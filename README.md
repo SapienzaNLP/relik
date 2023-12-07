@@ -69,9 +69,29 @@ pip install -e .[all]
 
 #### Retriever
 
+##### Data Preparation
+
+- TODO
+
+##### Training the model
+
+- TODO
+
+#### Inference
+
 - TODO
 
 #### Reader
+
+##### Data Preparation
+
+- TODO
+
+##### Training the model
+
+- TODO
+
+#### Inference
 
 - TODO
 
