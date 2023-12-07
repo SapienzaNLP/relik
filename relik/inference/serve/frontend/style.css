@@ -1,0 +1,33 @@
+/* Sidebar */
+.eczjsme11 {
+    background-color: #802433;
+}
+
+.st-emotion-cache-10oheav h2 {
+    color: white;
+}
+
+.st-emotion-cache-10oheav li {
+    color: white;
+}
+
+/* Main */
+a:link {
+    text-decoration: none;
+    color: white;
+}
+
+a:visited {
+    text-decoration: none;
+    color: white;
+}
+
+a:hover {
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.871);
+}
+
+a:active {
+    text-decoration: none;
+    color: white;
+}

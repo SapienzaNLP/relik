@@ -1,0 +1,14 @@
+# Required to make the "experiments" dir the default one for the output of the models
+hydra:
+  run:
+    dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+model_name: relik-reader-deberta-base  # used to name the model in wandb and output dir
+project_name: relik-reader # used to name the project in wandb
+
+
+defaults:
+  - _self_
+  - training: base
+  - model: base
+  - data: base

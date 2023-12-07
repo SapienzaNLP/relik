@@ -1,0 +1,13 @@
+repos:
+-   repo: https://github.com/ambv/black
+    rev: '23.10.1'
+    hooks:
+    - id: black
+-   repo: https://github.com/pycqa/flake8
+    rev: '6.1.0'
+    hooks:
+    - id: flake8
+
+default_language_version:
+    python: python3
+  

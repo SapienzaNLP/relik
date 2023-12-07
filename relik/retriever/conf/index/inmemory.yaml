@@ -1,0 +1,6 @@
+_target_: relik.retriever.indexers.inmemory.InMemoryDocumentIndex.from_file
+documents: ${data.shared_params.passages_path}
+metadata_fields: ["definition"]
+separator: "<def>"
+device: cuda
+precision: 16

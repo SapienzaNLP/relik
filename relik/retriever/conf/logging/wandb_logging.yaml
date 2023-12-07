@@ -1,0 +1,16 @@
+# don't forget loggers.login() for the first usage.
+
+log: True # set to False to avoid the logging
+
+wandb_arg:
+  _target_: lightning.loggers.WandbLogger
+  name: ${model_name}
+  project: ${project_name}
+  save_dir: ./
+  log_model: True
+  mode: "online"
+  entity: null
+
+watch:
+  log: "all"
+  log_freq: 100

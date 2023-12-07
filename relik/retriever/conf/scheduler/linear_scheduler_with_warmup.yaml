@@ -1,0 +1,3 @@
+_target_: transformers.get_linear_schedule_with_warmup
+num_warmup_steps: 5_000
+num_training_steps: ${train.pl_trainer.max_steps}
