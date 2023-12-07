@@ -54,6 +54,7 @@ pip install relik[serve]
 ```
 
 #### Installation from source
+
 ```bash
 git clone https://github.com/SapienzaNLP/relik.git
 cd relik
@@ -64,26 +65,24 @@ pip install -e .[all]
 
 ## Usage
 
+### Training
+
+#### Retriever
+
+- TODO
+
+#### Reader
+
+- TODO
+
+### Inference
+
 [//]: # (Write a short description of the model and how to use it with the `from_pretrained` method.)
-
-### Pretrained Pipelines
-
-#### Entity Linking
-
-We have four pretrained models for entity linking available on HuggingFace:
-
-| Pipeline                                            | Description                                                                                                        | # Parameters  | Download                                                                         |
-|-----------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------------|----------------------------------------------------------------------------------|
-| `riccorl/relik-entity-linking-aida-wikipedia-tiny`  | Entity Linking on trained on AIDA and Wikipedia as KB, `e5-small-v2` as retriever and `deberta-v3-small` as reader | 33M + 141M    | [link](https://huggingface.co/riccorl/relik-entity-linking-aida-wikipedia-tiny)  |
-| `riccorl/relik-entity-linking-aida-wikipedia-small` | Entity Linking on trained on AIDA and Wikipedia as KB, `e5-base-v2` as retriever and `deberta-v3-small` as reader  | 109M + 141M   | [link](https://huggingface.co/riccorl/relik-entity-linking-aida-wikipedia-small) |
-| `riccorl/relik-entity-linking-aida-wikipedia-base`  | Entity Linking on trained on AIDA and Wikipedia as KB, `e5-base-v2` as retriever and `deberta-v3-base` as reader   | 109M + 183M   | [link](https://huggingface.co/riccorl/relik-entity-linking-aida-wikipedia-base)  |
-| `riccorl/relik-entity-linking-aida-wikipedia-large` | Entity Linking on trained on AIDA and Wikipedia as KB, `e5-base-v2` as retriever and `deberta-v3-large` as reader  | 109M + 183M   | [link](https://huggingface.co/riccorl/relik-entity-linking-aida-wikipedia-large) |
 
 ```python
 from relik import Relik
 
-# Entity Linking
-relik = Relik.from_pretrained("riccorl/relik-entity-linking-aida-wikipedia-tiny")
+relik = Relik.from_pretrained("path/to/relik/model")
 relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
@@ -93,10 +92,10 @@ Retrievers and Readers can be used separately:
 from relik import Relik
 
 # If you want to use the retriever only
-retriever = Relik.from_pretrained("riccorl/relik-entity-linking-aida-wikipedia-tiny", reader=None)
+retriever = Relik.from_pretrained("path/to/relik/model", reader=None)
 
 # If you want to use the reader only
-reader = Relik.from_pretrained("riccorl/relik-entity-linking-aida-wikipedia-tiny", retriever=None)
+reader = Relik.from_pretrained("path/to/relik/model", retriever=None)
 ```
 
 or
@@ -105,18 +104,7 @@ or
 from relik.retriever import GoldenRetriever
 
 retriever = GoldenRetriever(
-    question_encoder="riccorl/retriever-relik-entity-linking-aida-wikipedia-small-question-encoder",
-    document_index="riccorl/retriever-relik-entity-linking-aida-wikipedia-small-index",
+    question_encoder="path/to/relik/retriever-question-encoder",
+    document_index="path/to/relik/retriever-document-index",
 )
 ```
-
-#### Relation Extraction
-
-```python
-from relik import Relik
-
-# Relation Extraction
-relik = Relik.from_pretrained("riccorl/relik-relation-extraction-nyt-small")
-relik("Michael Jordan was one of the best players in the NBA.")
-```
-
