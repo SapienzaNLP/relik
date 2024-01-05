@@ -89,8 +89,8 @@ Add candidates to the dataset
 
 ```bash
 python scripts/data/add_candidates.py \
-  --encoder riccorl/retriever-relik-e5-base-entity-linking-aida-question-encoder \
-  --index riccorl/retriever-relik-e5-base-entity-linking-aida-wikipedia-index \
+  --encoder riccorl/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder \
+  --index riccorl/retriever-relik-entity-linking-aida-wikipedia-base-index \
   --input_path path/to/processed/data \
   --output_path ... \
   # --index_device cuda \
