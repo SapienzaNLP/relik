@@ -75,6 +75,8 @@ class RelikServer:
         document_index_precision: str | int | torch.dtype | None = None,
         reader_precision: str | int | torch.dtype | None = None,
         annotation_type: str = "char",
+        retriever_batch_size: int = 32,
+        reader_batch_size: int = 32,
         relik_config_override: dict | None = None,
         **kwargs,
     ):
@@ -137,9 +139,17 @@ class RelikServer:
             **self.relik_config_override,
         )
 
+        self.retriever_batch_size = retriever_batch_size
+        self.reader_batch_size = reader_batch_size
+
     # @serve.batch()
     async def handle_batch(self, text: List[str]) -> List:
-        return self.relik(text, annotation_type=self.annotation_type)
+        return self.relik(
+            text,
+            annotation_type=self.annotation_type,
+            retriever_batch_size=self.retriever_batch_size,
+            reader_batch_size=self.reader_batch_size,
+        )
 
     @app.post("/api/relik")
     async def relik_endpoint(self, text: Union[str, List[str]]):

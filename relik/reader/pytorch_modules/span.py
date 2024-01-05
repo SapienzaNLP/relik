@@ -98,6 +98,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                     self.relik_reader_model.config.additional_special_symbols
                 ),
                 for_inference=True,
+                use_nme=kwargs.get("use_nme", False),
             )
             # merge the default data kwargs with the ones passed to the model
             default_data_kwargs.update(dataset_kwargs or {})

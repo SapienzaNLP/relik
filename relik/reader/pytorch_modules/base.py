@@ -9,7 +9,7 @@ from torch.utils.data import IterableDataset
 from transformers import AutoConfig
 
 from relik.common.log import get_logger
-from relik.common.torch_utils import load_ort_optimized_hf_model
+# from relik.common.torch_utils import load_ort_optimized_hf_model
 from relik.common.utils import get_callable_from_string
 from relik.inference.data.objects import AnnotationType
 from relik.reader.pytorch_modules.hf.modeling_relik import (

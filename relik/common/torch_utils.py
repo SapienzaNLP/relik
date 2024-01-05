@@ -43,37 +43,40 @@ def get_autocast_context(
     return autocast_manager
 
 
-def load_ort_optimized_hf_model(
-    hf_model: tr.PreTrainedModel,
-    provider: str = "CPUExecutionProvider",
-    ort_model_type: callable = ORTModelForCustomTasks,
-) -> ORTModel:
-    """
-    Load an optimized ONNX Runtime HF model.
-
-    Args:
-        hf_model (`tr.PreTrainedModel`):
-            The HF model to optimize.
-        provider (`str`, optional):
-            The ONNX Runtime provider to use. Defaults to "CPUExecutionProvider".
-
-    Returns:
-        `ORTModel`: The optimized HF model.
-    """
-    if isinstance(hf_model, ORTModel):
-        return hf_model
-    temp_dir = tempfile.mkdtemp()
-    hf_model.save_pretrained(temp_dir)
-    ort_model = ort_model_type.from_pretrained(
-        temp_dir, export=True, provider=provider, use_io_binding=True
-    )
-    optimizer = ORTOptimizer.from_pretrained(ort_model)
-    optimization_config = AutoOptimizationConfig.O4()
-    optimizer.optimize(save_dir=temp_dir, optimization_config=optimization_config)
-    ort_model = ort_model_type.from_pretrained(
-        temp_dir,
-        export=True,
-        provider=provider,
-        use_io_binding=bool(provider == "CUDAExecutionProvider"),
-    )
-    return ort_model
+# def load_ort_optimized_hf_model(
+#     hf_model: tr.PreTrainedModel,
+#     provider: str = "CPUExecutionProvider",
+#     ort_model_type: callable = "ORTModelForCustomTasks",
+# ) -> ORTModel:
+#     """
+#     Load an optimized ONNX Runtime HF model.
+#
+#     Args:
+#         hf_model (`tr.PreTrainedModel`):
+#             The HF model to optimize.
+#         provider (`str`, optional):
+#             The ONNX Runtime provider to use. Defaults to "CPUExecutionProvider".
+#
+#     Returns:
+#         `ORTModel`: The optimized HF model.
+#     """
+#     if isinstance(hf_model, ORTModel):
+#         return hf_model
+#     temp_dir = tempfile.mkdtemp()
+#     hf_model.save_pretrained(temp_dir)
+#     ort_model = ort_model_type.from_pretrained(
+#         temp_dir, export=True, provider=provider, use_io_binding=True
+#     )
+#     if is_package_available("onnxruntime"):
+#         optimizer = ORTOptimizer.from_pretrained(ort_model)
+#         optimization_config = AutoOptimizationConfig.O4()
+#         optimizer.optimize(save_dir=temp_dir, optimization_config=optimization_config)
+#         ort_model = ort_model_type.from_pretrained(
+#             temp_dir,
+#             export=True,
+#             provider=provider,
+#             use_io_binding=bool(provider == "CUDAExecutionProvider"),
+#         )
+#         return ort_model
+#     else:
+#         raise ValueError("onnxruntime is not installed. Please install Ray with `pip install relik[serve]`.")

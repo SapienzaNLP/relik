@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from relik.common.log import get_logger
-from relik.common.torch_utils import get_autocast_context, load_ort_optimized_hf_model
+from relik.common.torch_utils import get_autocast_context #, # load_ort_optimized_hf_model
 from relik.common.utils import is_package_available
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
@@ -106,7 +106,7 @@ class GoldenRetriever(torch.nn.Module):
         # set the precision
         self.precision = precision
 
-        self.question_encoder_ort: ORTModel | None = None
+        self.question_encoder_ort = None #: ORTModel | None = None
         # self.question_encoder_ort = load_ort_optimized_hf_model(self.question_encoder)
 
     def forward(

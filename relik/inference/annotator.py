@@ -531,6 +531,7 @@ class Relik:
                     task_type: [
                         r.document_index.documents.get_document_from_text(c)
                         for c in getattr(w, f"{task_type.value}_candidates", [])
+                        if r.document_index.documents.get_document_from_text(c) is not None
                     ]
                     for task_type, r in self.retriever.items()
                 },
