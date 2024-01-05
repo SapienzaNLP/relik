@@ -47,11 +47,10 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         | None = None,
         embeddings: torch.Tensor | None = None,
         metadata_fields: List[str] | None = None,
-        separator: str = "<def>",
+        separator: str | None = None,
         name_or_path: str | os.PathLike | None = None,
         device: str = "cpu",
         precision: str | int | torch.dtype = 32,
-        compile: bool = False,
         *args,
         **kwargs,
     ) -> None:
@@ -117,13 +116,12 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         if self.embeddings is not None and not self.embeddings.device == device:
             self.embeddings = self.embeddings.to(device)
 
-        # precision to be used for the embeddings
-        self.precision = precision
-
+        # TODO: check interactions with the embeddings
         # self.mm = MatrixMultiplicationModule(embeddings=self.embeddings)
         # self.mm.eval()
-        # if compile:
-        #     self.mm = torch.compile(self.mm, backend="onnxrt")
+
+        # precision to be used for the embeddings
+        self.precision = precision
 
     @torch.no_grad()
     @torch.inference_mode()
@@ -133,7 +131,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         documents: Optional[List[Document]] = None,
         batch_size: int = 32,
         num_workers: int = 4,
-        max_length: Optional[int] = None,
+        max_length: int | None = None,
         collate_fn: Optional[Callable] = None,
         encoder_precision: Optional[Union[str, int]] = None,
         compute_on_cpu: bool = False,
@@ -169,12 +167,25 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         if documents is None and self.documents is None:
             raise ValueError("Documents must be provided.")
 
-        if self.embeddings is not None and not force_reindex:
+        if self.embeddings is not None and not force_reindex and documents is None:
             logger.info(
                 "Embeddings are already present and `force_reindex` is `False`. Skipping indexing."
             )
-            if documents is None:
-                return self
+            return self
+
+        if force_reindex:
+            if documents is not None:
+                self.documents.add_documents(documents)
+            data = [k for k in self.get_passages()]
+
+        else:
+            if documents is not None:
+                data = [k for k in self.get_passages(DocumentStore(documents))]
+                # add the documents to the actual document store
+                self.documents.add_documents(documents)
+            else:
+                if self.embeddings is None:
+                    data = [k for k in self.get_passages()]
 
         if collate_fn is None:
             tokenizer = retriever.passage_tokenizer
@@ -190,17 +201,6 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
                     )
                 )
 
-        if force_reindex:
-            if documents is not None:
-                self.documents.add_document(documents)
-            data = [k for k in self.get_passages()]
-
-        else:
-            if documents is not None:
-                data = [k for k in self.get_passages(DocumentStore(documents))]
-            else:
-                return self
-
         dataloader = DataLoader(
             BaseDataset(name="passage", data=data),
             batch_size=batch_size,
@@ -215,7 +215,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         # Create empty lists to store the passage embeddings and passage index
         passage_embeddings: List[torch.Tensor] = []
 
-        encoder_device = "cpu" if compute_on_cpu else self.device
+        encoder_device = "cpu" if compute_on_cpu else encoder.device
 
         # fucking autocast only wants pure strings like 'cpu' or 'cuda'
         # we need to convert the model device to that
@@ -255,6 +255,8 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
             passage_embeddings = passage_embeddings.to(PRECISION_MAP[self.precision])
             passage_embeddings = passage_embeddings.to(self.device)
         self.embeddings = passage_embeddings
+        # update the matrix multiplication module
+        # self.mm = MatrixMultiplicationModule(embeddings=self.embeddings)
 
         # free up memory from the unused variable
         del passage_embeddings
@@ -285,7 +287,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
             similarity = torch.matmul(query, self.embeddings.T)
             # similarity = self.mm(query)
             # Retrieve the indices of the top k passage embeddings
-            retriever_out: Tuple = torch.topk(
+            retriever_out: torch.return_types.topk = torch.topk(
                 similarity, k=min(k, similarity.shape[-1]), dim=1
             )
 

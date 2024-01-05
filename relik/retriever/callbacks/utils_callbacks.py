@@ -18,7 +18,7 @@ logger = get_logger(__name__, level=logging.INFO)
 class SavePredictionsCallback(NLPTemplateCallback):
     def __init__(
         self,
-        saving_dir: Optional[Union[str, os.PathLike]] = None,
+        saving_dir: str | os.PathLike | None = None,
         verbose: bool = False,
         *args,
         **kwargs,
@@ -43,7 +43,7 @@ class SavePredictionsCallback(NLPTemplateCallback):
                 "You need to specify an output directory (`saving_dir`) or a logger to save the predictions.\n"
                 "Skipping saving predictions."
             )
-            return
+            return {}
         datasets = callback.datasets
         for dataloader_idx, dataloader_predictions in predictions.items():
             # save to file
@@ -59,7 +59,7 @@ class SavePredictionsCallback(NLPTemplateCallback):
                         "You need to specify an output directory (`saving_dir`) or a logger to save the predictions.\n"
                         "Skipping saving predictions."
                     )
-                    return
+                    return {}
                 prediction_folder.mkdir(exist_ok=True)
             predictions_path = (
                 prediction_folder
@@ -79,7 +79,7 @@ class ResetModelCallback(pl.Callback):
     def __init__(
         self,
         question_encoder: str,
-        passage_encoder: Optional[str] = None,
+        passage_encoder: str | None = None,
         verbose: bool = True,
     ) -> None:
         super().__init__()
@@ -125,7 +125,13 @@ class FreeUpIndexerVRAMCallback(pl.Callback):
         # remove the embeddings from the GPU memory first
         if pl_module.model.document_index is not None:
             if pl_module.model.document_index.embeddings is not None:
-                pl_module.model.document_index.embeddings.cpu()
+                try:
+                    pl_module.model.document_index.embeddings.cpu()
+                except Exception:
+                    logger.warning(
+                        "Could not move embeddings to CPU. Skipping freeing up VRAM."
+                    )
+                    pass
             pl_module.model.document_index.embeddings = None
 
         import gc
@@ -199,7 +205,7 @@ class SubsampleTrainDatasetCallback(pl.Callback):
 class SaveRetrieverCallback(pl.Callback):
     def __init__(
         self,
-        saving_dir: Optional[Union[str, os.PathLike]] = None,
+        saving_dir: str | os.PathLike | None = None,
         verbose: bool = True,
         *args,
         **kwargs,
@@ -230,8 +236,8 @@ class SaveRetrieverCallback(pl.Callback):
                 retriever_folder = Path(trainer.logger.experiment.dir) / "retriever"
             except Exception:
                 logger.info(
-                    "You need to specify an output directory (`saving_dir`) or a logger to save the retriever.\n"
-                    "Skipping saving retriever."
+                    "You need to specify an output directory (`saving_dir`) or a logger to save the "
+                    "retriever.\nSkipping saving retriever."
                 )
                 return
         retriever_folder.mkdir(exist_ok=True, parents=True)

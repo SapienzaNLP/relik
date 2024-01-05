@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os
 from pathlib import Path
 from typing import List, Literal, Optional, Union
@@ -33,6 +34,7 @@ from relik.retriever.callbacks.utils_callbacks import (
     SaveRetrieverCallback,
 )
 from relik.retriever.data.datasets import GoldenRetrieverDataset
+from relik.retriever.indexers.base import BaseDocumentIndex
 from relik.retriever.lightning_modules.pl_data_modules import (
     GoldenRetrieverPLDataModule,
 )
@@ -78,6 +80,7 @@ class RetrieverTrainer:
         fast_dev_run: bool = False,
         precision: int | str = 16,
         reload_dataloaders_every_n_epochs: int = 1,
+        resume_from_checkpoint_path: str | os.PathLike | None = None,
         trainer_kwargs: dict | None = None,
         # eval parameters
         metric_to_monitor: str = "validate_recall@{top_k}",
@@ -145,6 +148,7 @@ class RetrieverTrainer:
         self.fast_dev_run = fast_dev_run
         self.precision = precision
         self.reload_dataloaders_every_n_epochs = reload_dataloaders_every_n_epochs
+        self.resume_from_checkpoint_path = resume_from_checkpoint_path
         self.trainer_kwargs = trainer_kwargs or {}
         # eval parameters
         self.metric_to_monitor = metric_to_monitor
@@ -244,12 +248,16 @@ class RetrieverTrainer:
         # explicitly configure some callbacks that will be needed not only by the
         # pl.Trainer but also in this class
         # model checkpoint callback
+        if self.save_last:
+            logger.warning(
+                "We will override the `save_last` of `ModelCheckpoint` to `False`. "
+                "Instead, we will use a separate `ModelCheckpoint` callback to save the last checkpoint"
+            )
         checkpoint_kwargs = dict(
             monitor=self.metric_to_monitor,
             mode=self.monitor_mode,
             verbose=True,
             save_top_k=self.save_top_k,
-            save_last=self.save_last,
             filename=self.checkpoint_filename,
             dirpath=self.checkpoint_dir,
             auto_insert_metric_name=False,
@@ -259,6 +267,17 @@ class RetrieverTrainer:
         self.checkpoint_kwargs = checkpoint_kwargs
         self.model_checkpoint_callback: ModelCheckpoint | None = None
         self.checkpoint_path: str | os.PathLike | None = None
+        # last checkpoint callback
+        self.latest_model_checkpoint_callback: ModelCheckpoint | None = None
+        self.last_checkpoint_kwargs: dict | None = None
+        if self.save_last:
+            last_checkpoint_kwargs = deepcopy(self.checkpoint_kwargs)
+            last_checkpoint_kwargs["save_top_k"] = 1
+            last_checkpoint_kwargs["filename"] = "last-{epoch}-{step}"
+            last_checkpoint_kwargs["monitor"] = "step"
+            last_checkpoint_kwargs["mode"] = "max"
+            self.last_checkpoint_kwargs = last_checkpoint_kwargs
+
         # early stopping callback
         early_stopping_kwargs = dict(
             monitor=self.metric_to_monitor,
@@ -450,44 +469,55 @@ class RetrieverTrainer:
 
     def configure_model_checkpoint(
         self,
-        # monitor: str,
-        # mode: str,
-        # verbose: bool = True,
-        # save_top_k: int = 1,
-        # save_last: bool = False,
-        # filename: str | os.PathLike | None = None,
-        # dirpath: str | os.PathLike | None = None,
-        # auto_insert_metric_name: bool = False,
+        monitor: str,
+        mode: str,
+        verbose: bool = True,
+        save_top_k: int = 1,
+        save_last: bool = False,
+        filename: str | os.PathLike | None = None,
+        dirpath: str | os.PathLike | None = None,
+        auto_insert_metric_name: bool = False,
         *args,
         **kwargs,
     ) -> ModelCheckpoint:
         logger.info("Enabling Model Checkpointing")
-        if self.checkpoint_dir is None:
-            self.checkpoint_dir = (
+        if dirpath is None:
+            dirpath = (
                 self.experiment_path / "checkpoints" if self.experiment_path else None
             )
-        if self.checkpoint_filename is None:
-            self.checkpoint_filename = (
-                "checkpoint-"
-                + self.metric_to_monitor
-                + "_{"
-                + self.metric_to_monitor
-                + ":.4f}-epoch_{epoch:02d}"
+        if filename is None:
+            filename = (
+                "checkpoint-" + monitor + "_{" + monitor + ":.4f}-epoch_{epoch:02d}"
             )
-        self.checkpoint_path = (
-            self.checkpoint_dir / self.checkpoint_filename
-            if self.checkpoint_dir is not None
-            else None
+        self.checkpoint_path = dirpath / filename if dirpath is not None else None
+        logger.info(f"Checkpoint directory: {dirpath}")
+        logger.info(f"Checkpoint filename: {filename}")
+
+        kwargs = dict(
+            monitor=monitor,
+            mode=mode,
+            verbose=verbose,
+            save_top_k=save_top_k,
+            save_last=save_last,
+            filename=filename,
+            dirpath=dirpath,
+            auto_insert_metric_name=auto_insert_metric_name,
+            *args,
+            **kwargs,
         )
-        logger.info(f"Checkpoint directory: {self.checkpoint_dir}")
-        logger.info(f"Checkpoint filename: {self.checkpoint_filename}")
+
         # update the kwargs
         # TODO: this is bad
-        kwargs.update(
-            dirpath=self.checkpoint_dir,
-            filename=self.checkpoint_filename,
-        )
-        self.model_checkpoint_callback = ModelCheckpoint(*args, **kwargs)
+        # kwargs.update(
+        #     dirpath=self.checkpoint_dir,
+        #     filename=self.checkpoint_filename,
+        # )
+        # modelcheckpoint_kwargs = dict(
+        #     dirpath=self.checkpoint_dir,
+        #     filename=self.checkpoint_filename,
+        # )
+        # modelcheckpoint_kwargs.update(kwargs)
+        self.model_checkpoint_callback = ModelCheckpoint(**kwargs)
         return self.model_checkpoint_callback
 
     def configure_hard_negatives_callback(self):
@@ -513,6 +543,12 @@ class RetrieverTrainer:
                 **self.checkpoint_kwargs
             )
             self.callbacks_store.append(self.model_checkpoint_callback)
+            if self.save_last:
+                self.latest_model_checkpoint_callback = self.configure_model_checkpoint(
+                    **self.last_checkpoint_kwargs
+                )
+                self.callbacks_store.append(self.latest_model_checkpoint_callback)
+
             self.callbacks_store.append(SaveRetrieverCallback())
         if self.early_stopping:
             self.early_stopping_callback = self.configure_early_stopping(
@@ -632,7 +668,19 @@ class RetrieverTrainer:
                 **self.trainer_kwargs,
             )
 
-        self.trainer.fit(self.lightning_module, datamodule=self.lightning_datamodule)
+        # # save this class as config to file
+        # if self.experiment_path is not None:
+        #     logger.info("Saving the configuration to file")
+        #     self.experiment_path.mkdir(parents=True, exist_ok=True)
+        #     OmegaConf.save(
+        #         OmegaConf.create(to_config(self)),
+        #         self.experiment_path / "trainer_config.yaml",
+        #     )
+        self.trainer.fit(
+            self.lightning_module,
+            datamodule=self.lightning_datamodule,
+            ckpt_path=self.resume_from_checkpoint_path,
+        )
 
     def test(
         self,
@@ -718,6 +766,56 @@ class RetrieverTrainer:
 
 
 def train(conf: omegaconf.DictConfig) -> None:
+    logger.info("Starting training with config:")
+    logger.info(pformat(OmegaConf.to_container(conf)))
+
+    logger.info("Instantiating the Retriever")
+    retriever: GoldenRetriever = hydra.utils.instantiate(
+        conf.retriever, _recursive_=False
+    )
+
+    logger.info("Instantiating datasets")
+    train_dataset: GoldenRetrieverDataset = hydra.utils.instantiate(
+        conf.data.train_dataset, _recursive_=False
+    )
+    val_dataset: GoldenRetrieverDataset = hydra.utils.instantiate(
+        conf.data.val_dataset, _recursive_=False
+    )
+    test_dataset: GoldenRetrieverDataset = hydra.utils.instantiate(
+        conf.data.test_dataset, _recursive_=False
+    )
+
+    logger.info("Loading the document index")
+    document_index: BaseDocumentIndex = hydra.utils.instantiate(
+        conf.data.document_index, _recursive_=False
+    )
+    retriever.document_index = document_index
+
+    logger.info("Instantiating the Trainer")
+    trainer: Trainer = hydra.utils.instantiate(
+        conf.train,
+        retriever=retriever,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+        test_dataset=test_dataset,
+        _recursive_=False,
+    )
+
+    logger.info("Starting training")
+    trainer.train()
+
+    logger.info("Starting testing")
+    trainer.test()
+
+    logger.info("Training and testing completed")
+
+
+@hydra.main(config_path="../../conf", config_name="default", version_base="1.3")
+def main(conf: omegaconf.DictConfig):
+    train(conf)
+
+
+def train_hydra(conf: omegaconf.DictConfig) -> None:
     # reproducibility
     pl.seed_everything(conf.train.seed)
     torch.set_float32_matmul_precision(conf.train.float32_matmul_precision)
@@ -914,11 +1012,6 @@ def train(conf: omegaconf.DictConfig) -> None:
 
     # module test
     trainer.test(best_pl_module, datamodule=pl_data_module)
-
-
-@hydra.main(config_path="../../conf", config_name="default", version_base="1.3")
-def main(conf: omegaconf.DictConfig):
-    train(conf)
 
 
 if __name__ == "__main__":

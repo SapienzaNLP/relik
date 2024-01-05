@@ -13,8 +13,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from relik.common.log import get_logger
-from relik.common.torch_utils import get_autocast_context #, # load_ort_optimized_hf_model
-from relik.common.utils import is_package_available
+from relik.common.torch_utils import (
+    get_autocast_context,
+)  # , # load_ort_optimized_hf_model
+from relik.common.utils import is_package_available, to_config
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.data.labels import Labels
@@ -105,9 +107,6 @@ class GoldenRetriever(torch.nn.Module):
 
         # set the precision
         self.precision = precision
-
-        self.question_encoder_ort = None #: ORTModel | None = None
-        # self.question_encoder_ort = load_ort_optimized_hf_model(self.question_encoder)
 
     def forward(
         self,
@@ -350,18 +349,11 @@ class GoldenRetriever(torch.nn.Module):
             dataloader = tqdm(dataloader, desc="Retrieving passages")
 
         retrieved = []
-        question_encoder = self.question_encoder_ort or self.question_encoder
         try:
             with get_autocast_context(self.device, precision):
                 for batch in dataloader:
                     batch = batch.to(self.device)
-                    question_encodings = question_encoder(**batch)
-                    try:
-                        question_encodings = question_encodings.pooler_output
-                    except AttributeError:
-                        question_encodings = question_encodings.last_hidden_state[
-                            :, 0, :
-                        ]
+                    question_encodings = self.question_encoder(**batch).pooler_output
                     retrieved += self.document_index.search(question_encodings, k)
         except AttributeError as e:
             # apparently num_workers > 0 gives some issue on MacOS as of now
@@ -420,8 +412,8 @@ class GoldenRetriever(torch.nn.Module):
         Get the document from its text.
 
         Args:
-            text (`str`):
-                The text of the document.
+            passage (`str`):
+                The passage of the document.
 
         Returns:
             `str`: The document.
@@ -639,3 +631,15 @@ class GoldenRetriever(torch.nn.Module):
             )
 
         logger.info("Saving retriever to disk done.")
+
+    @classmethod
+    def to_config(cls, *args, **kwargs):
+        config = {
+            "_target_": f"{cls.__class__.__module__}.{cls.__class__.__name__}",
+            "question_encoder": cls.question_encoder.config.name_or_path,
+            "passage_encoder": cls.passage_encoder.config.name_or_path
+            if not cls.passage_encoder_is_question_encoder
+            else None,
+            "document_index": to_config(cls.document_index),
+        }
+        return config

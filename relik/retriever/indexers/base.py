@@ -56,7 +56,7 @@ class BaseDocumentIndex:
         | None = None,
         embeddings: torch.Tensor | None = None,
         metadata_fields: List[str] | None = None,
-        separator: str = "<def>",
+        separator: str | None = None,
         name_or_path: str | os.PathLike | None = None,
         device: str = "cpu",
     ) -> None:
@@ -65,6 +65,8 @@ class BaseDocumentIndex:
 
         self.metadata_fields = metadata_fields
         self.separator = separator
+
+        self.document_path: List[str | os.PathLike] = []
 
         if documents is not None:
             if isinstance(documents, DocumentStore):
@@ -89,6 +91,7 @@ class BaseDocumentIndex:
                     _documents = []
                     for doc in documents:
                         with open(relative_to_absolute_path(doc)) as f:
+                            self.document_path.append(doc)
                             _documents += [
                                 Document.from_dict(json.loads(line))
                                 for line in f.readlines()
@@ -159,7 +162,15 @@ class BaseDocumentIndex:
             `Dict[str, Any]`: The configuration of the retriever.
         """
 
-        return to_config(self)
+        config = {
+            "_target_": f"{self.__class__.__module__}.{self.__class__.__name__}",
+            "metadata_fields": self.metadata_fields,
+            "separator": self.separator,
+            "name_or_path": self.name_or_path,
+        }
+        if len(self.document_path) > 0:
+            config["documents"] = self.document_path
+        return config
 
     def index(
         self,
@@ -172,36 +183,42 @@ class BaseDocumentIndex:
     def search(self, query: Any, k: int = 1, *args, **kwargs) -> List:
         raise NotImplementedError
 
-    def get_document_from_passage(self, document: str) -> str:
+    def get_document_from_passage(self, passage: str) -> Document | None:
         """
         Get the document label from the passage.
 
         Args:
-            document (`str`):
+            passage (`str`):
                 The document to get the label for.
 
         Returns:
             `str`: The document label.
         """
         # get the text from the document
-        text = document.split(self.separator)[0]
+        if self.separator:
+            text = passage.split(self.separator)[0]
+        else:
+            text = passage
         return self.documents.get_document_from_text(text)
 
-    def get_index_from_passage(self, document: str) -> int:
+    def get_index_from_passage(self, passage: str) -> int:
         """
         Get the index of the passage.
 
         Args:
-            document (`str`):
+            passage (`str`):
                 The document to get the index for.
 
         Returns:
             `int`: The index of the document.
         """
         # get the text from the document
-        return self.get_document_from_passage(document).id
+        doc = self.get_document_from_passage(passage)
+        if doc is None:
+            raise ValueError(f"Document `{passage}` not found.")
+        return doc.id
 
-    def get_document_from_index(self, index: int) -> str:
+    def get_document_from_index(self, index: int) -> Document | None:
         """
         Get the document from the index.
 
@@ -227,6 +244,12 @@ class BaseDocumentIndex:
         """
         document = self.get_document_from_index(index)
         # build the passage using the metadata fields
+        passage = document.text
+        for field in self.metadata_fields:
+            passage += f"{self.separator}{document.metadata[field]}"
+        return passage
+
+    def get_passage_from_document(self, document: Document) -> str:
         passage = document.text
         for field in self.metadata_fields:
             passage += f"{self.separator}{document.metadata[field]}"
@@ -296,17 +319,18 @@ class BaseDocumentIndex:
         """
         documents = documents or self.documents
         # construct the passages from the documents
-        return [self.get_passage_from_index(i) for i in range(len(documents))]
+        # return [self.get_passage_from_index(i) for i in range(len(documents))]
+        return [self.get_passage_from_document(doc) for doc in documents]
 
     def save_pretrained(
         self,
         output_dir: Union[str, os.PathLike],
         config: Optional[Dict[str, Any]] = None,
-        config_file_name: Optional[str] = None,
-        document_file_name: Optional[str] = None,
-        embedding_file_name: Optional[str] = None,
+        config_file_name: str | None = None,
+        document_file_name: str | None = None,
+        embedding_file_name: str | None = None,
         push_to_hub: bool = False,
-        model_id: Optional[str] = None,
+        model_id: str | None = None,
         **kwargs,
     ):
         """
@@ -318,15 +342,15 @@ class BaseDocumentIndex:
             config (`Optional[Dict[str, Any]]`, `optional`):
                 The configuration to save. If `None`, the current configuration of the retriever will be
                 saved. Defaults to `None`.
-            config_file_name (`Optional[str]`, `optional`):
+            config_file_name (`str | None`, `optional`):
                 The name of the configuration file. Defaults to `config.yaml`.
-            document_file_name (`Optional[str]`, `optional`):
+            document_file_name (`str | None`, `optional`):
                 The name of the document file. Defaults to `documents.json`.
-            embedding_file_name (`Optional[str]`, `optional`):
+            embedding_file_name (`str | None`, `optional`):
                 The name of the embedding file. Defaults to `embeddings.pt`.
             push_to_hub (`bool`, `optional`):
                 Whether to push the saved retriever to the hub. Defaults to `False`.
-            model_id (`Optional[str]`, `optional`):
+            model_id (`str | None`, `optional`):
                 The id of the model to push to the hub. If `None`, the name of the output
                 directory will be used. Defaults to `None`.
             **kwargs:
@@ -373,10 +397,10 @@ class BaseDocumentIndex:
         cls,
         name_or_dir: Union[str, os.PathLike],
         device: str = "cpu",
-        precision: Optional[str] = None,
-        config_file_name: Optional[str] = None,
-        document_file_name: Optional[str] = None,
-        embedding_file_name: Optional[str] = None,
+        precision: str | None = None,
+        config_file_name: str | None = None,
+        document_file_name: str | None = None,
+        embedding_file_name: str | None = None,
         *args,
         **kwargs,
     ) -> "BaseDocumentIndex":
@@ -414,6 +438,15 @@ class BaseDocumentIndex:
             raise ValueError(f"Document file `{documents_path}` does not exist.")
         logger.info(f"Loading documents from {documents_path}")
         documents = DocumentStore.from_file(documents_path)
+        # TODO: probably is better to do the opposite and iterate over the config
+        # check for each possible attribute ind DocumentStore
+        for attr in dir(documents):
+            if attr.startswith("__"):
+                continue
+            if attr not in config:
+                continue
+            # set the attribute
+            setattr(documents, attr, config[attr])
 
         # load the passage embeddings
         embedding_path = model_dir / embedding_file_name
