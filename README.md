@@ -85,7 +85,19 @@ pip install -e .[all]
 
 ##### Data Preparation
 
-- TODO
+Add candidates to the dataset
+
+```bash
+python scripts/data/add_candidates.py \
+  --encoder riccorl/retriever-relik-e5-base-entity-linking-aida-question-encoder \
+  --index riccorl/retriever-relik-e5-base-entity-linking-aida-wikipedia-index \
+  --input_path path/to/processed/data \
+  --output_path ... \
+  # --index_device cuda \
+  # --precision 16 \
+  # --topics \
+  # --log_recall
+```
 
 ##### Training the model
 

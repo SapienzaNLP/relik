@@ -33,9 +33,9 @@ SAPIENZANLP_HF_MODEL_REPO_ARCHIVE_URL = (
     f"{SAPIENZANLP_HF_MODEL_REPO_URL}/resolve/main/model.zip"
 )
 # path constants
-SAPIENZANLP_CACHE_DIR = os.getenv("SAPIENZANLP_CACHE_DIR", Path.home() / ".sapienzanlp")
+HF_CACHE_DIR = Path(os.getenv("HF_HOME", Path.home() / ".cache/huggingface/hub"))
+SAPIENZANLP_CACHE_DIR = os.getenv("SAPIENZANLP_CACHE_DIR", HF_CACHE_DIR)
 SAPIENZANLP_DATE_FORMAT = "%Y-%m-%d %H-%M-%S"
-
 
 logger = get_logger(__name__)
 
