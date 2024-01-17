@@ -4,7 +4,6 @@ data/*
 experiments/*
 retrievers
 outputs
-model
 wandb
 pretrained_configs
 

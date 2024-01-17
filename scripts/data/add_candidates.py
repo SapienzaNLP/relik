@@ -17,7 +17,7 @@ from relik.retriever.data.base.datasets import BaseDataset
 logger = get_logger(level=logging.INFO)
 
 
-def compute_retriever_stats(dataset) -> None:
+def compute_retriever_stats(dataset, top_k) -> None:
     correct, total = 0, 0
     for sample in dataset:
         window_candidates = sample["window_candidates"]
@@ -31,7 +31,7 @@ def compute_retriever_stats(dataset) -> None:
             total += 1
 
     recall = correct / total
-    logger.info(f"Recall@100: {recall}")
+    logger.info(f"Recall@f{top_k}: {recall}")
 
 
 @torch.no_grad()
@@ -41,6 +41,7 @@ def add_candidates(
     input_path: Union[str, os.PathLike],
     output_path: Union[str, os.PathLike],
     passage_encoder: Optional[Union[str, os.PathLike]] = None,
+    top_k: int = 100,
     batch_size: int = 128,
     num_workers: int = 4,
     device: str = "cuda",
@@ -103,7 +104,7 @@ def add_candidates(
             for documents_batch in tqdm.tqdm(dataloader):
                 retrieve_kwargs = {
                     **documents_batch,
-                    "k": 100,
+                    "k": top_k,
                     "precision": precision,
                 }
                 batch_out = retriever.retrieve(**retrieve_kwargs)
@@ -168,7 +169,7 @@ def add_candidates(
     if log_recall:
         with open(output_path) as f:
             annotated_samples = [json.loads(line) for line in f.readlines()]
-        compute_retriever_stats(annotated_samples)
+        compute_retriever_stats(annotated_samples, top_k)
 
 
 if __name__ == "__main__":
@@ -178,6 +179,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--index", type=str, required=True)
     arg_parser.add_argument("--input_path", type=str, required=True)
     arg_parser.add_argument("--output_path", type=str, required=True)
+    arg_parser.add_argument("--top_k", type=int, default=100)
     arg_parser.add_argument("--batch_size", type=int, default=128)
     arg_parser.add_argument("--device", type=str, default="cuda")
     arg_parser.add_argument("--index_device", type=str, default="cpu")
