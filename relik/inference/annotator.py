@@ -298,6 +298,7 @@ class Relik:
         | List[Document]
         | Dict[TaskType, List[Document]]
         | None = None,
+        mentions: List[List[int]] | List[List[List[int]]] | None = None,
         top_k: int | None = None,
         window_size: int | None = None,
         window_stride: int | None = None,
@@ -397,11 +398,12 @@ class Relik:
 
         if windows is None:
             # windows were provided, use them
-            windows = self.window_manager.create_windows(
+            windows, blank_windows = self.window_manager.create_windows(
                 text,
                 window_size,
                 window_stride,
                 is_split_into_words=is_split_into_words,
+                mentions=mentions
             )
 
         if candidates is not None and any(
@@ -475,6 +477,11 @@ class Relik:
                 # create a member for the windows that is named like the task
                 setattr(window, f"{task_type.value}_candidates", formatted_candidates)
 
+        for task_type, task_candidates in windows_candidates.items():
+            for window in blank_windows:
+                setattr(window, f"{task_type.value}_candidates", [])
+                setattr(window, "predicted_spans", [])
+                setattr(window, "predicted_triples", [])
         if self.reader is not None:
             start_read = time.time()
             windows = self.reader.read(
@@ -489,10 +496,14 @@ class Relik:
             # TODO: check merging behavior without a reader
             # do we want to merge windows if there is no reader?
             start_w = time.time()
+            windows = windows + blank_windows
+            windows.sort(key=lambda x: (x.doc_id, x.offset))
             merged_windows = self.window_manager.merge_windows(windows)
             end_w = time.time()
             logger.info(f"Merging took {end_w - start_w} seconds.")
         else:
+            windows = windows + blank_windows
+            windows.sort(key=lambda x: (x.doc_id, x.offset))
             merged_windows = windows
 
         # transform predictions into RelikOutput objects
@@ -518,8 +529,9 @@ class Relik:
                             subject=span_labels[subj],
                             label=label,
                             object=span_labels[obj],
+                            confidence=conf,
                         )
-                        for subj, label, obj in w.predicted_triples
+                        for subj, label, obj, conf in w.predicted_triples
                     ]
             # create the output
             sample_output = RelikOutput(

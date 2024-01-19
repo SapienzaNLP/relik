@@ -23,7 +23,8 @@ class WindowManager:
         max_length: Optional[int] = None,
         doc_topic: str = None,
         is_split_into_words: bool = False,
-    ) -> List[RelikReaderSample]:
+        mentions: List[List[List[int]]] = None,
+    ) -> Tuple[List[RelikReaderSample], List[RelikReaderSample]]:
         """
         Create windows from a list of documents.
 
@@ -41,6 +42,8 @@ class WindowManager:
             is_split_into_words (:obj:`bool`, `optional`, defaults to :obj:`False`):
                 Whether the input is already pre-tokenized (e.g., split into words). If :obj:`False`, the
                 input will first be tokenized using the tokenizer, then the tokens will be split into words.
+            mentions (:obj:`List[List[List[int]]]`, `optional`):
+                The mentions of the document(s).
 
         Returns:
             :obj:`List[RelikReaderSample]`: The windows created from the documents.
@@ -60,9 +63,18 @@ class WindowManager:
         if hasattr(self.splitter, "window_stride"):
             self.splitter.window_stride = stride or self.splitter.window_stride
 
-        windowed_documents = []
-        for doc_id, (document, document_tokens) in enumerate(
-            zip(documents, documents_tokens)
+        windowed_documents, windowed_blank_documents = [], []
+
+        if mentions is not None:
+            assert len(documents) == len(
+                mentions
+            ), f"documents and mentions should have the same length, got {len(documents)} and {len(mentions)}"
+            doc_iter = zip(documents, documents_tokens, mentions)
+        else:
+            doc_iter = zip(documents, documents_tokens, itertools.repeat([]))
+
+        for doc_id, (document, document_tokens, document_mentions) in enumerate(
+            doc_iter
         ):
             if doc_topic is None:
                 doc_topic = document_tokens[0] if len(document_tokens) > 0 else ""
@@ -79,30 +91,36 @@ class WindowManager:
                     # window_text_start = window[0].idx
                     # window_text_end = window[-1].i
                     text = " ".join([w.text for w in window])
-                document_windows.append(
-                    RelikReaderSample(
-                        doc_id=doc_id,
-                        window_id=window_id,
-                        text=text,
-                        tokens=[w.text for w in window],
-                        words=[w.text for w in window],
-                        doc_topic=doc_topic,
-                        offset=window_text_start,
-                        token2char_start={str(i): w.idx for i, w in enumerate(window)},
-                        token2char_end={
-                            str(i): w.idx + len(w.text) for i, w in enumerate(window)
-                        },
-                        char2token_start={
-                            str(w.idx): w.i for i, w in enumerate(window)
-                        },
-                        char2token_end={
-                            str(w.idx + len(w.text)): w.i for i, w in enumerate(window)
-                        },
-                    )
+                sample = RelikReaderSample(
+                    doc_id=doc_id,
+                    window_id=window_id,
+                    text=text,
+                    tokens=[w.text for w in window],
+                    words=[w.text for w in window],
+                    doc_topic=doc_topic,
+                    offset=window_text_start,
+                    spans=[
+                        [m[0], m[1]] for m in document_mentions 
+                        if window_text_end > m[0] >= window_text_start and window_text_end >= m[1] >= window_text_start
+                    ],
+                    token2char_start={str(i): w.idx for i, w in enumerate(window)},
+                    token2char_end={
+                        str(i): w.idx + len(w.text) for i, w in enumerate(window)
+                    },
+                    char2token_start={
+                        str(w.idx): w.i for i, w in enumerate(window)
+                    },
+                    char2token_end={
+                        str(w.idx + len(w.text)): w.i for i, w in enumerate(window)
+                    },
                 )
+                if mentions is not None and len(sample.spans) == 0:
+                    windowed_blank_documents.append(sample)
+                else:
+                    document_windows.append(sample)
 
             windowed_documents.extend(document_windows)
-        return windowed_documents
+        return windowed_documents, windowed_blank_documents
 
     def merge_windows(
         self, windows: List[RelikReaderSample]
@@ -246,7 +264,7 @@ class WindowManager:
             merged_span_predictions = set(window1.predicted_spans).union(
                 set(window2.predicted_spans)
             )
-
+            merged_span_predictions = sorted(merged_span_predictions)
             # probabilities
             for span_prediction, predicted_probs in itertools.chain(
                 window1.probs_window_labels_chars.items()
@@ -265,18 +283,28 @@ class WindowManager:
             ):
                 # try to merge the triples predictions
                 # add offset to the second window
+                window1_triplets = [
+                    (
+                        merged_span_predictions.index(window1.predicted_spans[t[0]]),
+                        t[1],
+                        merged_span_predictions.index(window1.predicted_spans[t[2]]),
+                        t[3]
+                    )
+                    for t in window1.predicted_triples
+                ]
                 window2_triplets = [
                     (
-                        t[0] + len(window1.predicted_spans),
+                        merged_span_predictions.index(window2.predicted_spans[t[0]]),
                         t[1],
-                        t[2] + len(window1.predicted_spans),
+                        merged_span_predictions.index(window2.predicted_spans[t[2]]),
+                        t[3]
                     )
                     for t in window2.predicted_triples
                 ]
-                merged_triplet_predictions = set(window1.predicted_triples).union(
+                merged_triplet_predictions = set(window1_triplets).union(
                     set(window2_triplets)
                 )
-
+                merged_triplet_predictions = sorted(merged_triplet_predictions)
                 # for now no triplet probs, we don't need them for the moment
 
         return (

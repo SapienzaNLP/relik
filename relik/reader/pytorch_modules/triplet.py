@@ -184,6 +184,31 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
                     for i, sample in enumerate(samples):
                         assert sample._mixin_prediction_position is None
                         sample._mixin_prediction_position = i
+                        if sample.spans is not None and len(sample.spans) > 0:
+                            entities = []
+                            offset_span = sample.char2token_start[str(sample.offset)]
+                            for span_start, span_end in sample.spans:
+                                if str(span_start) not in sample.char2token_start:
+                                    # span_start is in the middle of a word
+                                    # retrieve the first token of the word
+                                    while str(span_start) not in sample.char2token_start:
+                                        span_start -= 1
+                                        # skip
+                                        if span_start < 0:
+                                            break
+                                if str(span_end) not in sample.char2token_end:
+                                    # span_end is in the middle of a word
+                                    # retrieve the last token of the word
+                                    while str(span_end) not in sample.char2token_end:
+                                        span_end += 1
+                                        # skip
+                                        if span_end >= int(list(sample.char2token_end.keys())[-1]):
+                                            break
+
+                                if span_start < 0 or span_end > int(list(sample.char2token_end.keys())[-1]):
+                                    continue
+                                entities.append([sample.char2token_start[str(span_start)]-offset_span, sample.char2token_end[str(span_end)]+1-offset_span, ""])
+                            sample.entities = entities
                         yield sample
 
                 next_prediction_position = 0

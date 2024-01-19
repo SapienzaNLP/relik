@@ -554,7 +554,7 @@ class RelikREDataset(IterableDataset):
             )
 
             window_tokens = input_tokenized.input_ids
-            # window_tokens = flatten(window_tokens)
+            window_tokens = flatten(window_tokens)
 
             offsets_mapping = [
                 [
@@ -1011,6 +1011,7 @@ class RelikREDataset(IterableDataset):
                     start_entity_index,
                     prediction["relation"]["name"],
                     end_entity_index,
+                    prediction["relation"]["probability"],
                 )
             )
         sample.predicted_spans = predicted_spans

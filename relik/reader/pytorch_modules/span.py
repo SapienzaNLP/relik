@@ -170,6 +170,8 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                     for i, sample in enumerate(samples):
                         assert sample._mixin_prediction_position is None
                         sample._mixin_prediction_position = i
+                        if sample.spans is not None and len(sample.spans) > 0:
+                            sample.window_labels = [[s[0], s[1], ""] for s in sample.spans]
                         yield sample
 
                 next_prediction_position = 0
