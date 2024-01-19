@@ -20,7 +20,7 @@ logger = get_logger(level=logging.INFO)
 def compute_retriever_stats(dataset, top_k) -> None:
     correct, total = 0, 0
     for sample in dataset:
-        window_candidates = sample["window_candidates"]
+        window_candidates = sample["span_candidates"]
         window_candidates = [c.replace("_", " ").lower() for c in window_candidates]
 
         for ss, se, label in sample["window_labels"]:
@@ -28,10 +28,12 @@ def compute_retriever_stats(dataset, top_k) -> None:
                 continue
             if label.replace("_", " ").lower() in window_candidates:
                 correct += 1
+            else:
+                logger.info(f"Did not find `{label}` in candidates")
             total += 1
 
     recall = correct / total
-    logger.info(f"Recall@f{top_k}: {recall}")
+    logger.info(f"Recall@{top_k}: {recall}")
 
 
 @torch.no_grad()
@@ -123,8 +125,9 @@ def add_candidates(
                         retrieved_accumulator,
                     ):
                         candidate_titles = [
-                            c.label.split(" <def>", 1)[0] for c in retrieved
+                            c.document.text for c in retrieved # TODO: add metadata if needed
                         ]
+                        sample["span_candidates"] = candidate_titles
                         sample["window_candidates"] = candidate_titles
                         sample["window_candidates_scores"] = [
                             c.score for c in retrieved
@@ -153,6 +156,7 @@ def add_candidates(
                         # c.label.split(" <def>", 1)[0] for c in retrieved
                         c.document.text for c in retrieved # TODO: add metadata if needed
                     ]
+                    sample["span_candidates"] = candidate_titles
                     sample["window_candidates"] = candidate_titles
                     sample["window_candidates_scores"] = [c.score for c in retrieved]
                     output_data.append(sample)

@@ -3,7 +3,7 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: relik-reader-deberta-base  # used to name the model in wandb and output dir
+model_name: relik-reader-deberta-base-retriever-relik-entity-linking-aida-wikipedia-base  # used to name the model in wandb and output dir
 project_name: relik-reader # used to name the project in wandb
 
 

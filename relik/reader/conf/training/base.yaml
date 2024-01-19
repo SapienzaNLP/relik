@@ -1,5 +1,7 @@
 seed: 94
 
+save_model_path: ""
+
 trainer:
   _target_: lightning.Trainer
   devices:
