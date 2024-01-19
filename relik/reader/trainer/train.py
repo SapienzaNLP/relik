@@ -1,3 +1,4 @@
+from pathlib import Path
 import hydra
 import lightning
 from hydra.utils import to_absolute_path
@@ -89,12 +90,13 @@ def train(cfg: DictConfig) -> None:
         val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=0),
     )
 
-    if cfg.training.save_model_path:
-        model = RelikReaderPLModule.load_from_checkpoint(
-            trainer.checkpoint_callback.best_model_path
-        )
-        model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
-        model.relik_reader_core_model.save_pretrained(cfg.training.save_model_path)
+    # if cfg.training.save_model_path:
+    experiment_path = Path(wandb_logger.experiment.dir)
+    model = RelikReaderPLModule.load_from_checkpoint(
+        trainer.checkpoint_callback.best_model_path
+    )
+    model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
+    model.relik_reader_core_model.save_pretrained(experiment_path / "hf_model")
 
 
 def main():

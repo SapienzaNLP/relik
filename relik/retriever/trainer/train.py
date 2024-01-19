@@ -26,8 +26,8 @@ from relik.retriever.callbacks.evaluation_callbacks import (
 )
 from relik.retriever.callbacks.prediction_callbacks import (
     GoldenRetrieverPredictionCallback,
-    NegativeAugmentationCallback,
 )
+from relik.retriever.callbacks.training_callbacks import NegativeAugmentationCallback
 from relik.retriever.callbacks.utils_callbacks import (
     FreeUpIndexerVRAMCallback,
     SavePredictionsCallback,

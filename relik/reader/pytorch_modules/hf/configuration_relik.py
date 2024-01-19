@@ -22,6 +22,7 @@ class RelikReaderConfig(PretrainedConfig):
         default_reader_class: Optional[str] = None,
         **kwargs
     ) -> None:
+        # TODO: add name_or_path to kwargs
         self.transformer_model = transformer_model
         self.additional_special_symbols = additional_special_symbols
         self.additional_special_symbols_types = additional_special_symbols_types

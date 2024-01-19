@@ -1,8 +1,8 @@
-train_dataset_path: "relik/reader/data/train.jsonl"
-val_dataset_path: "relik/reader/data/testa.jsonl"
+train_dataset_path: "/root/relik-sapienzanlp/data/reader/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder/train_windowed_candidates.jsonl"
+val_dataset_path: "/root/relik-sapienzanlp/data/reader/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder/testa_windowed_candidates.jsonl"
 
 train_dataset:
-  _target_: "relik.reader.relik_reader_data.RelikDataset"
+  _target_: "relik.reader.data.relik_reader_data.RelikDataset"
   transformer_model: "${model.model.transformer_model}"
   materialize_samples: False
   shuffle_candidates: 0.5
@@ -13,7 +13,7 @@ train_dataset:
   special_symbols: null
 
 val_dataset:
-  _target_: "relik.reader.relik_reader_data.RelikDataset"
+  _target_: "relik.reader.data.relik_reader_data.RelikDataset"
   transformer_model: "${model.model.transformer_model}"
   materialize_samples: False
   shuffle_candidates: False

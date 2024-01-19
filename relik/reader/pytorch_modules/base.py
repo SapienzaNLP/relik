@@ -9,6 +9,7 @@ from torch.utils.data import IterableDataset
 from transformers import AutoConfig
 
 from relik.common.log import get_logger
+
 # from relik.common.torch_utils import load_ort_optimized_hf_model
 from relik.common.utils import get_callable_from_string
 from relik.inference.data.objects import AnnotationType
@@ -76,7 +77,8 @@ class RelikReaderBase(torch.nn.Module):
         self.relik_reader_model = transformer_model
 
         self.relik_reader_model_config = self.relik_reader_model.config
-        self.name_or_path = self.relik_reader_model_config.name_or_path
+        # self.name_or_path = self.relik_reader_model_config.name_or_path
+        self.name_or_path = self.relik_reader_model.config.transformer_model
 
         # get the tokenizer
         self._tokenizer = tokenizer
@@ -220,7 +222,7 @@ class RelikReaderBase(torch.nn.Module):
             return self._tokenizer
 
         self._tokenizer = tr.AutoTokenizer.from_pretrained(
-            self.relik_reader_model.config.name_or_path
+            self.relik_reader_model.config.transformer_model
         )
         return self._tokenizer
 
