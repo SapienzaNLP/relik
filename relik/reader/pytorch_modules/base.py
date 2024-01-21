@@ -222,7 +222,7 @@ class RelikReaderBase(torch.nn.Module):
             return self._tokenizer
 
         self._tokenizer = tr.AutoTokenizer.from_pretrained(
-            self.relik_reader_model.config.transformer_model
+            self.relik_reader_model.config.name_or_path if "name_or_path" in self.relik_reader_model.config else self.relik_reader_model.config.transformer_model,
         )
         return self._tokenizer
 

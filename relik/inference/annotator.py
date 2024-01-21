@@ -320,6 +320,9 @@ class Relik:
             candidates (`list[str]`, `list[Document]`, `optional`, defaults to `None`):
                 The candidates to use for the reader. If `None`, the candidates will be
                 retrieved from the retriever.
+            mentions (`list[list[int]]` or `list[list[list[int]]]`, `optional`, defaults to `None`):
+                The mentions to use for the reader. If `None`, the mentions will be
+                predicted by the reader.
             top_k (`int`, `optional`, defaults to `None`):
                 The number of candidates to retrieve for each window.
             window_size (`int`, `optional`, defaults to `None`):
@@ -368,7 +371,8 @@ class Relik:
         if text:
             if isinstance(text, str):
                 text = [text]
-
+                if mentions is not None:
+                    mentions = [mentions]
             if file_logger is not None:
                 file_logger.info("Annotating the following text:")
                 for t in text:

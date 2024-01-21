@@ -197,6 +197,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                 with get_autocast_context(self.device, precision):
                     for batch in iterator:
                         batch = move_data_to_device(batch, self.device)
+                        batch.update(kwargs)
                         batch_out = self._batch_predict(**batch)
 
                         for sample in batch_out:
@@ -286,6 +287,8 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
             token_type_ids=token_type_ids,
             prediction_mask=prediction_mask,
             special_symbols_mask=special_symbols_mask,
+            *args,
+            **kwargs,
         )
 
         ned_start_predictions = forward_output["ned_start_predictions"].cpu().numpy()
