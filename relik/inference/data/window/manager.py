@@ -20,8 +20,9 @@ class WindowManager:
         documents: str | List[str],
         window_size: int | None = None,
         stride: int | None = None,
-        max_length: Optional[int] = None,
-        doc_topic: str = None,
+        max_length: int | None = None,
+        doc_id: str | int | None = None,
+        doc_topic: str | None = None,
         is_split_into_words: bool = False,
         mentions: List[List[List[int]]] = None,
     ) -> Tuple[List[RelikReaderSample], List[RelikReaderSample]]:
@@ -37,6 +38,8 @@ class WindowManager:
                 The stride between two windows.
             max_length (:obj:`int`, `optional`):
                 The maximum length of a window.
+            doc_id (:obj:`str` or :obj:`int`, `optional`):
+                The id of the document(s).
             doc_topic (:obj:`str`, `optional`):
                 The topic of the document(s).
             is_split_into_words (:obj:`bool`, `optional`, defaults to :obj:`False`):
@@ -73,11 +76,14 @@ class WindowManager:
         else:
             doc_iter = zip(documents, documents_tokens, itertools.repeat([]))
 
-        for doc_id, (document, document_tokens, document_mentions) in enumerate(
+        for infered_doc_id, (document, document_tokens, document_mentions) in enumerate(
             doc_iter
         ):
             if doc_topic is None:
                 doc_topic = document_tokens[0] if len(document_tokens) > 0 else ""
+
+            if doc_id is None:
+                doc_id = infered_doc_id
 
             splitted_document = self.splitter(document_tokens, max_length=max_length)
 
@@ -100,7 +106,7 @@ class WindowManager:
                     doc_topic=doc_topic,
                     offset=window_text_start,
                     spans=[
-                        [m[0], m[1]] for m in document_mentions 
+                        [m[0], m[1]] for m in document_mentions
                         if window_text_end > m[0] >= window_text_start and window_text_end >= m[1] >= window_text_start
                     ],
                     token2char_start={str(i): w.idx for i, w in enumerate(window)},

@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+from pathlib import Path
 import re
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -212,12 +213,19 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
 
+    responses_log_dir = Path(args.responses_log_dir)
+    responses_log_dir.mkdir(parents=True, exist_ok=True)
+
     # init manager
     manager.response_logger_dir = args.responses_log_dir
     manager.annotator = Relik.from_pretrained(
         args.relik_model_name,
         device="cuda",
+        # document_index_device="cpu",
+        # document_index_precision="fp32",
+        # reader_device="cpu",
         precision="fp16",  # , reader_device="cpu", reader_precision="fp32"
+        dataset_kwargs={"use_nme": True}
     )
 
     # print("Debugging, not using you relik model but an hardcoded one.")

@@ -142,7 +142,12 @@ class BaseDocumentIndex:
                 self.embeddings = self.embeddings.to(device_or_precision)
                 self.embeddings = self.embeddings.to(previous_device)
             else:
-                self.embeddings = self.embeddings.to(device_or_precision)
+                if isinstance(device_or_precision, torch.device):
+                    self.embeddings = self.embeddings.to(device_or_precision)
+                else:
+                    if device_or_precision != self.embeddings.dtype and self.device != "cpu":
+                        self.embeddings = self.embeddings.to(device_or_precision)
+                # self.embeddings = self.embeddings.to(device_or_precision)
         return self
 
     @property

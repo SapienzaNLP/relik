@@ -17,6 +17,7 @@ from relik.reader.pytorch_modules.hf.modeling_relik import (
     RelikReaderConfig,
     RelikReaderSample,
 )
+from relik.retriever.pytorch_modules import PRECISION_MAP
 
 logger = get_logger(__name__, level=logging.INFO)
 
@@ -91,6 +92,7 @@ class RelikReaderBase(torch.nn.Module):
 
         # set the precision
         self.precision = precision
+        self.to(PRECISION_MAP[precision])
 
     def forward(self, **kwargs) -> Dict[str, Any]:
         return self.relik_reader_model(**kwargs)

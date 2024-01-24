@@ -220,7 +220,7 @@ class Relik:
             if reader_device is not None:
                 logger.info(f"Moving reader to `{reader_device}`.")
                 reader.to(reader_device)
-            if reader_precision is not None:
+            if reader_precision is not None and reader.precision != PRECISION_MAP[reader_precision]:
                 logger.info(
                     f"Setting precision of reader to `{PRECISION_MAP[reader_precision]}`."
                 )

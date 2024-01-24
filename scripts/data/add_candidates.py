@@ -125,8 +125,10 @@ def add_candidates(
                         retrieved_accumulator,
                     ):
                         candidate_titles = [
+                            # c.label.split(" <def>", 1)[0] for c in retrieved
                             c.document.text for c in retrieved # TODO: add metadata if needed
                         ]
+                        # TODO: compatibility shit
                         sample["span_candidates"] = candidate_titles
                         sample["window_candidates"] = candidate_titles
                         sample["window_candidates_scores"] = [
@@ -156,6 +158,7 @@ def add_candidates(
                         # c.label.split(" <def>", 1)[0] for c in retrieved
                         c.document.text for c in retrieved # TODO: add metadata if needed
                     ]
+                    # TODO: compatibility shit
                     sample["span_candidates"] = candidate_titles
                     sample["window_candidates"] = candidate_titles
                     sample["window_candidates_scores"] = [c.score for c in retrieved]
