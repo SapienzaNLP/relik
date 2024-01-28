@@ -62,7 +62,7 @@ class Triples(NamedTuple):
     subject: Span
     label: str
     object: Span
-
+    confidence: float
 
 @dataclass
 class RelikOutput:

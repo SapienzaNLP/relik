@@ -126,7 +126,10 @@ class WindowManager:
                     document_windows.append(sample)
 
             windowed_documents.extend(document_windows)
-        return windowed_documents, windowed_blank_documents
+        if mentions is not None:
+            return windowed_documents, windowed_blank_documents
+        else:
+            return windowed_documents
 
     def merge_windows(
         self, windows: List[RelikReaderSample]

@@ -409,6 +409,9 @@ class Relik:
                 is_split_into_words=is_split_into_words,
                 mentions=mentions
             )
+        else:
+            blank_windows = []
+            text = {w.doc_id: w.text for w in windows}
 
         if candidates is not None and any(
             r is not None for r in self.retriever.values()
@@ -451,7 +454,7 @@ class Relik:
             for task_type, retriever in self.retriever.items():
                 retriever_out = retriever.retrieve(
                     [w.text for w in windows],
-                    text_pair=[w.doc_topic.text for w in windows],
+                    text_pair=[w.doc_topic.text if w.doc_topic is not None else None for w in windows],
                     k=top_k,
                     batch_size=retriever_batch_size,
                     progress_bar=progress_bar,
@@ -499,12 +502,16 @@ class Relik:
             logger.info(f"Reading took {end_read - start_read} seconds.")
             # TODO: check merging behavior without a reader
             # do we want to merge windows if there is no reader?
-            start_w = time.time()
-            windows = windows + blank_windows
-            windows.sort(key=lambda x: (x.doc_id, x.offset))
-            merged_windows = self.window_manager.merge_windows(windows)
-            end_w = time.time()
-            logger.info(f"Merging took {end_w - start_w} seconds.")
+
+            if self.window_size is not None and self.window_size not in ["sentence", "none"]:
+                start_w = time.time()
+                windows = windows + blank_windows
+                windows.sort(key=lambda x: (x.doc_id, x.offset))
+                merged_windows = self.window_manager.merge_windows(windows)
+                end_w = time.time()
+                logger.info(f"Merging took {end_w - start_w} seconds.")
+            else:
+                merged_windows = windows
         else:
             windows = windows + blank_windows
             windows.sort(key=lambda x: (x.doc_id, x.offset))
