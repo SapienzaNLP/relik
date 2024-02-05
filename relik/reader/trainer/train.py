@@ -74,7 +74,9 @@ def train(cfg: DictConfig) -> None:
         LearningRateMonitor(),
     ]
 
-    wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
+    wandb_logger = WandbLogger(
+        cfg.model_name, project=cfg.project_name, offline=cfg.offline
+    )
 
     # trainer declaration
     trainer: Trainer = hydra.utils.instantiate(
