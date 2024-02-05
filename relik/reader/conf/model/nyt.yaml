@@ -1,0 +1,22 @@
+model:
+  transformer_model: "microsoft/deberta-v3-large"
+
+optimizer:
+  lr: 
+    - 0.0001
+    - 0.00002
+  warmup_steps: 500
+  total_steps: ${training.trainer.max_steps}
+  total_reset: 1
+  weight_decay: 0.01
+  lr_decay: 0.9
+  no_decay_params:
+    - "bias"
+    - LayerNorm.weight    
+  other_lr_params:
+    - "re_subject_projector"
+    - "re_object_projector"
+    - "re_relation_projector"
+    - "re_classifier"
+relations_per_forward: 24
+entities_per_forward: 

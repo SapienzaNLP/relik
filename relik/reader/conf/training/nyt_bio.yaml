@@ -1,12 +1,15 @@
-seed: 94
+seed: 15
 
 trainer:
   _target_: lightning.Trainer
   devices:
     - 0
   precision: "16-mixed"
-  max_steps: 50000
+  max_steps: 25000
   val_check_interval: 1.0
   num_sanity_val_steps: 0
   limit_val_batches: 1
   gradient_clip_val: 1.0
+
+save_model_path: /root/relik-sapienzanlp/models/${model_name}-${now:%Y-%m-%d-%H-%M-%S}
+ckpt_path:

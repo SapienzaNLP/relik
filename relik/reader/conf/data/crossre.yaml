@@ -1,0 +1,36 @@
+train_dataset_path: "data/reader/crossre/train.swapped.candidates.jsonl"
+val_dataset_path: "data/reader/crossre/dev.swapped.candidates.jsonl"
+test_dataset_path: "data/reader/crossre/test.swapped.candidates.jsonl"
+
+train_dataset:
+  _target_: "relik.reader.data.relik_reader_re_data.RelikREDataset"
+  transformer_model: "${model.model.transformer_model}"
+  materialize_samples: False
+  shuffle_candidates: False
+  flip_candidates: 1.0
+  noise_param: 0.0
+  for_inference: False
+  tokens_per_batch: 4096
+  max_length: 1024
+  max_triplets: 8
+  max_spans:
+  min_length: -1
+  special_symbols: null
+  special_symbols_types: null
+  section_size: 1000000
+  use_nme: False
+  sorting_fields: 
+    - "predictable_candidates"
+val_dataset:
+  _target_: "relik.reader.data.relik_reader_re_data.RelikREDataset"
+  transformer_model: "${model.model.transformer_model}"
+  materialize_samples: False
+  shuffle_candidates: False
+  flip_candidates: False
+  for_inference: True
+  use_nme: False
+  max_triplets: 8
+  max_spans:
+  min_length: -1
+  special_symbols: null
+  special_symbols_types: null

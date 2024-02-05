@@ -1,0 +1,14 @@
+model:
+  transformer_model: "/root/relik-sapienzanlp/models/relik-reader-deberta-small-retriever-relik-e5-small-hierarchy-top8-balanced-2024-02-01-06-43-07-{val_f1:.2f}/relik-reader-deberta-small-retriever-relik-e5-small-hierarchy-top8-balanced-2024-02-01-06-43-07-{val_f1:.2f}/"
+
+optimizer:
+  lr: 0.00005
+  warmup_steps: 2500
+  total_steps: ${training.trainer.max_steps}
+  weight_decay: 0.01
+  no_decay_params:
+    - "bias"
+    - LayerNorm.weight
+
+relations_per_forward: 12
+entities_per_forward: 

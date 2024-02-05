@@ -7,7 +7,7 @@ optimizer:
   total_steps: ${training.trainer.max_steps}
   total_reset: 1
   weight_decay: 0.0
-  lr_decay: 0.8
+  lr_decay: 0.9
   no_decay_params:
     - "bias"
     - LayerNorm.weight
