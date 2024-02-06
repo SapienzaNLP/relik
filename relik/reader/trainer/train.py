@@ -1,4 +1,5 @@
 from pathlib import Path
+from pprint import pprint
 import hydra
 import lightning
 from hydra.utils import to_absolute_path
@@ -6,6 +7,7 @@ from lightning import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf, open_dict
+import torch
 from torch.utils.data import DataLoader
 
 from relik.reader.data.relik_reader_data import RelikDataset
@@ -17,10 +19,16 @@ from relik.reader.utils.strong_matching_eval import ELStrongMatchingCallback
 
 @hydra.main(config_path="../conf", config_name="config")
 def train(cfg: DictConfig) -> None:
+    
     lightning.seed_everything(cfg.training.seed)
+    # check if deterministic algorithms are available
+    # torch.use_deterministic_algorithms(True, warn_only=True)
+
+    # log the configuration
+    pprint(OmegaConf.to_container(cfg, resolve=True))
 
     special_symbols = get_special_symbols(cfg.model.entities_per_forward)
-
+    
     # model declaration
     model = RelikReaderPLModule(
         cfg=OmegaConf.to_container(cfg),

@@ -557,9 +557,11 @@ class RelikDataset(IterableDataset):
 
                     # sample update
                     sample.window_labels = [
-                        (s, e, _l)
-                        if _l not in dropped_candidates
-                        else (s, e, NME_SYMBOL)
+                        (
+                            (s, e, _l)
+                            if _l not in dropped_candidates
+                            else (s, e, NME_SYMBOL)
+                        )
                         for s, e, _l in sample.window_labels
                     ]
                     remaining_candidates = [
@@ -582,9 +584,9 @@ class RelikDataset(IterableDataset):
                 sample_bag = self.produce_sample_bag(
                     sample,
                     predictable_candidates=remaining_candidates,
-                    candidates_starting_offset=used_candidates
-                    if used_candidates is not None
-                    else 0,
+                    candidates_starting_offset=(
+                        used_candidates if used_candidates is not None else 0
+                    ),
                 )
                 if sample_bag is not None:
                     sample_bag, remaining_candidates, used_candidates = sample_bag
@@ -625,14 +627,15 @@ class RelikDataset(IterableDataset):
         if not self.for_inference:
             dataset_elements = np.random.permutation(dataset_elements)
 
-        sorting_fn = (
-            lambda elem: add_noise_to_value(
-                sum(len(elem[k]) for k in self.sorting_fields),
-                noise_param=self.noise_param,
+        def sorting_fn(elem):
+            return (
+                add_noise_to_value(
+                    sum(len(elem[k]) for k in self.sorting_fields),
+                    noise_param=self.noise_param,
+                )
+                if not self.for_inference
+                else sum(len(elem[k]) for k in self.sorting_fields)
             )
-            if not self.for_inference
-            else sum(len(elem[k]) for k in self.sorting_fields)
-        )
 
         dataset_elements = sorted(dataset_elements, key=sorting_fn)
 
@@ -834,6 +837,8 @@ class RelikDataset(IterableDataset):
         ), candidates_probs in sample.span_title_probabilities.items():
             span_start = sample.token2char_start[str(span_start)]
             span_end = sample.token2char_end[str(span_end)]
+            # TODO: which one is kept if there are multiple candidates with same title?
+            # and where is the order?
             char_probs_annotations[(span_start, span_end)] = {
                 title for title, _ in candidates_probs
             }
