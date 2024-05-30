@@ -60,7 +60,7 @@ class RelikReaderBase(torch.nn.Module):
             )
             if "relik-reader" in config.model_type:
                 transformer_model = self.default_reader_class.from_pretrained(
-                    transformer_model, config=config, **kwargs
+                    transformer_model, config=config, ignore_mismatched_sizes=True, trust_remote_code=True, **kwargs, 
                 )
             else:
                 reader_config = RelikReaderConfig(

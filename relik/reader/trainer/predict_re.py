@@ -9,6 +9,7 @@ from relik.reader.pytorch_modules.hf.modeling_relik import (
 )
 from relik.reader.pytorch_modules.triplet import RelikReaderForTripletExtraction
 from relik.reader.utils.relation_matching_eval import StrongMatching
+from relik.inference.data.objects import AnnotationType
 
 
 def eval(model_path, data_path, is_eval, output_path=None):
@@ -45,14 +46,14 @@ def eval(model_path, data_path, is_eval, output_path=None):
         )
     else:
         # if it is a huggingface model we load the model directly. Note that it could even be a string from the hub
-        model = RelikReaderREModel.from_pretrained(model_path)
+        model = RelikReaderREModel.from_pretrained(model_path, ignore_mismatched_sizes=True)
         reader = RelikReaderForTripletExtraction(
             model, training=False, device="cuda"
         )  # , dataset_kwargs={"use_nme": True}) if we want to use NME
 
     samples = list(load_relik_reader_samples(data_path))
 
-    predicted_samples = reader.read(samples=samples, progress_bar=True)
+    predicted_samples = reader.read(samples=samples, progress_bar=True, annotation_type=AnnotationType.WORD)
     if is_eval:
         strong_matching_metric = StrongMatching()
         predicted_samples = list(predicted_samples)

@@ -70,7 +70,7 @@ class RelikOutput:
     tokens: List[str]
     spans: List[Span]
     triples: List[Triples]
-    candidates: Dict[TaskType, List[Document]]
+    candidates: Dict[TaskType, List[Document]] = None
     windows: Optional[List[RelikReaderSample]] = None
 
 

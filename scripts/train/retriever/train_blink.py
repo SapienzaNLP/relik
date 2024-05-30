@@ -65,7 +65,7 @@ if __name__ == "__main__":
         max_steps=400_000,
         wandb_online_mode=True,
         wandb_project_name="relik-retriever-blink",
-        wandb_experiment_name="blink-first1M-e5-base-topics",
+        wandb_experiment_name="blink-first1M-e5-base-topics-recheck",
         max_hard_negatives_to_mine=15,
         mine_hard_negatives_with_probability=0.2,
         save_last=True,

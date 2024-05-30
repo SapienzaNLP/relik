@@ -401,14 +401,24 @@ class Relik:
                 )
 
         if windows is None:
+            # TODO: make it more consistent (no tuples or single elements in output)
             # windows were provided, use them
-            windows, blank_windows = self.window_manager.create_windows(
-                text,
-                window_size,
-                window_stride,
-                is_split_into_words=is_split_into_words,
-                mentions=mentions
-            )
+            if mentions is not None:
+                windows, blank_windows = self.window_manager.create_windows(
+                    text,
+                    window_size,
+                    window_stride,
+                    is_split_into_words=is_split_into_words,
+                    mentions=mentions
+                )
+            else:
+                blank_windows = []
+                windows = self.window_manager.create_windows(
+                    text,
+                    window_size,
+                    window_stride,
+                    is_split_into_words=is_split_into_words,
+                )
         else:
             blank_windows = []
             text = {w.doc_id: w.text for w in windows}
@@ -550,14 +560,14 @@ class Relik:
                 tokens=w.words,
                 spans=span_labels,
                 triples=triples_labels,
-                candidates={
-                    task_type: [
-                        r.document_index.documents.get_document_from_text(c)
-                        for c in getattr(w, f"{task_type.value}_candidates", [])
-                        if r.document_index.documents.get_document_from_text(c) is not None
-                    ]
-                    for task_type, r in self.retriever.items()
-                },
+                # candidates={
+                #     task_type: [
+                #         r.document_index.documents.get_document_from_text(c)
+                #         for c in getattr(w, f"{task_type.value}_candidates", [])
+                #         if r.document_index.documents.get_document_from_text(c) is not None
+                #     ]
+                #     for task_type, r in self.retriever.items()
+                # },
             )
             output.append(sample_output)
 

@@ -8,6 +8,8 @@ from transformers.modeling_utils import PoolerEndLogits
 
 from .configuration_relik import RelikReaderConfig
 
+torch.set_float32_matmul_precision("medium")
+
 class RelikReaderSample:
     def __init__(self, **kwargs):
         super().__setattr__("_d", {})

@@ -1,4 +1,5 @@
 import hydra
+from pathlib import Path
 import lightning
 from hydra.utils import to_absolute_path
 from lightning import Trainer
@@ -17,7 +18,7 @@ from relik.reader.pytorch_modules.optim import (
 )
 from relik.reader.utils.relation_matching_eval import REStrongMatchingCallback
 from relik.reader.utils.special_symbols import get_special_symbols_re
-
+import wandb
 
 @hydra.main(config_path="../conf", config_name="config")
 def train(cfg: DictConfig) -> None:
@@ -88,7 +89,7 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
-
+    ***REMOVED***
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
 
     # trainer declaration
@@ -107,13 +108,15 @@ def train(cfg: DictConfig) -> None:
     )
 
     # Load best checkpoint
-    if cfg.training.save_model_path:
+    if True:
         model = RelikReaderREPLModule.load_from_checkpoint(
             trainer.checkpoint_callback.best_model_path
         )
+        # model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
+        # model.relik_reader_re_model.save_pretrained(cfg.training.save_model_path)
+        experiment_path = Path(wandb_logger.experiment.dir)
         model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
-        model.relik_reader_re_model.save_pretrained(cfg.training.save_model_path)
-
+        model.relik_reader_re_model.save_pretrained(experiment_path / "hf_model")
 
 def main():
     train()
