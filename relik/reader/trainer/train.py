@@ -106,7 +106,7 @@ def train(cfg: DictConfig) -> None:
         trainer.checkpoint_callback.best_model_path
     )
     model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
-    model.relik_reader_core_model.save_pretrained(experiment_path / "hf_model")
+    model.relik_reader_core_model.save_pretrained(experiment_path)
 
 
 def main():

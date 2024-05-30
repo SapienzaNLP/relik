@@ -11,6 +11,7 @@ train_dataset:
   for_inference: False
   tokens_per_batch: 2048
   special_symbols: null
+  # lowercase_policy: 0.1
 
 val_dataset:
   _target_: "relik.reader.data.relik_reader_data.RelikDataset"

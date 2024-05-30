@@ -20,16 +20,17 @@ logger = get_logger(level=logging.INFO)
 def compute_retriever_stats(dataset, top_k) -> None:
     correct, total = 0, 0
     for sample in dataset:
-        window_candidates = sample["span_candidates"]
+        window_candidates = sample["triplet_candidates"]
         window_candidates = [c.replace("_", " ").lower() for c in window_candidates]
 
-        for ss, se, label in sample["window_labels"]:
+        for triplet in sample["triplets"]:
+            label = triplet["relation"]["name"]
             if label == "--NME--":
                 continue
             if label.replace("_", " ").lower() in window_candidates:
                 correct += 1
             else:
-                logger.debug(f"Did not find `{label.replace('_', ' ').lower()}` in candidates")
+                logger.info(f"Did not find `{label}` in candidates")
             total += 1
 
     recall = correct / total
@@ -63,7 +64,7 @@ def add_candidates(
     retriever.eval()
 
     logger.info(f"Loading from {input_path}")
-    with open(input_path) as f:
+    with open(input_path, "r") as f:
         samples = [json.loads(line) for line in f.readlines()]
 
     if topics and "doc_topic" not in samples[0]:
@@ -72,9 +73,6 @@ def add_candidates(
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    total_samples = 0
-
     with open(output_path, "w") as f_out:
         # get tokenizer
         tokenizer = retriever.question_tokenizer
@@ -132,9 +130,8 @@ def add_candidates(
                             c.document.text for c in retrieved # TODO: add metadata if needed
                         ]
                         # TODO: compatibility shit
-                        sample["span_candidates"] = candidate_titles
-                        sample["window_candidates"] = candidate_titles
-                        sample["window_candidates_scores"] = [
+                        sample["triplet_candidates"] = candidate_titles
+                        sample["triplet_candidates_scores"] = [
                             c.score for c in retrieved
                         ]
                         output_data.append(sample)
@@ -162,9 +159,8 @@ def add_candidates(
                         c.document.text for c in retrieved # TODO: add metadata if needed
                     ]
                     # TODO: compatibility shit
-                    sample["span_candidates"] = candidate_titles
-                    sample["window_candidates"] = candidate_titles
-                    sample["window_candidates_scores"] = [c.score for c in retrieved]
+                    sample["triplet_candidates"] = candidate_titles
+                    sample["triplet_candidates_scores"] = [c.score for c in retrieved]
                     output_data.append(sample)
 
                 for sample in output_data:

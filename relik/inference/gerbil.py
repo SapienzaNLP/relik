@@ -32,7 +32,7 @@ class GerbilAlbyManager:
 
     def annotate(self, document: str):
         relik_output: RelikOutput = self.annotator(
-            document, retriever_batch_size=2, reader_batch_size=1
+            document,# retriever_batch_size=2, reader_batch_size=1
         )
         annotations = [(ss, se, l) for ss, se, l, _ in relik_output.spans]
         if self.labels_mapping is not None:

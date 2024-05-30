@@ -3,12 +3,12 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: relik-reader-deberta-large-retriever-relik-entity-linking-aida-wikipedia  # -start-end-mask-0.001  # used to name the model in wandb and output dir
+model_name: relik-reader-deberta-large-29052024-lrd09-8x2048-onelayer # no-proj-special-token  # -start-end-mask-0.001  # used to name the model in wandb and output dir
 project_name: relik-reader # used to name the project in wandb
 offline: false  # if true, wandb will not be used
 
 defaults:
   - _self_
-  - training: base
-  - model: base
-  - data: base
+  - training: large
+  - model: large
+  - data: large

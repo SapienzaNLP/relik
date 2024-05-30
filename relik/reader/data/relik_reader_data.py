@@ -839,9 +839,7 @@ class RelikDataset(IterableDataset):
             span_end = sample.token2char_end[str(span_end)]
             # TODO: which one is kept if there are multiple candidates with same title?
             # and where is the order?
-            char_probs_annotations[(span_start, span_end)] = {
-                title for title, _ in candidates_probs
-            }
+            char_probs_annotations[(span_start, span_end)] = candidates_probs
 
         sample.predicted_window_labels_chars = char_annotations
         sample.probs_window_labels_chars = char_probs_annotations
