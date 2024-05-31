@@ -7,6 +7,7 @@ from lightning import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers.wandb import WandbLogger
 from omegaconf import DictConfig, OmegaConf, open_dict
+import omegaconf
 import torch
 from torch.utils.data import DataLoader
 
@@ -17,9 +18,8 @@ from relik.reader.utils.special_symbols import get_special_symbols
 from relik.reader.utils.strong_matching_eval import ELStrongMatchingCallback
 
 
-@hydra.main(config_path="../conf", config_name="config")
 def train(cfg: DictConfig) -> None:
-    
+
     lightning.seed_everything(cfg.training.seed)
     # check if deterministic algorithms are available
     # torch.use_deterministic_algorithms(True, warn_only=True)
@@ -28,7 +28,7 @@ def train(cfg: DictConfig) -> None:
     pprint(OmegaConf.to_container(cfg, resolve=True))
 
     special_symbols = get_special_symbols(cfg.model.entities_per_forward)
-    
+
     # model declaration
     model = RelikReaderPLModule(
         cfg=OmegaConf.to_container(cfg),
@@ -109,8 +109,9 @@ def train(cfg: DictConfig) -> None:
     model.relik_reader_core_model.save_pretrained(experiment_path)
 
 
-def main():
-    train()
+@hydra.main(config_path="../conf", config_name="config", version_base="1.3")
+def main(conf: omegaconf.DictConfig):
+    train(conf)
 
 
 if __name__ == "__main__":

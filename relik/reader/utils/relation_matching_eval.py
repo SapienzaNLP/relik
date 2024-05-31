@@ -6,7 +6,7 @@ from lightning.pytorch.callbacks import Callback
 
 from relik.reader.data.relik_reader_re_data import RelikREDataset
 from relik.reader.data.relik_reader_sample import RelikReaderSample
-from relik.reader.relik_reader_predictor import RelikReaderPredictor
+from relik.reader.utils.relik_reader_predictor import RelikReaderPredictor
 from relik.reader.utils.metrics import compute_metrics
 
 

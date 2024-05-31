@@ -89,7 +89,6 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
-    ***REMOVED***
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
 
     # trainer declaration

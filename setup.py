@@ -132,4 +132,7 @@ setuptools.setup(
     extras_require=extras,
     python_requires=">=3.10",
     find_links=find_links,
+    entry_points={
+        "console_scripts": ["relik = relik.cli.cli:app"],
+    },
 )

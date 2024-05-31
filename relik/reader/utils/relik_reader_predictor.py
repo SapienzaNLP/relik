@@ -12,7 +12,7 @@ from relik.reader.data.relik_reader_sample import (
     RelikReaderSample,
     load_relik_reader_samples,
 )
-from relik.reader.relik_reader_core import RelikReaderCoreModel
+from relik.reader.pytorch_modules.base import RelikReaderBase
 from relik.reader.utils.special_symbols import NME_SYMBOL
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def convert_tokens_to_char_annotations(
 class RelikReaderPredictor:
     def __init__(
         self,
-        relik_reader_core: RelikReaderCoreModel,
+        relik_reader_core: RelikReaderBase,
         dataset_conf: Optional[dict] = None,
         predict_nmes: bool = False,
         dataloader: Optional[DataLoader] = None,

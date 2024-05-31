@@ -8,6 +8,7 @@ from transformers.modeling_utils import PoolerEndLogits
 
 from .configuration_relik import RelikReaderConfig
 
+
 class RelikReaderSample:
     def __init__(self, **kwargs):
         super().__setattr__("_d", {})
@@ -79,8 +80,7 @@ class RelikReaderSpanModel(PreTrainedModel):
         )
         self.transformer_model.resize_token_embeddings(
             self.transformer_model.config.vocab_size
-            + self.config.additional_special_symbols,
-            pad_to_multiple_of=8,
+            + self.config.additional_special_symbols
         )
 
         self.activation = self.config.activation
@@ -94,7 +94,8 @@ class RelikReaderSpanModel(PreTrainedModel):
         self.ned_end_classifier = PoolerEndLogits(self.transformer_model.config)
 
         # END entity disambiguation layer
-        self.ed_projector = self._get_projection_layer(self.activation, last_hidden = 2*self.linears_hidden_size, hidden=2*self.linears_hidden_size)
+        self.ed_start_projector = self._get_projection_layer(self.activation)
+        self.ed_end_projector = self._get_projection_layer(self.activation)
 
         self.training = self.config.training
 
@@ -105,7 +106,6 @@ class RelikReaderSpanModel(PreTrainedModel):
         self,
         activation: str,
         last_hidden: Optional[int] = None,
-        hidden: Optional[int] = None,
         input_hidden=None,
         layer_norm: bool = True,
     ) -> torch.nn.Sequential:
@@ -117,12 +117,12 @@ class RelikReaderSpanModel(PreTrainedModel):
                     if input_hidden is None
                     else input_hidden
                 ),
-                self.linears_hidden_size if hidden is None else hidden,
+                self.linears_hidden_size,
             ),
             activation2functions[activation],
             torch.nn.Dropout(0.1),
             torch.nn.Linear(
-                self.linears_hidden_size if hidden is None else hidden,
+                self.linears_hidden_size,
                 self.linears_hidden_size if last_hidden is None else last_hidden,
             ),
         ]
@@ -219,12 +219,13 @@ class RelikReaderSpanModel(PreTrainedModel):
             start_positions = torch.zeros_like(prediction_mask)
             end_positions = torch.zeros_like(prediction_mask)
 
+        model_start_features = self.ed_start_projector(model_features)
+        model_end_features = self.ed_end_projector(model_features)
+        model_end_features[start_positions > 0] = model_end_features[end_positions > 0]
 
-        model_ed_features = self.ed_projector(model_features)
-
-        model_ed_features[start_positions > 0][:, model_ed_features.shape[-1] // 2:] = model_ed_features[end_positions > 0][
-            :, :model_ed_features.shape[-1] // 2
-        ]
+        model_ed_features = torch.cat(
+            [model_start_features, model_end_features], dim=-1
+        )
 
         # computing ed features
         classes_representations = torch.sum(special_symbols_mask, dim=1)[0].item()
@@ -320,40 +321,20 @@ class RelikReaderSpanModel(PreTrainedModel):
             # flattening end predictions
             #   (flattening can happen only if the
             #   end boundaries were not predicted using the gold labels)
-            if not self.training and ned_end_logits is not None:
-                flattened_end_predictions = torch.zeros_like(ned_start_predictions)
+            if not self.training:
+                flattened_end_predictions = torch.clone(ned_start_predictions)
+                flattened_end_predictions[flattened_end_predictions > 0] = 0
 
-                row_indices, start_positions = torch.where(ned_start_predictions > 0)
-                ned_end_predictions[ned_end_predictions < start_positions] = (
-                    start_positions[ned_end_predictions < start_positions]
-                )
+                batch_start_predictions = list()
+                for elem_idx in range(batch_size):
+                    batch_start_predictions.append(
+                        torch.where(ned_start_predictions[elem_idx] > 0)[0].tolist()
+                    )
 
-                end_spans_repeated = (row_indices + 1) * seq_len + ned_end_predictions
-                cummax_values, _ = end_spans_repeated.cummax(dim=0)
-
-                end_spans_repeated = end_spans_repeated > torch.cat(
-                    (end_spans_repeated[:1], cummax_values[:-1])
-                )
-                end_spans_repeated[0] = True
-
-                ned_start_predictions[
-                    row_indices[~end_spans_repeated],
-                    start_positions[~end_spans_repeated],
-                ] = 0
-
-                row_indices, start_positions, ned_end_predictions = (
-                    row_indices[end_spans_repeated],
-                    start_positions[end_spans_repeated],
-                    ned_end_predictions[end_spans_repeated],
-                )
-
-                flattened_end_predictions[row_indices, ned_end_predictions] = 1
-
-                total_start_predictions, total_end_predictions = (
-                    ned_start_predictions.sum(),
-                    flattened_end_predictions.sum(),
-                )
-
+                # check that the total number of start predictions
+                # is equal to the end predictions
+                total_start_predictions = sum(map(len, batch_start_predictions))
+                total_end_predictions = len(ned_end_predictions)
                 assert (
                     total_start_predictions == 0
                     or total_start_predictions == total_end_predictions
@@ -361,9 +342,23 @@ class RelikReaderSpanModel(PreTrainedModel):
                     f"Total number of start predictions = {total_start_predictions}. "
                     f"Total number of end predictions = {total_end_predictions}"
                 )
+
+                curr_end_pred_num = 0
+                for elem_idx, bsp in enumerate(batch_start_predictions):
+                    for sp in bsp:
+                        ep = ned_end_predictions[curr_end_pred_num].item()
+                        if ep < sp:
+                            ep = sp
+
+                        # if we already set this span throw it (no overlap)
+                        if flattened_end_predictions[elem_idx, ep] == 1:
+                            ned_start_predictions[elem_idx, sp] = 0
+                        else:
+                            flattened_end_predictions[elem_idx, ep] = 1
+
+                        curr_end_pred_num += 1
+
                 ned_end_predictions = flattened_end_predictions
-            else:
-                ned_end_predictions = torch.zeros_like(ned_start_predictions)
 
         start_position, end_position = (
             (start_labels, end_labels)
@@ -466,8 +461,7 @@ class RelikReaderREModel(PreTrainedModel):
         self.transformer_model.resize_token_embeddings(
             self.transformer_model.config.vocab_size
             + config.additional_special_symbols
-            + config.additional_special_symbols_types,
-            pad_to_multiple_of=8,
+            + config.additional_special_symbols_types
         )
 
         # named entity detection layers
@@ -987,11 +981,8 @@ class RelikReaderREModel(PreTrainedModel):
                 ) / 4
                 output_dict["ned_type_loss"] = ned_type_loss
             else:
-                # output_dict["loss"] = ((1 / 4) * (ned_start_loss + ned_end_loss)) + (
-                #     (1 / 2) * relation_loss
-                # )
-                output_dict["loss"] = ((1 / 16) * (ned_start_loss + ned_end_loss)) + (
-                    (7 / 8) * relation_loss
+                output_dict["loss"] = ((1 / 4) * (ned_start_loss + ned_end_loss)) + (
+                    (1 / 2) * relation_loss
                 )
 
             output_dict["ned_start_loss"] = ned_start_loss

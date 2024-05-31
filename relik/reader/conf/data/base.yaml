@@ -1,5 +1,5 @@
-train_dataset_path: "/root/relik-sapienzanlp/data/reader/aida-e5-base-topics-from-blink-1M-32words-windows/train_windowed_candidates.jsonl"
-val_dataset_path: "/root/relik-sapienzanlp/data/reader/aida-e5-base-topics-from-blink-1M-32words-windows/testa_windowed_candidates.jsonl"
+train_dataset_path: "/root/relik-sapienzanlp/data/reader/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder/train_windowed_candidates.jsonl"
+val_dataset_path: "/root/relik-sapienzanlp/data/reader/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder/testa_windowed_candidates.jsonl"
 
 train_dataset:
   _target_: "relik.reader.data.relik_reader_data.RelikDataset"

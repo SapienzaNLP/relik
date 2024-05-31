@@ -3,7 +3,6 @@ from typing import Any, Optional
 import lightning
 from lightning.pytorch.utilities.types import STEP_OUTPUT, OptimizerLRScheduler
 
-# from relik.reader.relik_reader_core import RelikReaderCoreModel
 from relik.reader.pytorch_modules.span import RelikReaderForSpanExtraction
 
 

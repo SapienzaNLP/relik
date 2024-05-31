@@ -3,7 +3,7 @@ hydra:
   run:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
-model_name: relik-reader-base-19042024  # -start-end-mask-0.001  # used to name the model in wandb and output dir
+model_name: relik-reader-deberta-base-30052024-lrd09-8x2048-onelayer  # -start-end-mask-0.001  # used to name the model in wandb and output dir
 project_name: relik-reader # used to name the project in wandb
 offline: false  # if true, wandb will not be used
 
