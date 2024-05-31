@@ -7,7 +7,6 @@ import torch
 
 from relik.common.utils import from_cache
 from relik.reader.lightning_modules.relik_reader_pl_module import RelikReaderPLModule
-from relik.reader.relik_reader_core import RelikReaderCoreModel
 
 CKPT_FILE_NAME = "model.ckpt"
 CONFIG_FILE_NAME = "cfg.yaml"
@@ -34,7 +33,7 @@ def convert_pl_module(pl_module_ckpt_path: str, output_dir: str) -> None:
 
 def load_model_and_conf(
     model_dir_path: str,
-) -> Tuple[RelikReaderCoreModel, omegaconf.DictConfig]:
+) -> Tuple[torch.nn.Module, omegaconf.DictConfig]:
     # TODO: quick workaround to load the model from HF hub
     model_dir = from_cache(
         model_dir_path,

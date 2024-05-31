@@ -16,10 +16,10 @@
 
 A blazing fast and lightweight Information Extraction model for Entity Linking and Relation Extraction.
 
-
 ## Installation
 
 Installation from PyPI
+
 ```bash
 pip install relik
 ```
@@ -75,7 +75,11 @@ pip install -e .[all]
 
 ##### Training the model
 
-- TODO
+To train the model you need a configuration file. You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`. Once you have your configuration file, you can train the model with the following command:
+
+```bash
+relik retriever train path/to/config.yaml
+```
 
 #### Inference
 
@@ -101,7 +105,11 @@ python scripts/data/add_candidates.py \
 
 ##### Training the model
 
-- TODO
+To train the model you need a configuration file. You can find an example in `relik/reader/conf/large.yaml`. Once you have your configuration file, you can train the model with the following command:
+
+```bash
+relik reader train path/to/config.yaml
+```
 
 #### Inference
 

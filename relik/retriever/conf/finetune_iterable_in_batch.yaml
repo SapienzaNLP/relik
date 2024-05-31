@@ -4,7 +4,7 @@ hydra:
     dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 model_name: ${model.language_model} # used to name the model in wandb
-project_name: relik-retriever # used to name the project in wandb
+project_name: relik-retriever-aida # used to name the project in wandb
 
 defaults:
   - _self_
@@ -13,7 +13,7 @@ defaults:
   - loss: nce_loss
   - optimizer: radamw
   - scheduler: linear_scheduler
-  - data: dataset_v2 # iterable_in_batch_negatives #dataset_v2
+  - data: aida_dataset
   - logging: wandb_logging
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog
@@ -23,7 +23,7 @@ train:
   seed: 42
   set_determinism_the_old_way: False
   # torch parameters
-  float32_matmul_precision: "medium"
+  float32_matmul_precision: "high"
   # if true, only test the model
   only_test: False
   # if provided, initialize the model with the weights from the checkpoint

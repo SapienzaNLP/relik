@@ -89,7 +89,6 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
-    wandb.login(key = '5bb4c909f1583e06ef55d74b6c821f9a4a0da3af')
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
 
     # trainer declaration

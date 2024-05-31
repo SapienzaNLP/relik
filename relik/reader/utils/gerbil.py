@@ -29,10 +29,14 @@ class GerbilAlbyManager:
         self.response_logger_dir = response_logger_dir
         self.predictions_counter = 0
         self.labels_mapping = None
+        self.retriever_batch_size = 32
+        self.reader_batch_size = 32
 
     def annotate(self, document: str):
         relik_output: RelikOutput = self.annotator(
-            document,# retriever_batch_size=2, reader_batch_size=1
+            document,
+            retriever_batch_size=self.retriever_batch_size,
+            reader_batch_size=self.reader_batch_size,
         )
         annotations = [(ss, se, l) for ss, se, l, _ in relik_output.spans]
         if self.labels_mapping is not None:
@@ -204,6 +208,12 @@ def read_json(post_data):
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--relik-model-name", required=True)
+    parser.add_argument("--retriever-device", default="cuda")
+    parser.add_argument("--index-device", type=int, default=32)
+    parser.add_argument("--reader-device", default="cuda")
+    parser.add_argument("--precision", default="fp16")
+    parser.add_argument("--retriever-batch-size", type=int, default=32)
+    parser.add_argument("--reader-batch-size", type=int, default=32)
     parser.add_argument("--responses-log-dir")
     parser.add_argument("--log-file", default="experiments/logging.txt")
     parser.add_argument("--mapping-file")
@@ -220,23 +230,16 @@ def main():
     manager.response_logger_dir = args.responses_log_dir
     manager.annotator = Relik.from_pretrained(
         args.relik_model_name,
-        device="cuda",
-        # document_index_device="cpu",
-        # document_index_precision="fp32",
-        # reader_device="cpu",
-        precision="fp16",  # , reader_device="cpu", reader_precision="fp32"
-        dataset_kwargs={"use_nme": True}
+        document_index_device=args.retriever_device,
+        retriever_device=args.retriever_device,
+        reader_device=args.reader_device,
+        precision=args.precision,
+        dataset_kwargs={"use_nme": True},
     )
 
-    # print("Debugging, not using you relik model but an hardcoded one.")
-    # manager.annotator = Relik(
-    #     question_encoder="riccorl/relik-retriever-aida-blink-pretrain-omniencoder",
-    #     document_index="riccorl/index-relik-retriever-aida-blink-pretrain-omniencoder",
-    #     reader="relik/reader/models/relik-reader-deberta-base-new-data",
-    #     window_size=32,
-    #     window_stride=16,
-    #     candidates_preprocessing_fn=(lambda x: x.split("<def>")[0].strip()),
-    # )
+    # set global batch sizes
+    manager.retriever_batch_size = args.retriever_batch_size
+    manager.reader_batch_size = args.reader_batch_size
 
     if args.mapping_file is not None:
         manager.set_mapping_file(args.mapping_file)

@@ -3,7 +3,7 @@ from typing import Dict, List
 from lightning.pytorch.callbacks import Callback
 
 from relik.reader.data.relik_reader_sample import RelikReaderSample
-from relik.reader.relik_reader_predictor import RelikReaderPredictor
+from relik.reader.utils.relik_reader_predictor import RelikReaderPredictor
 from relik.reader.utils.metrics import f1_measure, safe_divide
 from relik.reader.utils.special_symbols import NME_SYMBOL
 
