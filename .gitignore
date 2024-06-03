@@ -2,7 +2,8 @@
 
 data/*
 experiments/*
-models/*
+models
+model
 retrievers
 outputs
 wandb
