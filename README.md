@@ -166,9 +166,9 @@ relik reader train path/to/config.yaml
 
 - TODO
 
-### Performance
+## Performance
 
-#### Entity Linking
+### Entity Linking
 
 We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://gerbil-qa.aksw.org/gerbil/). The following table shows the results (InKB Micro F1) of ReLiK Large and Base:
 
@@ -199,13 +199,13 @@ python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-
 
 4. Open the url [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:
    - Select A2KB as experiment type
-   - Select "Ma - strong annotation match?
+   - Select "Ma - strong annotation match"
    - In Name filed write the name you want to give to the experiment
    - In URI field write: [http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm](http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm)
    - Select the datasets (We use AIDA-B, MSNBC, Der, K50, R128, R500, OKE15, OKE16)
    - Finally, run experiment
 
-#### Relation Extraction
+### Relation Extraction
 
 - TODO
 
