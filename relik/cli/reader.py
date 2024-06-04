@@ -13,5 +13,6 @@ app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 def train():
     print_relik_text_art()
-    config = resolve_config("reader")
+    config, config_dir = resolve_config("reader")
+    hydra.initialize_config_dir(config_dir=str(config_dir), version_base="1.3")
     reader_train(config)

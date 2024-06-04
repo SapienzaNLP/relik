@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 from pprint import pprint
 import hydra
 import lightning
-from hydra.utils import to_absolute_path
+from hydra.utils import to_absolute_path, get_original_cwd
 from lightning import Trainer
 from lightning.pytorch.callbacks import LearningRateMonitor, ModelCheckpoint
 from lightning.pytorch.loggers.wandb import WandbLogger
@@ -16,7 +17,6 @@ from relik.reader.lightning_modules.relik_reader_pl_module import RelikReaderPLM
 from relik.reader.pytorch_modules.optim import LayerWiseLRDecayOptimizer
 from relik.reader.utils.special_symbols import get_special_symbols
 from relik.reader.utils.strong_matching_eval import ELStrongMatchingCallback
-
 
 def train(cfg: DictConfig) -> None:
 

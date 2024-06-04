@@ -51,9 +51,8 @@ def resolve_config(type: str | None = None) -> OmegaConf:
                 "Please provide the type (`reader` or `retriever`) or provide an absolute path."
             )
     logger.debug(f"config_dir: {config_dir}")
-    context = initialize_config_dir(config_dir=str(config_dir), version_base="1.3")
 
-    with context:
+    with initialize_config_dir(config_dir=str(config_dir), version_base="1.3"):
         cfg = compose(config_name=config_name, overrides=overrides)
 
-    return cfg
+    return cfg, config_dir

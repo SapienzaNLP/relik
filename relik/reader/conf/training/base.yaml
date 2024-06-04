@@ -1,4 +1,4 @@
-seed: 94
+seed: 42
 
 trainer:
   _target_: lightning.Trainer
@@ -10,4 +10,4 @@ trainer:
   num_sanity_val_steps: 0
   limit_val_batches: 1
   gradient_clip_val: 1.0
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 1
