@@ -31,12 +31,14 @@ class GerbilAlbyManager:
         self.labels_mapping = None
         self.retriever_batch_size = 32
         self.reader_batch_size = 32
+        self.top_k = 100
 
     def annotate(self, document: str):
         relik_output: RelikOutput = self.annotator(
             document,
             retriever_batch_size=self.retriever_batch_size,
             reader_batch_size=self.reader_batch_size,
+            top_k=self.top_k,
         )
         annotations = [(ss, se, l) for ss, se, l, _ in relik_output.spans]
         if self.labels_mapping is not None:
@@ -214,6 +216,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--precision", default="fp16")
     parser.add_argument("--retriever-batch-size", type=int, default=32)
     parser.add_argument("--reader-batch-size", type=int, default=32)
+    parser.add_argument("--top-k", type=int, default=100)
     parser.add_argument("--responses-log-dir")
     parser.add_argument("--log-file", default="experiments/logging.txt")
     parser.add_argument("--mapping-file")
@@ -240,6 +243,7 @@ def main():
     # set global batch sizes
     manager.retriever_batch_size = args.retriever_batch_size
     manager.reader_batch_size = args.reader_batch_size
+    manager.top_k = args.top_k
 
     if args.mapping_file is not None:
         manager.set_mapping_file(args.mapping_file)
