@@ -13,7 +13,7 @@ defaults:
   - loss: nce_loss
   - optimizer: radamw
   - scheduler: linear_scheduler
-  - data: dataset_v2
+  - data: blink_dataset
   - logging: wandb_logging
   - override hydra/job_logging: colorlog
   - override hydra/hydra_logging: colorlog

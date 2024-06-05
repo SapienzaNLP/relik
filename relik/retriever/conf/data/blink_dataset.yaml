@@ -1,3 +1,7 @@
+train_dataset_path: null
+val_dataset_path: null
+test_dataset_path: null
+
 shared_params:
   passages_path: null
   max_passage_length: 64
@@ -10,19 +14,19 @@ datamodule:
     train:
       _target_: relik.retriever.data.datasets.InBatchNegativesDataset
       name: "train"
-      path: null
+      path: ${data.train_dataset_path}
       tokenizer: ${model.language_model}
       max_passage_length: ${data.shared_params.max_passage_length}
       question_batch_size: ${data.shared_params.question_batch_size}
       passage_batch_size: ${data.shared_params.passage_batch_size}
-      subsample_strategy: null
+      subsample_strategy: random
       subsample_portion: 0.1
       shuffle: True
 
     val:
       - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
         name: "val"
-        path: null
+        path: ${data.val_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
@@ -31,7 +35,7 @@ datamodule:
     test:
       - _target_: relik.retriever.data.datasets.InBatchNegativesDataset
         name: "test"
-        path: null
+        path: ${data.test_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}

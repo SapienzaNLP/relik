@@ -93,44 +93,165 @@ relik("Michael Jordan was one of the best players in the NBA.")
 
 The full list of available models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
 
-<!-- Retrievers and Readers can be used separately:
+Retrievers and Readers can be used separately:
 
 ```python
 from relik import Relik
 
 # If you want to use the retriever only
-retriever = Relik.from_pretrained("path/to/relik/model", reader=None)
+retriever = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large", reader=None)
 
 # If you want to use the reader only
-reader = Relik.from_pretrained("path/to/relik/model", retriever=None)
+reader = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large", retriever=None)
 ```
-
+<!-- 
 or
 
 ```python
 from relik.retriever import GoldenRetriever
 
+# If you want to use the retriever only
 retriever = GoldenRetriever(
     question_encoder="path/to/relik/retriever-question-encoder",
     document_index="path/to/relik/retriever-document-index",
 )
+
+from relik.reader import R
+# If you want to use the reader only
+reader = 
 ``` -->
 
 ### Training
 
+Here we provide instructions on how to train the retriever and the reader.
+All your data should have the following starting structure:
+
+```jsonl
+{
+  "doc_id": int,  # Unique identifier for the document
+  "doc_text": txt,  # Text of the document
+  "doc_annotations": # Char level annotations
+    [
+      [start, end, label],
+      [start, end, label],
+      ...
+    ]
+}
+```
+
 #### Retriever
+
+We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
 
 ##### Data Preparation
 
-- TODO
+The retriever requires a dataset in a format similar to [DPR](https://github.com/facebookresearch/DPR): a `jsonl` file where each line is a dictionary with the following keys:
+
+```json lines
+{
+  "question": "....",
+  "positive_ctxs": [{
+    "title": "...",
+    "text": "...."
+  }],
+  "negative_ctxs": [{
+    "title": "...",
+    "text": "...."
+  }],
+  "hard_negative_ctxs": [{
+    "title": "...",
+    "text": "...."
+  }]
+}
+```
+
+The data preparation involves three steps:
+
+1. Convert the data to the ReLiK format.
+2. Windowize the data to create smaller contexts.
+3. Convert the data to the DPR format.
+
+###### BLINK
+
+The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
+We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
+
+1. Assuming the data is downloaded in `data/blink`, you can convert it to the ReLiK format with the following command:
+
+```bash
+# Train
+python scripts/data/blink/preprocess_genre_blink.py \
+  data/blink/blink-train-kilt.jsonl \
+  data/blink/processed/blink-train-kilt-relik.jsonl
+
+# Dev
+python scripts/data/blink/preprocess_genre_blink.py \
+  data/blink/blink-dev-kilt.jsonl \
+  data/blink/processed/blink-dev-kilt-relik.jsonl
+```
+
+2. Then you can windowize the data with the following command:
+
+```bash
+# train
+python scripts/data/create_windows.py \
+  data/blink/processed/blink-train-kilt-relik.jsonl \
+  data/blink/processed/blink-train-kilt-relik-windowed.jsonl
+
+# dev
+python scripts/data/create_windows.py \
+  data/blink/processed/blink-dev-kilt-relik.jsonl \
+  data/blink/processed/blink-dev-kilt-relik-windowed.jsonl
+```
+
+3. Finally, you can convert the data to the DPR format with the following command:
+
+```bash
+# train
+python scripts/data/blink/convert_to_dpr.py \
+  data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
+  data/blink/processed/blink-train-kilt-relik-windowed-dpr.jsonl
+
+# dev
+python scripts/data/blink/convert_to_dpr.py \
+  data/blink/processed/blink-dev-kilt-relik-windowed.jsonl \
+  data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl
+```
+
+###### AIDA
+
+Since the AIDA dataset is not publicly available, we provide just the annotations in the ReLiK format. Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following commands:
+
+```bash
+python scripts/data/create_windows.py \
+  data/data/processed/aida-train-relik.jsonl \
+  data/data/processed/aida-train-relik-windowed.jsonl
+```
+
+and then convert it to the DPR format with the following command:
+
+```bash
+python scripts/data/convert_to_dpr.py \
+  data/data/processed/aida-train-relik-windowed.jsonl \
+  data/data/processed/aida-train-relik-windowed-dpr.jsonl
+```
 
 ##### Training the model
 
-To train the model you need a configuration file. You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`. Once you have your configuration file, you can train the model with the following command:
+To train the model you need a configuration file. You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`.
+
+To train the retriever on the AIDA dataset, you can run the following command:
 
 ```bash
-relik retriever train path/to/config.yaml
+relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml model.language_model=intfloat/e5-base-v2 train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl test_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl
 ```
+
+The `relik retriever train` command takes the following arguments:
+
+- `config_path`: The path to the configuration file.
+- `overrides`: A list of overrides to the configuration file, in the format `key=value`.
+
+The two configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batch.yaml` and `finetune_iterable_in_batch.yaml`, used for pre-training and fine-tuning the retriever, respectively.
 
 #### Inference
 

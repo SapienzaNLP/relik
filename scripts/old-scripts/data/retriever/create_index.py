@@ -45,14 +45,6 @@ def build_index(
         )
 
     logger.info("Loading document index")
-    # document_index = InMemoryDocumentIndex(
-    #     documents=documents,
-    #     # metadata_fields=["title"],
-    #     # separator=" <title> ",
-    #     device="cuda",
-    #     precision="16",
-    # )
-    # retriever.document_index = document_index
     logger.info(f"Loaded {len(documents)} documents")
     indexer = get_callable_from_string(indexer_class)(
         documents, device=index_device, precision=precision

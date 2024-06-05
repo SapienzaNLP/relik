@@ -1,9 +1,13 @@
+train_dataset_path: null
+val_dataset_path: null
+test_dataset_path: null
+
 shared_params:
   passages_path: null
   max_passage_length: 64
   passage_batch_size: 64
   question_batch_size: 64
-  use_topics: False
+  use_topics: True
 
 datamodule:
   _target_: relik.retriever.lightning_modules.pl_data_modules.GoldenRetrieverPLDataModule
@@ -11,7 +15,7 @@ datamodule:
     train:
       _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
       name: "train"
-      path: null
+      path: {data.train_dataset_path}
       tokenizer: ${model.language_model}
       max_passage_length: ${data.shared_params.max_passage_length}
       question_batch_size: ${data.shared_params.question_batch_size}
@@ -24,7 +28,7 @@ datamodule:
     val:
       - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
         name: "val"
-        path: null
+        path: {data.val_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
@@ -34,7 +38,7 @@ datamodule:
     test:
       - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
         name: "test"
-        path: null
+        path: {data.test_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}

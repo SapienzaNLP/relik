@@ -1,10 +1,13 @@
 import argparse
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Union
 
 from tqdm import tqdm
+
+from relik.common.log import get_logger
 from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSplitter
 from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
 from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentenceSplitter
@@ -12,16 +15,19 @@ from relik.inference.data.splitters.window_based_splitter import WindowSentenceS
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from relik.inference.data.window.manager import WindowManager
 
+logger = get_logger()
+
 
 def create_windows(
     input_file: Union[str, os.PathLike],
-    output_dir: Union[str, os.PathLike],
+    output_file: Union[str, os.PathLike],
     window_size: int = 32,
     window_stride: int = 16,
     title_mapping: str = None,
     language: str = "en",
     tokenizer_device: str = "cpu",
     is_split_into_words: bool = False,
+    write_batch_size: int = 10_000,
 ):
     # windowization stuff
     tokenizer = SpacyTokenizer(language=language, use_gpu=tokenizer_device == "cuda")
@@ -39,58 +45,99 @@ def create_windows(
         with open(title_mapping) as f:
             title_mapping = json.load(f)
 
-    data = []
-    with open(input_file) as f:
-        for line in f:
-            data.append(json.loads(line))
+    output_file_path = Path(output_file)
 
-    windowized_data_train = []
-    windowized_data_dev = []
-    windowized_data_test = []
-    for document in tqdm(data, desc="Windowizing documents"):
-        doc_info = document["doc_id"]
-
-        # clean doc_info, e.g. "-DOCSTART- (1 EU)"
-        doc_info = (
-            doc_info.replace("-DOCSTART-", "").replace("(", "").replace(")", "").strip()
+    # check if file exists
+    continue_from_id = None
+    if output_file_path.exists():
+        # we should not overwrite the file
+        # open last line of the file using tail command
+        try:
+            last_line = subprocess.check_output(f"tail -n 1 {output_file}", shell=True)
+            continue_from_id = json.loads(last_line)["doc_id"]
+        except Exception as e:
+            logger.error(f"Error getting last line of the file: {e}")
+        logger.info(
+            f"Output file {output_file} already exists. Continuing from doc id {continue_from_id}"
         )
-        doc_id, doc_topic = doc_info.split(" ")
+    else:
+        output_file_path.parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Saving windowized data to {output_file}")
 
-        if "testa" in doc_id:
-            split = "dev"
-        elif "testb" in doc_id:
-            split = "test"
-        else:
-            split = "train"
-
-        doc_id = doc_id.replace("testa", "").replace("testb", "").strip()
-        doc_id = int(doc_id)
-
-        windowized_document = window_manager.create_windows(
-            document["doc_text"],
-            window_size,
-            window_stride,
-            is_split_into_words=is_split_into_words,
-            doc_ids=doc_id,
-            doc_topic=doc_topic,
+    logger.info(f"Loading data from {input_file}")
+    batched_data = []
+    # get number of lines in the file
+    # run bash command to get the number of lines in the file
+    try:
+        total_lines = int(
+            subprocess.check_output(
+                f"wc -l {input_file} | awk '{{print $1}}'", shell=True
+            )
         )
+    except Exception as e:
+        logger.error(f"Error getting number of lines in the file: {e}")
+        total_lines = None
+    progress_bar = tqdm(total=total_lines)
+    write_mode = "a" if continue_from_id is not None else "w"
+    with open(input_file) as f_in, open(output_file, write_mode) as f_out:
+        for line in f_in:
+            if continue_from_id is not None:
+                # we need to skip until we reach the last written line
+                current_id = json.loads(line)["doc_id"]
+                if current_id != continue_from_id:
+                    progress_bar.update(1)
+                    continue
+                else:
+                    continue_from_id = None
+            batched_data.append(json.loads(line))
+            if len(batched_data) == write_batch_size:
+                windowized_data = _process_batch(
+                    batched_data,
+                    window_manager,
+                    window_size,
+                    window_stride,
+                    is_split_into_words,
+                    title_mapping,
+                )
+                for wd in windowized_data:
+                    f_out.write(wd.to_jsons() + "\n")
+                progress_bar.update(len(batched_data))
+                batched_data = []
 
-        # we need to add the labels
-        doc_level_labels = document["doc_annotations"]
-        # if we have a title mapping, we need to map the labels to the
-        # new titles
-        if title_mapping is not None:
-            # compute the missing labels
-            # missing_labels |= set(title_mapping.keys()) - set(
-            #     [label for _, _, label in doc_level_labels]
-            # )
-            doc_level_labels = [
-                [start, end, title_mapping.get(label, label)]
-                for start, end, label in doc_level_labels
-            ]
 
-        # these are the labels for the whole document, we need add them to the correct window
-        for window in windowized_document:
+def _process_batch(
+    data, window_manager, window_size, window_stride, is_split_into_words, title_mapping
+):
+    # build a doc_id to doc mapping
+    doc_id_to_doc = {int(document["doc_id"]): document for document in data}
+
+    windowized_data = window_manager.create_windows(
+        [document["doc_text"] for document in data],
+        window_size,
+        window_stride,
+        is_split_into_words=is_split_into_words,
+        doc_ids=[int(document["doc_id"]) for document in data],
+        # doc_topic=doc_topic,
+    )
+
+    for window in windowized_data:
+        try:
+            # we need to add the labels
+            doc_level_labels = doc_id_to_doc[window._d["doc_id"]]["doc_annotations"]
+            # if we have a title mapping, we need to map the labels to the
+            # new titles
+            if title_mapping is not None:
+                # compute the missing labels
+                # missing_labels |= set(title_mapping.keys()) - set(
+                #     [label for _, _, label in doc_level_labels]
+                # )
+                doc_level_labels = [
+                    [start, end, title_mapping.get(label, label)]
+                    for start, end, label in doc_level_labels
+                ]
+
+            # these are the labels for the whole document, we need add them to the correct window
+            # for window in windowized_document:
             window_level_labels = []
             for doc_level_label in doc_level_labels:
                 start_char, end_char, label_text = doc_level_label
@@ -125,44 +172,24 @@ def create_windows(
                 )
             window._d["window_labels_tokens"] = window_level_labels_but_for_tokens
 
-        if split == "train":
-            windowized_data_train.extend(windowized_document)
-        elif split == "dev":
-            windowized_data_dev.extend(windowized_document)
-        elif split == "test":
-            windowized_data_test.extend(windowized_document)
-        else:
-            raise ValueError(f"Unknown split: {split}")
+        except Exception as e:
+            logger.error(
+                f"Error processing document {window._d['doc_id']} window {window._d['window_id']}: {e}"
+            )
 
-    output_dir_path = Path(output_dir)
-    output_dir_path.mkdir(parents=True, exist_ok=True)
-
-    with open(output_dir_path / "train_windowed.jsonl", "w") as f:
-        for window in windowized_data_train:
-            # f.write(json.dumps(window) + "\n")
-            f.write(window.to_jsons() + "\n")
-    with open(output_dir_path / "testa_windowed.jsonl", "w") as f:
-        for window in windowized_data_dev:
-            # f.write(json.dumps(window) + "\n")
-            f.write(window.to_jsons() + "\n")
-    with open(output_dir_path / "testb_windowed.jsonl", "w") as f:
-        for window in windowized_data_test:
-            # f.write(json.dumps(window) + "\n")
-            f.write(window.to_jsons() + "\n")
-
-    # print(f"Missing labels: {missing_labels}")
-    # print(f"Total number of missing labels: {len(missing_labels)}")
+    return windowized_data
 
 
 if __name__ == "__main__":
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--input_file", type=str, required=True)
-    arg_parser.add_argument("--output_dir", type=str, required=True)
-    arg_parser.add_argument("--window_size", type=int, default=32)
-    arg_parser.add_argument("--window_stride", type=int, default=16)
-    arg_parser.add_argument("--title_mapping", type=str)
+    arg_parser = argparse.ArgumentParser("Create windows from ReLiK data.")
+    arg_parser.add_argument("input-file", type=str)
+    arg_parser.add_argument("output-file", type=str)
+    arg_parser.add_argument("--window-size", type=int, default=32)
+    arg_parser.add_argument("--window-stride", type=int, default=16)
+    arg_parser.add_argument("--title-mapping", type=str)
     arg_parser.add_argument("--language", type=str, default="en")
-    arg_parser.add_argument("--tokenizer_device", type=str, default="cpu")
-    arg_parser.add_argument("--is_split_into_words", action="store_true")
+    arg_parser.add_argument("--tokenizer-device", type=str, default="cpu")
+    arg_parser.add_argument("--is-split-into-words", action="store_true")
+    arg_parser.add_argument("--write-batch-size", type=int, default=10_000)
 
     create_windows(**vars(arg_parser.parse_args()))
