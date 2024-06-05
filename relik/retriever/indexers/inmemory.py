@@ -74,7 +74,8 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
             logger.info("Both documents and embeddings are provided.")
             if len(documents) != embeddings.shape[0]:
                 raise ValueError(
-                    "The number of documents and embeddings must be the same."
+                    "The number of documents and embeddings must be the same. "
+                    f"Got {len(documents)} documents and {embeddings.shape[0]} embeddings."
                 )
 
         # # embeddings of the documents
@@ -83,7 +84,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         del embeddings
         # convert the embeddings to the desired precision
         if precision is not None:
-            if self.embeddings is not None and device == "cpu":
+            if self.embeddings is not None and self.device == "cpu":
                 if PRECISION_MAP[precision] == PRECISION_MAP[16]:
                     logger.info(
                         f"Precision `{precision}` is not supported on CPU. "
@@ -103,7 +104,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         else:
             # TODO: a bit redundant, fix this eventually
             if (
-                device == "cpu"
+                (self.device == "cpu" or self.device == torch.device("cpu"))
                 and self.embeddings is not None
                 and self.embeddings.dtype != torch.float32
             ):
@@ -113,8 +114,8 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
                 )
                 self.embeddings = self.embeddings.to(PRECISION_MAP[32])
         # move the embeddings to the desired device
-        if self.embeddings is not None and not self.embeddings.device == device:
-            self.embeddings = self.embeddings.to(device)
+        if self.embeddings is not None and not self.embeddings.device == self.device:
+            self.embeddings = self.embeddings.to(self.device)
 
         # TODO: check interactions with the embeddings
         # self.mm = MatrixMultiplicationModule(embeddings=self.embeddings)

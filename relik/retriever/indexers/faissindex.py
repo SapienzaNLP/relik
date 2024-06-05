@@ -2,22 +2,26 @@ import contextlib
 import logging
 import os
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy
+from omegaconf import OmegaConf
+from pprintpp import pformat
 import psutil
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from relik.common.log import get_logger
+from relik.common.upload import upload
 from relik.common.utils import is_package_available
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.indexers.base import BaseDocumentIndex
 from relik.retriever.indexers.document import Document, DocumentStore
 from relik.retriever.pytorch_modules import PRECISION_MAP, RetrievedSample
-from relik.retriever.pytorch_modules.model import GoldenRetriever
+# from relik.retriever.pytorch_modules.model import GoldenRetriever
 
 if is_package_available("faiss"):
     import faiss
@@ -33,21 +37,18 @@ class FaissOutput:
 
 
 class FaissDocumentIndex(BaseDocumentIndex):
-    DOCUMENTS_FILE_NAME = "documents.json"
+    DOCUMENTS_FILE_NAME = "documents.jsonl"
     EMBEDDINGS_FILE_NAME = "embeddings.pt"
     INDEX_FILE_NAME = "index.faiss"
 
     def __init__(
         self,
-        documents: str
-        | List[str]
-        | os.PathLike
-        | List[os.PathLike]
-        | DocumentStore
-        | None = None,
+        documents: (
+            str | List[str] | os.PathLike | List[os.PathLike] | DocumentStore | None
+        ) = None,
         embeddings: torch.Tensor | numpy.ndarray | None = None,
         metadata_fields: List[str] | None = None,
-        separator: str = "<def>",
+        separator: str | None = None,
         name_or_path: str | os.PathLike | None = None,
         device: str = "cpu",
         index=None,
@@ -66,7 +67,8 @@ class FaissDocumentIndex(BaseDocumentIndex):
             logger.info("Both documents and embeddings are provided.")
             if len(documents) != embeddings.shape[0]:
                 raise ValueError(
-                    "The number of documents and embeddings must be the same."
+                    "The number of documents and embeddings must be the same. "
+                    f"Got {len(documents)} documents and {embeddings.shape[0]} embeddings."
                 )
 
         faiss.omp_set_num_threads(psutil.cpu_count(logical=False))
@@ -110,11 +112,8 @@ class FaissDocumentIndex(BaseDocumentIndex):
             `BaseDocumentIndex`: The retriever.
         """
         if isinstance(device_or_precision, torch.dtype):
-            # raise ValueError(
-            #     "FaissDocumentIndex does not support precision conversion."
-            # )
-            logger.warning(
-                "FaissDocumentIndex does not support precision conversion. Ignoring."
+            raise ValueError(
+                "FaissDocumentIndex does not support precision conversion."
             )
         if device_or_precision == "cuda" and self.device == "cpu":
             # use a single GPU
@@ -199,11 +198,11 @@ class FaissDocumentIndex(BaseDocumentIndex):
     @torch.inference_mode()
     def index(
         self,
-        retriever: GoldenRetriever,
+        retriever,
         documents: Optional[List[Document]] = None,
         batch_size: int = 32,
         num_workers: int = 4,
-        max_length: Optional[int] = None,
+        max_length: int | None = None,
         collate_fn: Optional[Callable] = None,
         encoder_precision: Optional[Union[str, int]] = None,
         compute_on_cpu: bool = False,
@@ -239,7 +238,7 @@ class FaissDocumentIndex(BaseDocumentIndex):
         """
 
         if self.embeddings is not None and not force_reindex:
-            logger.log(
+            logger.info(
                 "Embeddings are already present and `force_reindex` is `False`. Skipping indexing."
             )
             if documents is None:
@@ -365,6 +364,76 @@ class FaissDocumentIndex(BaseDocumentIndex):
         ]
         return batch_retrieved_samples
 
+    def save_pretrained(
+        self,
+        output_dir: Union[str, os.PathLike],
+        config: Optional[Dict[str, Any]] = None,
+        config_file_name: str | None = None,
+        document_file_name: str | None = None,
+        embedding_file_name: str | None = None,
+        push_to_hub: bool = False,
+        model_id: str | None = None,
+        **kwargs,
+    ):
+        """
+        Save the retriever to a directory.
+
+        Args:
+            output_dir (`str`):
+                The directory to save the retriever to.
+            config (`Optional[Dict[str, Any]]`, `optional`):
+                The configuration to save. If `None`, the current configuration of the retriever will be
+                saved. Defaults to `None`.
+            config_file_name (`str | None`, `optional`):
+                The name of the configuration file. Defaults to `config.yaml`.
+            document_file_name (`str | None`, `optional`):
+                The name of the document file. Defaults to `documents.json`.
+            embedding_file_name (`str | None`, `optional`):
+                The name of the embedding file. Defaults to `embeddings.pt`.
+            push_to_hub (`bool`, `optional`):
+                Whether to push the saved retriever to the hub. Defaults to `False`.
+            model_id (`str | None`, `optional`):
+                The id of the model to push to the hub. If `None`, the name of the output
+                directory will be used. Defaults to `None`.
+            **kwargs:
+                Additional keyword arguments to pass to `upload`.
+        """
+        if config is None:
+            # create a default config
+            config = self.config
+
+        config_file_name = config_file_name or self.CONFIG_NAME
+        document_file_name = document_file_name or self.DOCUMENTS_FILE_NAME
+        embedding_file_name = embedding_file_name or self.EMBEDDINGS_FILE_NAME
+
+        # create the output directory
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Saving retriever to {output_dir}")
+        logger.info(f"Saving config to {output_dir / config_file_name}")
+        # pretty print the config
+        OmegaConf.save(config, output_dir / config_file_name)
+        logger.info(pformat(config))
+
+        # save the current state of the retriever
+        embedding_path = output_dir / embedding_file_name
+        logger.info(f"Saving retriever state to {output_dir / embedding_path}")
+        torch.save(self.embeddings, embedding_path)
+
+        # save the passage index
+        documents_path = output_dir / document_file_name
+        logger.info(f"Saving passage index to {documents_path}")
+        self.documents.save(documents_path)
+
+        logger.info("Saving document index to disk done.")
+
+        if push_to_hub:
+            # push to hub
+            logger.info("Pushing to hub")
+            model_id = model_id or output_dir.name
+            upload(output_dir, model_id, **kwargs)
+
     # def save(self, saving_dir: Union[str, os.PathLike]):
     #     """
     #     Save the indexer to the disk.
@@ -388,9 +457,9 @@ class FaissDocumentIndex(BaseDocumentIndex):
     #     cls,
     #     loading_dir: Union[str, os.PathLike],
     #     device: str = "cpu",
-    #     document_file_name: Optional[str] = None,
-    #     embedding_file_name: Optional[str] = None,
-    #     index_file_name: Optional[str] = None,
+    #     document_file_name: str | None = None,
+    #     embedding_file_name: str | None = None,
+    #     index_file_name: str | None = None,
     #     **kwargs,
     # ) -> "FaissDocumentIndex":
     #     loading_dir = Path(loading_dir)

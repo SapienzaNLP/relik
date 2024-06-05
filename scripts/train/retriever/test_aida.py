@@ -15,7 +15,6 @@ if __name__ == "__main__":
     arg_parser.add_argument("index", type=str, required=True)
     args = arg_parser.parse_args()
 
-
     # instantiate retriever
     retriever = GoldenRetriever(
         question_encoder=args.encoder,
@@ -55,7 +54,7 @@ if __name__ == "__main__":
         # wandb_experiment_name="aida-e5-base-topics-from-blink-new-data",
         max_hard_negatives_to_mine=15,
         resume_from_checkpoint_path=None,  # path to lightning checkpoint
-        trainer_kwargs={"logger": False}
+        trainer_kwargs={"logger": False},
     )
 
     # trainer.train()

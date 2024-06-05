@@ -21,7 +21,7 @@ class WindowManager:
         window_size: int | None = None,
         stride: int | None = None,
         max_length: int | None = None,
-        doc_id: str | int | None = None,
+        doc_ids: str | int | List[str] | List[int] | None = None,
         doc_topic: str | None = None,
         is_split_into_words: bool = False,
         mentions: List[List[List[int]]] = None,
@@ -55,6 +55,16 @@ class WindowManager:
         if isinstance(documents, str) or is_split_into_words:
             documents = [documents]
 
+        if doc_ids is not None:
+            if isinstance(doc_ids, int):
+                doc_ids = [doc_ids]
+
+            # check doc_id and documents have the same length
+            if len(doc_ids) != len(documents):
+                raise ValueError(
+                    f"doc_id and documents must have the same length. Found {len(doc_ids)} doc_id and {len(documents)} documents."
+                )   
+        
         # batch tokenize
         documents_tokens = self.tokenizer(
             documents, is_split_into_words=is_split_into_words
@@ -68,22 +78,26 @@ class WindowManager:
 
         windowed_documents, windowed_blank_documents = [], []
 
+        # TODO: normalize mantions and return type, check when doc_ids is None
         if mentions is not None:
             assert len(documents) == len(
                 mentions
             ), f"documents and mentions should have the same length, got {len(documents)} and {len(mentions)}"
-            doc_iter = zip(documents, documents_tokens, mentions)
+            doc_iter = zip(documents, documents_tokens, doc_ids or itertools.repeat([]), mentions)
         else:
-            doc_iter = zip(documents, documents_tokens, itertools.repeat([]))
+            doc_iter = zip(documents, documents_tokens, doc_ids or itertools.repeat([]), itertools.repeat([]))
 
-        for infered_doc_id, (document, document_tokens, document_mentions) in enumerate(
+        for infered_doc_id, (document, document_tokens, doc_id, document_mentions) in enumerate(
             doc_iter
         ):
             if doc_topic is None:
-                doc_topic = document_tokens[0] if len(document_tokens) > 0 else ""
-
-            if doc_id is None:
+                doc_topic = document_tokens[0].text if len(document_tokens) > 0 else ""
+            
+            if not doc_id:
                 doc_id = infered_doc_id
+
+            # if doc_id is None:
+            # actual_doc_id = doc_ids or infered_doc_id
 
             splitted_document = self.splitter(document_tokens, max_length=max_length)
 
@@ -106,16 +120,16 @@ class WindowManager:
                     doc_topic=doc_topic,
                     offset=window_text_start,
                     spans=[
-                        [m[0], m[1]] for m in document_mentions
-                        if window_text_end > m[0] >= window_text_start and window_text_end >= m[1] >= window_text_start
+                        [m[0], m[1]]
+                        for m in document_mentions
+                        if window_text_end > m[0] >= window_text_start
+                        and window_text_end >= m[1] >= window_text_start
                     ],
                     token2char_start={str(i): w.idx for i, w in enumerate(window)},
                     token2char_end={
                         str(i): w.idx + len(w.text) for i, w in enumerate(window)
                     },
-                    char2token_start={
-                        str(w.idx): w.i for i, w in enumerate(window)
-                    },
+                    char2token_start={str(w.idx): w.i for i, w in enumerate(window)},
                     char2token_end={
                         str(w.idx + len(w.text)): w.i for i, w in enumerate(window)
                     },
@@ -134,9 +148,13 @@ class WindowManager:
     def merge_windows(
         self, windows: List[RelikReaderSample]
     ) -> List[RelikReaderSample]:
+
         windows_by_doc_id = collections.defaultdict(list)
         for window in windows:
             windows_by_doc_id[window.doc_id].append(window)
+
+        # for doc_id, doc_windows in windows_by_doc_id.items():
+        #     print(f"doc id {doc_id} has {len(doc_windows)} windows")
 
         merged_window_by_doc = {
             doc_id: self._merge_doc_windows(doc_windows)
@@ -276,12 +294,16 @@ class WindowManager:
             merged_span_predictions = sorted(merged_span_predictions)
             # probabilities
             for span_prediction, predicted_probs in itertools.chain(
-                window1.probs_window_labels_chars.items()
-                if window1.probs_window_labels_chars is not None
-                else [],
-                window2.probs_window_labels_chars.items()
-                if window2.probs_window_labels_chars is not None
-                else [],
+                (
+                    window1.probs_window_labels_chars.items()
+                    if window1.probs_window_labels_chars is not None
+                    else []
+                ),
+                (
+                    window2.probs_window_labels_chars.items()
+                    if window2.probs_window_labels_chars is not None
+                    else []
+                ),
             ):
                 if span_prediction not in merged_span_probabilities:
                     merged_span_probabilities[span_prediction] = predicted_probs
@@ -297,7 +319,7 @@ class WindowManager:
                         merged_span_predictions.index(window1.predicted_spans[t[0]]),
                         t[1],
                         merged_span_predictions.index(window1.predicted_spans[t[2]]),
-                        t[3]
+                        t[3],
                     )
                     for t in window1.predicted_triples
                 ]
@@ -306,7 +328,7 @@ class WindowManager:
                         merged_span_predictions.index(window2.predicted_spans[t[0]]),
                         t[1],
                         merged_span_predictions.index(window2.predicted_spans[t[2]]),
-                        t[3]
+                        t[3],
                     )
                     for t in window2.predicted_triples
                 ]

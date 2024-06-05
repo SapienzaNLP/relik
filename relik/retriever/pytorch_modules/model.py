@@ -16,12 +16,13 @@ from relik.common.log import get_logger
 from relik.common.torch_utils import (
     get_autocast_context,
 )  # , # load_ort_optimized_hf_model
-from relik.common.utils import is_package_available, to_config
+from relik.common.utils import get_callable_from_string, is_package_available, to_config
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.data.labels import Labels
 from relik.retriever.indexers.base import BaseDocumentIndex
 from relik.retriever.indexers.document import Document
+from relik.retriever.indexers.faissindex import FaissDocumentIndex
 from relik.retriever.indexers.inmemory import InMemoryDocumentIndex
 from relik.retriever.pytorch_modules import PRECISION_MAP, RetrievedSample
 from relik.retriever.pytorch_modules.hf import GoldenRetrieverModel
@@ -54,6 +55,7 @@ class GoldenRetriever(torch.nn.Module):
         passage_tokenizer: Optional[Union[str, tr.PreTrainedTokenizer]] = None,
         device: Optional[Union[str, torch.device]] = "cpu",
         precision: Optional[Union[str, int]] = None,
+        use_faiss: bool = False,
         index_precision: Optional[Union[str, int]] = None,
         index_device: Optional[Union[str, torch.device]] = None,
         *args,
@@ -85,16 +87,20 @@ class GoldenRetriever(torch.nn.Module):
         self.loss_type = loss_type
 
         # indexer stuff
-        index_device = index_device or device
-        index_precision = index_precision or precision
-        if document_index is None:
-            # if no indexer is provided, create a new one
-            document_index = InMemoryDocumentIndex(
-                device=index_device, precision=index_precision, **kwargs
-            )
+        # index_device = index_device or device
+        # index_precision = index_precision or precision
+        if use_faiss:
+            index_class = FaissDocumentIndex
+        else:
+            index_class = InMemoryDocumentIndex
+        # if document_index is None:
+        #     # if no indexer is provided, create a new one
+        #     document_index = index_class(
+        #         device=index_device, precision=index_precision, **kwargs
+        #     )
         if isinstance(document_index, str):
-            document_index = BaseDocumentIndex.from_pretrained(
-                document_index, device=index_device, precision=index_precision, **kwargs
+            document_index = index_class.from_pretrained(
+                document_index#, device=index_device, precision=index_precision, **kwargs
             )
         self.document_index = document_index
 

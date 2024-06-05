@@ -55,6 +55,7 @@ class RelikReaderBase(torch.nn.Module):
         )
 
         if isinstance(transformer_model, str):
+            self.name_or_path = transformer_model
             config = AutoConfig.from_pretrained(
                 transformer_model, trust_remote_code=True
             )
@@ -74,12 +75,13 @@ class RelikReaderBase(torch.nn.Module):
                     **kwargs,
                 )
                 transformer_model = self.default_reader_class(reader_config)
+                self.name_or_path = self.relik_reader_model.config.transformer_model
 
         self.relik_reader_model = transformer_model
 
         self.relik_reader_model_config = self.relik_reader_model.config
         # self.name_or_path = self.relik_reader_model_config.name_or_path
-        self.name_or_path = self.relik_reader_model.config.transformer_model
+        # self.name_or_path = self.relik_reader_model.config.transformer_model
 
         # get the tokenizer
         self._tokenizer = tokenizer

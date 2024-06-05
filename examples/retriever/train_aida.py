@@ -27,7 +27,7 @@ if __name__ == "__main__":
         name="aida_val",
         path="data/entitylinking/aida_32_tokens_topic/val.jsonl",
         tokenizer=retriever.question_tokenizer,
-        question_batch_size=64,
+        question_batch_size=64,x
         passage_batch_size=400,
         max_passage_length=64,
         use_topics=True,

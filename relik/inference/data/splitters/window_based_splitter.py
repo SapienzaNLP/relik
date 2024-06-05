@@ -46,6 +46,10 @@ class WindowSentenceSplitter(BaseSentenceSplitter):
         if isinstance(text, str):
             text = text.split()
         sentences = []
+        # if window_stride is zero, we don't need overlapping windows
+        self.window_stride = (
+            self.window_stride if self.window_stride != 0 else self.window_size
+        )
         for i in range(0, len(text), self.window_stride):
             # if the last stride is smaller than the window size, then we can
             # include more tokens form the previous window.

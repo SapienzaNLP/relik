@@ -9,8 +9,7 @@ import torch
 from omegaconf import DictConfig, OmegaConf
 from pprintpp import pformat
 
-from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
-from relik.common.log import get_logger
+from relik.common.log import get_logger, print_relik_text_art
 from relik.common.upload import get_logged_in_username, upload
 from relik.common.utils import CONFIG_NAME, from_cache
 from relik.inference.data.objects import (
@@ -21,6 +20,7 @@ from relik.inference.data.objects import (
     Triples,
 )
 from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSplitter
+from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
 from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentenceSplitter
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
@@ -40,7 +40,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = os.getenv("TOKENIZERS_PARALLELISM", "fals
 
 LOG_QUERY = os.getenv("RELIK_LOG_QUERY_ON_FILE", "false").lower() == "true"
 
-logger = get_logger(__name__, level=logging.INFO)
+logger = get_logger(__name__)
+
 file_logger = None
 if LOG_QUERY:
     RELIK_LOG_PATH = Path(__file__).parent.parent.parent / "relik.log"
@@ -93,14 +94,15 @@ class Relik:
     def __init__(
         self,
         retriever: GoldenRetriever | DictConfig | Dict | None = None,
+        index: BaseDocumentIndex | DictConfig | Dict | None = None,
         reader: RelikReaderBase | DictConfig | None = None,
         device: str | None = None,
         retriever_device: str | None = None,
-        document_index_device: str | None = None,
+        index_device: str | None = None,
         reader_device: str | None = None,
         precision: int | str | torch.dtype | None = None,
         retriever_precision: int | str | torch.dtype | None = None,
-        document_index_precision: int | str | torch.dtype | None = None,
+        index_precision: int | str | torch.dtype | None = None,
         reader_precision: int | str | torch.dtype | None = None,
         task: TaskType | str = TaskType.SPAN,
         metadata_fields: list[str] | None = None,
@@ -108,9 +110,22 @@ class Relik:
         window_size: int | str | None = None,
         window_stride: int | None = None,
         retriever_kwargs: Dict[str, Any] | None = None,
+        index_kwargs: Dict[str, Any] | None = None,
         reader_kwargs: Dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
+
+        if retriever_kwargs is None:
+            retriever_kwargs = {}
+        if index_kwargs is None:
+            index_kwargs = {}
+        if reader_kwargs is None:
+            reader_kwargs = {}
+
+        # selected parameters that are popped from kwargs
+        index_kwargs["use_faiss"] = kwargs.pop("use_faiss", False)
+        reader_kwargs["use_nme"] = kwargs.pop("use_nme", False)
+
         # parse task into a TaskType
         if isinstance(task, str):
             try:
@@ -126,8 +141,8 @@ class Relik:
         if device is not None:
             if retriever_device is None:
                 retriever_device = device
-            if document_index_device is None:
-                document_index_device = device
+            if index_device is None:
+                index_device = device
             if reader_device is None:
                 reader_device = device
 
@@ -135,13 +150,13 @@ class Relik:
         if precision is not None:
             if retriever_precision is None:
                 retriever_precision = precision
-            if document_index_precision is None:
-                document_index_precision = precision
+            if index_precision is None:
+                index_precision = precision
             if reader_precision is None:
                 reader_precision = precision
 
         # retriever
-        self.retriever: Dict[TaskType, GoldenRetriever] = {
+        self._retriever: Dict[TaskType, GoldenRetriever] = {
             TaskType.SPAN: None,
             TaskType.TRIPLET: None,
         }
@@ -175,33 +190,90 @@ class Relik:
                 retriever = {TaskType(k): v for k, v in retriever.items()}
             else:
                 retriever = {task: retriever}
-
+            
             # instantiate each retriever
             if self.task in [TaskType.SPAN, TaskType.BOTH]:
-                self.retriever[TaskType.SPAN] = self._instantiate_retriever(
+                self._retriever[TaskType.SPAN] = self._instantiate_retriever(
                     retriever[TaskType.SPAN],
                     retriever_device,
                     retriever_precision,
-                    None,
-                    document_index_device,
-                    document_index_precision,
+                    retriever_kwargs,
                 )
             if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
-                self.retriever[TaskType.TRIPLET] = self._instantiate_retriever(
+                self._retriever[TaskType.TRIPLET] = self._instantiate_retriever(
                     retriever[TaskType.TRIPLET],
                     retriever_device,
                     retriever_precision,
-                    None,
-                    document_index_device,
-                    document_index_precision,
+                    retriever_kwargs,
                 )
 
             # clean up None retrievers from the dictionary
-            self.retriever = {
-                task_type: r for task_type, r in self.retriever.items() if r is not None
+            self._retriever = {
+                task_type: r
+                for task_type, r in self._retriever.items()
+                if r is not None
             }
             # torch compile
-            # self.retriever = {task_type: torch.compile(r, backend="onnxrt") for task_type, r in self.retriever.items()}
+            # self._retriever = {task_type: torch.compile(r, backend="onnxrt") for task_type, r in self._retriever.items()}
+
+        # index
+        self._index: Dict[TaskType, BaseDocumentIndex] = {
+            TaskType.SPAN: None,
+            TaskType.TRIPLET: None,
+        }
+
+        if index:
+            # check retriever type, it can be a BaseDocumentIndex, a DictConfig or a Dict
+            if not isinstance(index, (BaseDocumentIndex, DictConfig, Dict)):
+                raise ValueError(
+                    f"`index` must be a `BaseDocumentIndex`, a `DictConfig` or "
+                    f"a `Dict`, got `{type(index)}`."
+                )
+            # we need to check weather the DictConfig is a DictConfig for an instance of BaseDocumentIndex
+            # or a primitive Dict
+            if isinstance(index, DictConfig):
+                # then it is probably a primitive Dict
+                if "_target_" not in index:
+                    index = OmegaConf.to_container(index, resolve=True)
+                    # convert the key to TaskType
+                    try:
+                        index = {TaskType(k.lower()): v for k, v in index.items()}
+                    except ValueError as e:
+                        raise ValueError(
+                            f"Please choose a valid task type (one of {list(TaskType)}) for each index."
+                        ) from e
+            
+            if isinstance(index, Dict):
+                # convert the key to TaskType
+                index = {TaskType(k): v for k, v in index.items()}
+            else:
+                index = {task: index}
+            
+            # instantiate each retriever
+            if self.task in [TaskType.SPAN, TaskType.BOTH]:
+                self._index[TaskType.SPAN] = self._instantiate_index(
+                    index[TaskType.SPAN],
+                    index_device,
+                    index_precision,
+                    index_kwargs,
+                )
+            if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
+                self._index[TaskType.TRIPLET] = self._instantiate_index(
+                    index[TaskType.TRIPLET],
+                    index_device,
+                    index_precision,
+                    index_kwargs,
+                )
+
+            # clean up None retrievers from the dictionary
+            self._index = {
+                task_type: i for task_type, i in self._index.items() if i is not None
+            }
+
+            # link each index to the retriever
+            for task_type, retriever in self._retriever.items():
+                if task_type in self._index:
+                    retriever.document_index = self._index[task_type]
 
         # reader
         self.reader: RelikReaderBase | None = None
@@ -211,6 +283,7 @@ class Relik:
                     reader,
                     device=reader_device,
                     precision=reader_precision,
+                    **reader_kwargs,
                 )
                 if isinstance(reader, DictConfig)
                 else reader
@@ -220,7 +293,10 @@ class Relik:
             if reader_device is not None:
                 logger.info(f"Moving reader to `{reader_device}`.")
                 reader.to(reader_device)
-            if reader_precision is not None and reader.precision != PRECISION_MAP[reader_precision]:
+            if (
+                reader_precision is not None
+                and reader.precision != PRECISION_MAP[reader_precision]
+            ):
                 logger.info(
                     f"Setting precision of reader to `{PRECISION_MAP[reader_precision]}`."
                 )
@@ -243,61 +319,162 @@ class Relik:
         self.window_stride = window_stride
 
     @staticmethod
+    def _instantiate_index(
+        index: BaseDocumentIndex | DictConfig | Dict,
+        index_device: str | None | torch.device | int = None,
+        index_precision: int | str | torch.dtype | None = None,
+        index_kwargs: Dict[str, Any] | None = None,
+    ) -> BaseDocumentIndex:
+        """
+        Instantiate a document index.
+
+        Args:
+            index (`BaseDocumentIndex`, `DictConfig` or `Dict`):
+                The document index to instantiate.
+            index_device (`str`, `optional`):
+                The device to use for the document index.
+            index_precision (`int`, `str` or `torch.dtype`, `optional`):
+                The precision to use for the document index.
+            index_kwargs (`Dict[str, Any]`, `optional`):
+                Additional keyword arguments to pass to the document index.
+
+        Returns:
+            `BaseDocumentIndex`:
+                The instantiated document index.
+        """
+        if not isinstance(index, BaseDocumentIndex):
+            index = OmegaConf.create(index)
+            use_faiss = index_kwargs.get("use_faiss", False)
+            if use_faiss:
+                index = OmegaConf.merge(
+                    index,
+                    {
+                        "_target_": "relik.retriever.indexers.faissindex.FaissDocumentIndex.from_pretrained",
+                    },
+                )
+            if index_device is not None:
+                index_kwargs["device"] = index_device
+            if index_precision is not None:
+                index_kwargs["precision"] = PRECISION_MAP[index_precision]
+            # convert to DictConfig
+            index: BaseDocumentIndex = hydra.utils.instantiate(index, **index_kwargs)
+            if index.embeddings is None or (
+                hasattr(index, "index") and index.index is None
+            ):
+                logger.warning(
+                    "The document index does not have embeddings. "
+                    "Please remember to provide documents and to build the index."
+                )
+        else:
+            index = index
+            if index_device is not None:
+                logger.info(f"Moving index to `{index_device}`.")
+                index.to(index_device)
+            if index_device is not None:
+                logger.info(
+                    f"Setting precision of index to `{PRECISION_MAP[index_device]}`."
+                )
+                index.to(PRECISION_MAP[index_device])
+        return index
+
+    @staticmethod
     def _instantiate_retriever(
-        retriever,
-        retriever_device,
-        retriever_precision,
-        document_index,
-        document_index_device,
-        document_index_precision,
-    ):
+        retriever: GoldenRetriever | DictConfig | Dict,
+        retriever_device: str | None,
+        retriever_precision: int | str | torch.dtype | None,
+        retriever_kwargs: Dict[str, Any] | None,
+    ) -> GoldenRetriever:
+        """
+        Instantiate a retriever.
+
+        Args:
+            retriever (`GoldenRetriever`, `DictConfig` or `Dict`):
+                The retriever to instantiate.
+            retriever_device (`str`, `optional`):
+                The device to use for the retriever.
+            retriever_precision (`int`, `str` or `torch.dtype`, `optional`):
+                The precision to use for the retriever.
+            retriever_kwargs (`Dict[str, Any]`, `optional`):
+                Additional keyword arguments to pass to the retriever.
+
+        Returns:
+            `GoldenRetriever`:
+                The instantiated retriever.
+        """
         if not isinstance(retriever, GoldenRetriever):
             # convert to DictConfig
             retriever = hydra.utils.instantiate(
                 OmegaConf.create(retriever),
                 device=retriever_device,
                 precision=retriever_precision,
-                index_device=document_index_device,
-                index_precision=document_index_precision,
+                # index_device=document_index_device,
+                # index_precision=document_index_precision,
+                **retriever_kwargs,
             )
+        else:
+            if retriever_device is not None:
+                logger.info(f"Moving retriever to `{retriever_device}`.")
+                retriever.to(retriever_device)
+            if retriever_precision is not None:
+                logger.info(
+                    f"Setting precision of retriever to `{PRECISION_MAP[retriever_precision]}`."
+                )
+                retriever.to(PRECISION_MAP[retriever_precision])
         retriever.training = False
         retriever.eval()
-        if document_index is not None:
-            if retriever.document_index is not None:
-                logger.info(
-                    "The Retriever already has a document index, replacing it with the provided one."
-                    "If you want to keep using the old one, please do not provide a document index."
-                )
-                retriever.document_index = document_index
-        # we override the device and the precision of the document index if provided
-        if document_index_device is not None:
-            logger.info(f"Moving document index to `{document_index_device}`.")
-            retriever.document_index.to(document_index_device)
-        if document_index_precision is not None:
-            logger.info(
-                f"Setting precision of document index to `{PRECISION_MAP[document_index_precision]}`."
-            )
-            retriever.document_index.to(PRECISION_MAP[document_index_precision])
+        # if document_index is not None:
+        #     if retriever.document_index is not None:
+        #         logger.info(
+        #             "The Retriever already has a document index, replacing it with the provided one."
+        #             "If you want to keep using the old one, please do not provide a document index."
+        #         )
+        #         retriever.document_index = document_index
+        # # we override the device and the precision of the document index if provided
+        # if document_index_device is not None:
+        #     logger.info(f"Moving document index to `{document_index_device}`.")
+        #     retriever.document_index.to(document_index_device)
+        # if document_index_precision is not None:
+        #     logger.info(
+        #         f"Setting precision of document index to `{PRECISION_MAP[document_index_precision]}`."
+        #     )
+        #     retriever.document_index.to(PRECISION_MAP[document_index_precision])
         # retriever.document_index = document_index
         # now we can move the retriever to the right device and set the precision
-        if retriever_device is not None:
-            logger.info(f"Moving retriever to `{retriever_device}`.")
-            retriever.to(retriever_device)
-        if retriever_precision is not None:
-            logger.info(
-                f"Setting precision of retriever to `{PRECISION_MAP[retriever_precision]}`."
-            )
-            retriever.to(PRECISION_MAP[retriever_precision])
         return retriever
+
+    @property
+    def retriever(self) -> GoldenRetriever | Dict[TaskType, GoldenRetriever]:
+        """
+        Get the retriever.
+
+        Returns:
+            `GoldenRetriever` or `Dict[TaskType, GoldenRetriever]`:
+                The retriever or a dictionary of retrievers.
+        """
+        if len(self._retriever) == 1:
+            return list(self._retriever.values())[0]
+        return self._retriever
+
+    @property
+    def index(self) -> BaseDocumentIndex | Dict[TaskType, BaseDocumentIndex]:
+        """
+        Get the document index.
+
+        Returns:
+            `BaseDocumentIndex` or `Dict[TaskType, BaseDocumentIndex]`:
+                The document index or a dictionary of document indexes.
+        """
+        if len(self._index) == 1:
+            return list(self._index.values())[0]
+        return self._index
 
     def __call__(
         self,
         text: str | List[str] | None = None,
         windows: List[RelikReaderSample] | None = None,
-        candidates: List[str]
-        | List[Document]
-        | Dict[TaskType, List[Document]]
-        | None = None,
+        candidates: (
+            List[str] | List[Document] | Dict[TaskType, List[Document]] | None
+        ) = None,
         mentions: List[List[int]] | List[List[List[int]]] | None = None,
         top_k: int | None = None,
         window_size: int | None = None,
@@ -409,7 +586,7 @@ class Relik:
                     window_size,
                     window_stride,
                     is_split_into_words=is_split_into_words,
-                    mentions=mentions
+                    mentions=mentions,
                 )
             else:
                 blank_windows = []
@@ -424,7 +601,7 @@ class Relik:
             text = {w.doc_id: w.text for w in windows}
 
         if candidates is not None and any(
-            r is not None for r in self.retriever.values()
+            r is not None for r in self._retriever.values()
         ):
             logger.info(
                 "Both candidates and a retriever were provided. "
@@ -456,15 +633,18 @@ class Relik:
 
         else:
             # retrieve candidates first
-            if self.retriever is None:
+            if self._retriever is None:
                 raise ValueError(
                     "No retriever was provided, please provide a retriever or candidates."
                 )
             start_retr = time.time()
-            for task_type, retriever in self.retriever.items():
+            for task_type, retriever in self._retriever.items():
                 retriever_out = retriever.retrieve(
                     [w.text for w in windows],
-                    text_pair=[w.doc_topic.text if w.doc_topic is not None else None for w in windows],
+                    text_pair=[
+                        w.doc_topic if w.doc_topic is not None else None
+                        for w in windows
+                    ],
                     k=top_k,
                     batch_size=retriever_batch_size,
                     progress_bar=progress_bar,
@@ -474,7 +654,7 @@ class Relik:
                     [p.document for p in predictions] for predictions in retriever_out
                 ]
             end_retr = time.time()
-            logger.info(f"Retrieval took {end_retr - start_retr} seconds.")
+            logger.debug(f"Retrieval took {end_retr - start_retr} seconds.")
 
         # clean up None's
         windows_candidates = {
@@ -509,17 +689,20 @@ class Relik:
                 **kwargs,
             )
             end_read = time.time()
-            logger.info(f"Reading took {end_read - start_read} seconds.")
+            logger.debug(f"Reading took {end_read - start_read} seconds.")
             # TODO: check merging behavior without a reader
             # do we want to merge windows if there is no reader?
 
-            if self.window_size is not None and self.window_size not in ["sentence", "none"]:
+            if self.window_size is not None and self.window_size not in [
+                "sentence",
+                "none",
+            ]:
                 start_w = time.time()
                 windows = windows + blank_windows
                 windows.sort(key=lambda x: (x.doc_id, x.offset))
                 merged_windows = self.window_manager.merge_windows(windows)
                 end_w = time.time()
-                logger.info(f"Merging took {end_w - start_w} seconds.")
+                logger.debug(f"Merging took {end_w - start_w} seconds.")
             else:
                 merged_windows = windows
         else:
@@ -536,9 +719,11 @@ class Relik:
             if getattr(w, "predicted_spans", None) is not None:
                 span_labels = sorted(
                     [
-                        Span(start=ss, end=se, label=sl, text=text[w.doc_id][ss:se])
-                        if annotation_type == AnnotationType.CHAR
-                        else Span(start=ss, end=se, label=sl, text=w.words[ss:se])
+                        (
+                            Span(start=ss, end=se, label=sl, text=text[w.doc_id][ss:se])
+                            if annotation_type == AnnotationType.CHAR
+                            else Span(start=ss, end=se, label=sl, text=w.words[ss:se])
+                        )
                         for ss, se, sl in w.predicted_spans
                     ],
                     key=lambda x: x.start,
@@ -566,7 +751,7 @@ class Relik:
                 #         for c in getattr(w, f"{task_type.value}_candidates", [])
                 #         if r.document_index.documents.get_document_from_text(c) is not None
                 #     ]
-                #     for task_type, r in self.retriever.items()
+                #     for task_type, r in self._retriever.items()
                 # },
             )
             output.append(sample_output)
@@ -609,6 +794,9 @@ class Relik:
                 The instantiated `Relik`.
 
         """
+
+        print_relik_text_art()
+
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
 
@@ -691,13 +879,15 @@ class Relik:
             TaskType.SPAN: {
                 "question_encoder_name": None,
                 "passage_encoder_name": None,
-                "document_index_name": None,
             },
             TaskType.TRIPLET: {
                 "question_encoder_name": None,
                 "passage_encoder_name": None,
-                "document_index_name": None,
             },
+        }
+        index_names = {
+            TaskType.SPAN: None,
+            TaskType.TRIPLET: None,
         }
 
         if save_weights:
@@ -705,13 +895,12 @@ class Relik:
             # retriever
             model_id = model_id or output_dir.name
             retriever_model_id = retriever_model_id or f"retriever-{model_id}"
-            for task_type, retriever in self.retriever.items():
+            for task_type, retriever in self._retriever.items():
                 if retriever is None:
                     continue
                 task_retriever_model_id = f"{retriever_model_id}-{task_type.value}"
                 question_encoder_name = f"{task_retriever_model_id}-question-encoder"
                 passage_encoder_name = f"{task_retriever_model_id}-passage-encoder"
-                document_index_name = f"{task_retriever_model_id}-index"
                 logger.info(
                     f"Saving retriever to {output_dir / task_retriever_model_id}"
                 )
@@ -719,17 +908,26 @@ class Relik:
                     output_dir / task_retriever_model_id,
                     question_encoder_name=question_encoder_name,
                     passage_encoder_name=passage_encoder_name,
-                    document_index_name=document_index_name,
                     push_to_hub=push_to_hub,
                     organization=organization,
                     **kwargs,
                 )
                 retrievers_names[task_type] = {
-                    "reader_model_id": task_retriever_model_id,
+                    # "reader_model_id": task_retriever_model_id,
                     "question_encoder_name": question_encoder_name,
                     "passage_encoder_name": passage_encoder_name,
-                    "document_index_name": document_index_name,
                 }
+
+            for task_type, index in self._index.items():
+                index_name = f"{retriever_model_id}-{task_type.value}-index"
+                logger.info(f"Saving index to {output_dir / index_name}")
+                index.save_pretrained(
+                    output_dir / index_name,
+                    push_to_hub=push_to_hub,
+                    organization=organization,
+                    **kwargs,
+                )
+                index_names[task_type] = index_name
 
             # reader
             reader_model_id = reader_model_id or f"reader-{model_id}"
@@ -746,15 +944,18 @@ class Relik:
                 # we need to update the config with the model ids that will
                 # result from the push to hub
                 for task_type, retriever_names in retrievers_names.items():
-                    retriever_names[
-                        "question_encoder_name"
-                    ] = f"{user}/{retriever_names['question_encoder_name']}"
-                    retriever_names[
-                        "passage_encoder_name"
-                    ] = f"{user}/{retriever_names['passage_encoder_name']}"
-                    retriever_names[
-                        "document_index_name"
-                    ] = f"{user}/{retriever_names['document_index_name']}"
+                    retriever_names["question_encoder_name"] = (
+                        f"{user}/{retriever_names['question_encoder_name']}"
+                    )
+                    retriever_names["passage_encoder_name"] = (
+                        f"{user}/{retriever_names['passage_encoder_name']}"
+                    )
+                    # retriever_names["document_index_name"] = (
+                    #     f"{user}/{retriever_names['document_index_name']}"
+                    # )
+                for task_type, index_name in index_names.items():
+                    if index_name is not None:
+                        index_names[task_type] = f"{user}/{index_name}"
                 # question_encoder_name = f"{user}/{question_encoder_name}"
                 # passage_encoder_name = f"{user}/{passage_encoder_name}"
                 # document_index_name = f"{user}/{document_index_name}"
@@ -767,25 +968,28 @@ class Relik:
                     retriever_names["passage_encoder_name"] = (
                         output_dir / retriever_names["passage_encoder_name"]
                     )
-                    retriever_names["document_index_name"] = (
-                        output_dir / retriever_names["document_index_name"]
-                    )
+                    # retriever_names["document_index_name"] = (
+                    #     output_dir / retriever_names["document_index_name"]
+                    # )
                 reader_model_id = output_dir / reader_model_id
         else:
             # save config only
             for task_type, retriever_names in retrievers_names.items():
-                retriever = self.retriever.get(task_type, None)
+                retriever = self._retriever.get(task_type, None)
                 if retriever is None:
                     continue
-                retriever_names[
-                    "question_encoder_name"
-                ] = retriever.question_encoder.name_or_path
-                retriever_names[
-                    "passage_encoder_name"
-                ] = retriever.passage_encoder.name_or_path
-                retriever_names[
-                    "document_index_name"
-                ] = retriever.document_index.name_or_path
+                retriever_names["question_encoder_name"] = (
+                    retriever.question_encoder.name_or_path
+                )
+                retriever_names["passage_encoder_name"] = (
+                    retriever.passage_encoder.name_or_path
+                )
+                # retriever_names["document_index_name"] = (
+                #     retriever.document_index.name_or_path
+                # )
+
+            for task_type, index in self._index.items():
+                index_names[task_type] = index.name_or_path
 
             reader_model_id = self.reader.name_or_path
 
@@ -794,34 +998,45 @@ class Relik:
             config = {
                 "_target_": f"{self.__class__.__module__}.{self.__class__.__name__}"
             }
-            if self.retriever is not None:
+            if self._retriever is not None:
                 config["retriever"] = {}
-                for task_type, retriever in self.retriever.items():
+                for task_type, retriever in self._retriever.items():
                     if retriever is None:
                         continue
                     config["retriever"][task_type.value] = {
                         "_target_": f"{retriever.__class__.__module__}.{retriever.__class__.__name__}",
                     }
                     if retriever.question_encoder is not None:
-                        config["retriever"][task_type.value][
-                            "question_encoder"
-                        ] = retrievers_names[task_type]["question_encoder_name"]
+                        config["retriever"][task_type.value]["question_encoder"] = (
+                            retrievers_names[task_type]["question_encoder_name"]
+                        )
                     if (
                         retriever.passage_encoder is not None
                         and not retriever.passage_encoder_is_question_encoder
                     ):
-                        config["retriever"][task_type.value][
-                            "passage_encoder"
-                        ] = retrievers_names[task_type]["passage_encoder_name"]
-                    if retriever.document_index is not None:
-                        config["retriever"][task_type.value][
-                            "document_index"
-                        ] = retrievers_names[task_type]["document_index_name"]
-                if self.reader is not None:
-                    config["reader"] = {
-                        "_target_": f"{self.reader.__class__.__module__}.{self.reader.__class__.__name__}",
-                        "transformer_model": reader_model_id,
+                        config["retriever"][task_type.value]["passage_encoder"] = (
+                            retrievers_names[task_type]["passage_encoder_name"]
+                        )
+                    # if retriever.document_index is not None:
+                    #     config["retriever"][task_type.value]["document_index"] = (
+                    #         retrievers_names[task_type]["document_index_name"]
+                    #     )
+            if self._index is not None:
+                config["index"] = {}
+                for task_type, index in self._index.items():
+                    if index is None:
+                        continue
+                    config["index"][task_type.value] = {
+                        "_target_": f"{index.__class__.__module__}.{index.__class__.__name__}.from_pretrained",
                     }
+                    config["index"][task_type.value][
+                        "name_or_path"
+                    ] = index.name_or_path
+            if self.reader is not None:
+                config["reader"] = {
+                    "_target_": f"{self.reader.__class__.__module__}.{self.reader.__class__.__name__}",
+                    "transformer_model": reader_model_id,
+                }
 
             # these are model-specific and should be saved
             config["task"] = self.task

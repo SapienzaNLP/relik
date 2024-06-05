@@ -71,7 +71,7 @@ def create_windows(
             window_size,
             window_stride,
             is_split_into_words=is_split_into_words,
-            doc_id=doc_id,
+            doc_ids=doc_id,
             doc_topic=doc_topic,
         )
 

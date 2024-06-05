@@ -48,12 +48,9 @@ class BaseDocumentIndex:
 
     def __init__(
         self,
-        documents: str
-        | List[str]
-        | os.PathLike
-        | List[os.PathLike]
-        | DocumentStore
-        | None = None,
+        documents: (
+            str | List[str] | os.PathLike | List[os.PathLike] | DocumentStore | None
+        ) = None,
         embeddings: torch.Tensor | None = None,
         metadata_fields: List[str] | None = None,
         separator: str | None = None,
@@ -62,6 +59,9 @@ class BaseDocumentIndex:
     ) -> None:
         if metadata_fields is None:
             metadata_fields = []
+
+        if device is None:
+            device = "cpu"
 
         self.metadata_fields = metadata_fields
         self.separator = separator
@@ -145,7 +145,10 @@ class BaseDocumentIndex:
                 if isinstance(device_or_precision, torch.device):
                     self.embeddings = self.embeddings.to(device_or_precision)
                 else:
-                    if device_or_precision != self.embeddings.dtype and self.device != "cpu":
+                    if (
+                        device_or_precision != self.embeddings.dtype
+                        and self.device != "cpu"
+                    ):
                         self.embeddings = self.embeddings.to(device_or_precision)
                 # self.embeddings = self.embeddings.to(device_or_precision)
         return self
@@ -400,7 +403,7 @@ class BaseDocumentIndex:
     @classmethod
     def from_pretrained(
         cls,
-        name_or_dir: Union[str, os.PathLike],
+        name_or_path: Union[str, os.PathLike],
         device: str = "cpu",
         precision: str | None = None,
         config_file_name: str | None = None,
@@ -417,7 +420,7 @@ class BaseDocumentIndex:
         embedding_file_name = embedding_file_name or cls.EMBEDDINGS_FILE_NAME
 
         model_dir = from_cache(
-            name_or_dir,
+            name_or_path,
             filenames=[config_file_name, document_file_name, embedding_file_name],
             cache_dir=cache_dir,
             force_download=force_download,
@@ -430,8 +433,10 @@ class BaseDocumentIndex:
             )
 
         config = OmegaConf.load(config_path)
+        # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
+        if cls.__name__ != "BaseDocumentIndex":
+            kwargs["_target_"] = f"{cls.__module__}.{cls.__name__}"
         # override the config with the kwargs
-        # if config_kwargs is not None:
         config = OmegaConf.merge(config, OmegaConf.create(kwargs))
         logger.info("Loading Index from config:")
         logger.info(pformat(OmegaConf.to_container(config)))
@@ -469,7 +474,7 @@ class BaseDocumentIndex:
             embeddings=embeddings,
             device=device,
             precision=precision,
-            name_or_dir=name_or_dir,
+            name_or_path=name_or_path,
             _convert_="partial",
             *args,
             **kwargs,

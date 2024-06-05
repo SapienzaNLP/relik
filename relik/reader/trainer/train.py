@@ -20,9 +20,18 @@ from relik.reader.utils.strong_matching_eval import ELStrongMatchingCallback
 
 def train(cfg: DictConfig) -> None:
 
+    print(cfg)
+
+    print(f"Current working directory : {os.getcwd()}")
+    print(f"Orig working directory    : {get_original_cwd()}")
+    print(f"to_absolute_path('foo')   : {to_absolute_path('foo')}")
+    print(f"to_absolute_path('/foo')  : {to_absolute_path('/foo')}")
+    return
+
     lightning.seed_everything(cfg.training.seed)
     # check if deterministic algorithms are available
-    # torch.use_deterministic_algorithms(True, warn_only=True)
+    if "deterministic" in cfg and cfg.deterministic:
+        torch.use_deterministic_algorithms(True, warn_only=True)
 
     # log the configuration
     pprint(OmegaConf.to_container(cfg, resolve=True))

@@ -1,10 +1,13 @@
 import csv
 import json
-import pickle
 from pathlib import Path
-from typing import Dict, List, Union
+import pickle
+import sys
+from typing import Any, Dict, List, Union
 
 from relik.common.log import get_logger
+
+csv.field_size_limit(sys.maxsize)
 
 logger = get_logger(__name__)
 
@@ -133,7 +136,24 @@ class DocumentStore:
             logger.warning(f"Document with text `{text}` does not exist, skipping")
         return self._documents_reverse_index.get(text, None)
 
-    def add_documents(self, documents: List[Document] | List[Dict]) -> List[Document]:
+    def get_document_from_index(self, index: int) -> Document | None:
+        """
+        Retrieve the document by its index.
+
+        Args:
+            index (`int`):
+                The index of the document to retrieve.
+
+        Returns:
+            Optional[Document]: The document with the given index, or None if it does not exist.
+        """
+        if index >= len(self._documents):
+            logger.warning(f"Document with index `{index}` does not exist, skipping")
+        return self._documents[index]
+
+    def add_documents(
+        self, documents: List[Document] | List[str] | List[Dict]
+    ) -> List[Document]:
         """
         Add a list of documents to the document store.
 
@@ -145,9 +165,11 @@ class DocumentStore:
             List[Document]: The documents just added.
         """
         return [
-            self.add_document(doc)
-            if isinstance(doc, Document)
-            else self.add_document(Document.from_dict(doc))
+            (
+                self.add_document(Document.from_dict(doc))
+                if isinstance(doc, Dict)
+                else self.add_document(doc)
+            )
             for doc in documents
         ]
 
@@ -172,13 +194,17 @@ class DocumentStore:
             Document: The document just added.
         """
         if isinstance(text, str):
+            # check if the document already exists
+            if text in self:
+                logger.warning(f"Document `{text}` already exists, skipping")
+                return self._documents_reverse_index[text]
             if id is None:
                 # get the len of the documents and add 1
                 id = len(self._documents)  # + 1
             text = Document(text, id, metadata)
 
         if text in self:
-            logger.warning(f"Document {text} already exists, skipping")
+            logger.warning(f"Document `{text}` already exists, skipping")
             return self._documents_index[text.id]
 
         self._documents.append(text)
@@ -319,9 +345,11 @@ class DocumentStore:
 
                 d.append(
                     Document(
-                        text=row[header.index(text)].strip().lower()
-                        if ingore_case
-                        else row[header.index(text)].strip(),
+                        text=(
+                            row[header.index(text)].strip().lower()
+                            if ingore_case
+                            else row[header.index(text)].strip()
+                        ),
                         id=s_id,  # row[header.index(id)],
                         metadata={
                             key: row[header.index(key)] for key in row_metadata_keys
