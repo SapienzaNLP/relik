@@ -1,4 +1,4 @@
-seed: 42
+seed: 94
 
 trainer:
   _target_: lightning.Trainer

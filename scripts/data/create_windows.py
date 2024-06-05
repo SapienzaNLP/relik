@@ -103,6 +103,20 @@ def create_windows(
                     f_out.write(wd.to_jsons() + "\n")
                 progress_bar.update(len(batched_data))
                 batched_data = []
+            
+        if len(batched_data) > 0:
+            windowized_data = _process_batch(
+                batched_data,
+                window_manager,
+                window_size,
+                window_stride,
+                is_split_into_words,
+                title_mapping,
+            )
+            for wd in windowized_data:
+                f_out.write(wd.to_jsons() + "\n")
+            progress_bar.update(len(batched_data))
+            batched_data = []
 
 
 def _process_batch(
@@ -182,8 +196,8 @@ def _process_batch(
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser("Create windows from ReLiK data.")
-    arg_parser.add_argument("input-file", type=str)
-    arg_parser.add_argument("output-file", type=str)
+    arg_parser.add_argument("input_file", type=str)
+    arg_parser.add_argument("output_file", type=str)
     arg_parser.add_argument("--window-size", type=int, default=32)
     arg_parser.add_argument("--window-stride", type=int, default=16)
     arg_parser.add_argument("--title-mapping", type=str)

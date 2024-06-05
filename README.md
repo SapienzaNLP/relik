@@ -65,9 +65,7 @@ pip install -e .[all]
 
 </details>
 
-## Usage
-
-### Inference
+## Inference
 
 [//]: # (Write a short description of the model and how to use it with the `from_pretrained` method.)
 
@@ -121,7 +119,7 @@ from relik.reader import R
 reader = 
 ``` -->
 
-### Training
+## Training
 
 Here we provide instructions on how to train the retriever and the reader.
 All your data should have the following starting structure:
@@ -139,11 +137,11 @@ All your data should have the following starting structure:
 }
 ```
 
-#### Retriever
+### Retriever
 
 We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
 
-##### Data Preparation
+#### Data Preparation
 
 The retriever requires a dataset in a format similar to [DPR](https://github.com/facebookresearch/DPR): a `jsonl` file where each line is a dictionary with the following keys:
 
@@ -165,16 +163,11 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 }
 ```
 
-The data preparation involves three steps:
-
-1. Convert the data to the ReLiK format.
-2. Windowize the data to create smaller contexts.
-3. Convert the data to the DPR format.
-
-###### BLINK
+##### BLINK
 
 The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
+To convert the BLINK dataset to the ReLiK format, you can use the following commands:
 
 1. Assuming the data is downloaded in `data/blink`, you can convert it to the ReLiK format with the following command:
 
@@ -218,7 +211,7 @@ python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl
 ```
 
-###### AIDA
+##### AIDA
 
 Since the AIDA dataset is not publicly available, we provide just the annotations in the ReLiK format. Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following commands:
 
@@ -228,7 +221,7 @@ python scripts/data/create_windows.py \
   data/data/processed/aida-train-relik-windowed.jsonl
 ```
 
-and then convert it to the DPR format with the following command:
+and then convert it to the DPR format:
 
 ```bash
 python scripts/data/convert_to_dpr.py \
@@ -236,14 +229,20 @@ python scripts/data/convert_to_dpr.py \
   data/data/processed/aida-train-relik-windowed-dpr.jsonl
 ```
 
-##### Training the model
+#### Training the model
 
-To train the model you need a configuration file. You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`.
+To train the model you need a configuration file. 
+<!-- You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`. -->
+The configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batch.yaml` and `finetune_iterable_in_batch.yaml`, which we used to pre-train and fine-tune the retriever, respectively.
 
 To train the retriever on the AIDA dataset, you can run the following command:
 
 ```bash
-relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml model.language_model=intfloat/e5-base-v2 train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl test_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl
+relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
+  model.language_model=intfloat/e5-base-v2 \
+  train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
+  val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
+  test_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl
 ```
 
 The `relik retriever train` command takes the following arguments:
@@ -251,17 +250,15 @@ The `relik retriever train` command takes the following arguments:
 - `config_path`: The path to the configuration file.
 - `overrides`: A list of overrides to the configuration file, in the format `key=value`.
 
-The two configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batch.yaml` and `finetune_iterable_in_batch.yaml`, used for pre-training and fine-tuning the retriever, respectively.
-
-#### Inference
+### Inference
 
 - TODO
 
-#### Reader
+### Reader
 
-##### Data Preparation
+#### Data Preparation
 
-Add candidates to the dataset
+The reader requires the windowized dataset we created in section [Retriever](#retriever) augmented with the candidate from the retriever. 
 
 ```bash
 python scripts/data/add_candidates.py \
@@ -275,15 +272,20 @@ python scripts/data/add_candidates.py \
   # --log_recall
 ```
 
-##### Training the model
+#### Training the model
 
-To train the model you need a configuration file. You can find an example in `relik/reader/conf/large.yaml`. Once you have your configuration file, you can train the model with the following command:
+Similar to the retriever, the reader requires a configuration file. The folder `relik/reader/conf` contains the configuration files we used to train the reader.
+For instance, `large.yaml` is the configuration file we used to train the large reader.
+By running the following command, you can train the reader on the AIDA dataset:
 
 ```bash
-relik reader train path/to/config.yaml
+relik reader train relik/reader/conf/large.yaml \
+  train_dataset_path=data/aida/processed/aida-train-relik-windowed-candidates.jsonl \
+  val_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl \
+  test_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl
 ```
 
-#### Inference
+### Inference
 
 - TODO
 
