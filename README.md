@@ -80,7 +80,7 @@ relik = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large")
 relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
-To use ReLiK for Relation Extraction, you can use the `relik-relation-extraction-large` model:
+and for Relation Extraction:
 
 ```python
 from relik import Relik
@@ -167,7 +167,7 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 
 The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
-To convert the BLINK dataset to the ReLiK format, you can use the following commands:
+To convert the BLINK dataset to the ReLiK format, you can follow these steps:
 
 1. Assuming the data is downloaded in `data/blink`, you can convert it to the ReLiK format with the following command:
 
@@ -213,7 +213,8 @@ python scripts/data/blink/convert_to_dpr.py \
 
 ##### AIDA
 
-Since the AIDA dataset is not publicly available, we provide just the annotations in the ReLiK format. Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following commands:
+Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
+Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
 
 ```bash
 python scripts/data/create_windows.py \
