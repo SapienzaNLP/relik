@@ -468,11 +468,11 @@ The reader can be loaded from a repo id or a local path:
 from relik.reader import RelikReaderForSpanExtraction, RelikReaderForTripletExtraction
 
 # the reader for span extraction
-reader_span = RelikReaderForSpanExtraction.from_pretrained(
+reader_span = RelikReaderForSpanExtraction(
   "sapienzanlp/relik-reader-deberta-v3-large-aida"
 )
 # the reader for triplet extraction
-reader_tripltes = RelikReaderForTripletExtraction.from_pretrained(
+reader_tripltes = RelikReaderForTripletExtraction(
   "sapienzanlp/relik-reader-deberta-v3-large-nyt"
 )
 ```
