@@ -137,11 +137,11 @@ All your data should have the following starting structure:
 }
 ```
 
-### Retriever
+## Retriever
 
 We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
 
-#### Data Preparation
+### Data Preparation
 
 The retriever requires a dataset in a format similar to [DPR](https://github.com/facebookresearch/DPR): a `jsonl` file where each line is a dictionary with the following keys:
 
@@ -163,7 +163,7 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 }
 ```
 
-##### BLINK
+#### BLINK
 
 The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
@@ -211,7 +211,7 @@ python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl
 ```
 
-##### AIDA
+#### AIDA
 
 Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
 Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
@@ -230,7 +230,7 @@ python scripts/data/convert_to_dpr.py \
   data/data/processed/aida-train-relik-windowed-dpr.jsonl
 ```
 
-#### Training the model
+### Training the model
 
 To train the model you need a configuration file. 
 <!-- You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`. -->
@@ -334,9 +334,9 @@ and then it can be used to retrieve documents:
 retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top_k=100)
 ```
 
-### Reader
+## Reader
 
-#### Data Preparation
+### Data Preparation
 
 The reader requires the windowized dataset we created in section [Retriever](#retriever) augmented with the candidate from the retriever. 
 
@@ -352,7 +352,7 @@ python scripts/data/add_candidates.py \
   # --log_recall
 ```
 
-#### Training the model
+### Training the model
 
 Similar to the retriever, the reader requires a configuration file. The folder `relik/reader/conf` contains the configuration files we used to train the reader.
 For instance, `large.yaml` is the configuration file we used to train the large reader.
