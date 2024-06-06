@@ -224,7 +224,7 @@ id \t text \t any other column
 
 Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
-```console
+```shell
 # train
 python scripts/data/create_windows.py \
   data/blink/processed/blink-train-kilt-relik.jsonl \
@@ -238,7 +238,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```console
+```shell
 # train
 python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
