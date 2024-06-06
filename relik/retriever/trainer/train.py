@@ -984,7 +984,7 @@ def train_hydra(conf: omegaconf.DictConfig) -> None:
     else:
         # load best model for testing
         if conf.train.checkpoint_path:
-            best_model_path = conf.evaluation.checkpoint_path
+            best_model_path = conf.train.checkpoint_path
         elif model_checkpoint_callback:
             best_model_path = model_checkpoint_callback.best_model_path
         else:

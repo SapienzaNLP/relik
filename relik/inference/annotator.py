@@ -483,6 +483,7 @@ class Relik:
         retriever_batch_size: int | None = 32,
         reader_batch_size: int | None = 32,
         return_also_windows: bool = False,
+        use_doc_topic: bool = False,
         annotation_type: str | AnnotationType = AnnotationType.CHAR,
         progress_bar: bool = False,
         **kwargs,
@@ -642,7 +643,7 @@ class Relik:
                 retriever_out = retriever.retrieve(
                     [w.text for w in windows],
                     text_pair=[
-                        w.doc_topic if w.doc_topic is not None else None
+                        w.doc_topic if (w.doc_topic is not None and use_doc_topic) else None
                         for w in windows
                     ],
                     k=top_k,

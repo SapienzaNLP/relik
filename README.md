@@ -243,7 +243,7 @@ relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
   train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
   val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
-  test_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl
+  test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
 ```
 
 The `relik retriever train` command takes the following arguments:
@@ -253,7 +253,86 @@ The `relik retriever train` command takes the following arguments:
 
 ### Inference
 
-- TODO
+By passing `train.only_test=True` to the `relik retriever train` command, you can skip the training and only evaluate the model.
+It needs also the path to the PyTorch Lightning checkpoint and the dataset to evaluate on.
+
+```bash
+relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
+  train.only_test=True \
+  test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
+  model.checkpoint_path=path/to/checkpoint
+```
+
+The retriever encoder can be saved from the checkpoint with the following command:
+
+```python
+from relik.retriever.lightning_modules.pl_modules import GoldenRetrieverPLModule
+
+checkpoint_path = "path/to/checkpoint"
+retriever_folder = "path/to/retriever"
+
+# If you want to push the model to the Hugging Face Hub set push_to_hub=True
+push_to_hub = False
+# If you want to push the model to the Hugging Face Hub set the repo_id
+repo_id = "sapienzanlp/relik-retriever-e5-base-v2-aida-blink-encoder"
+
+pl_module = GoldenRetrieverPLModule.load_from_checkpoint(checkpoint_path)
+pl_module.model.save_pretrained(retriever_folder, push_to_hub=push_to_hub, repo_id=repo_id)
+```
+
+with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
+
+The retriever needs a index to search for the documents. The index can be created using `create_index.py` script in `scripts/data/retriever`
+
+```bash
+
+python scripts/data/retriever/create_index.py -h 
+
+usage: Create retriever index. [-h] --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH --document-path DOCUMENT_PATH [--passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH] [--indexer_class INDEXER_CLASS]
+                               [--document-file-type DOCUMENT_FILE_TYPE] --output-folder OUTPUT_FOLDER [--batch-size BATCH_SIZE] [--passage-max-length PASSAGE_MAX_LENGTH] [--device DEVICE] [--index-device INDEX_DEVICE] [--precision PRECISION]
+                               [--num-workers NUM_WORKERS] [--push-to-hub] [--repo-id REPO_ID]
+
+options:
+  -h, --help            show this help message and exit
+  --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH
+  --document-path DOCUMENT_PATH
+  --passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH
+  --indexer_class INDEXER_CLASS
+  --document-file-type DOCUMENT_FILE_TYPE
+  --output-folder OUTPUT_FOLDER
+  --batch-size BATCH_SIZE
+  --passage-max-length PASSAGE_MAX_LENGTH
+  --device DEVICE
+  --index-device INDEX_DEVICE
+  --precision PRECISION
+  --num-workers NUM_WORKERS
+  --push-to-hub
+  --repo-id REPO_ID
+```
+
+With the encoder and the index, the retriever can be loaded from a repo id or a local path:
+
+```python
+from relik.retriever import GoldenRetriever
+
+encoder_name_or_path = "sapienzanlp/relik-retriever-e5-base-v2-aida-blink-encoder"
+index_name_or_path = "sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-index"
+
+retriever = GoldenRetriever(
+  question_encoder=encoder_name_or_path,
+  document_index=index_name_or_path,
+  device="cuda", # or "cpu"
+  precision="16", # or "32", "bf16"
+  index_device="cuda", # or "cpu"
+  index_precision="16", # or "32", "bf16"
+)
+```
+
+and then it can be used to retrieve documents:
+
+```python
+retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top_k=100)
+```
 
 ### Reader
 
