@@ -65,7 +65,7 @@ pip install -e .[all]
 
 </details>
 
-## Inference
+## Quick Start
 
 [//]: # (Write a short description of the model and how to use it with the `from_pretrained` method.)
 
