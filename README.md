@@ -119,9 +119,12 @@ from relik.reader import R
 reader = 
 ``` -->
 
-## Training
+## Before you start
 
-Here we provide instructions on how to train the retriever and the reader.
+In the following sections, we provide a step-by-step guide on how to prepare the data, train the retriever and reader, and evaluate the model.
+
+### Entity Linking
+
 All your data should have the following starting structure:
 
 ```jsonl
@@ -136,6 +139,33 @@ All your data should have the following starting structure:
     ]
 }
 ```
+
+We used BLINK (Wu et al., 2019) and AIDA (Hoffart et al, 2011) datasets for training and evaluation.
+More specifically, we used the BLINK dataset for pre-training the retriever and the AIDA dataset for fine-tuning the retriever and training the reader.
+
+The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
+We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
+Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
+
+```bash
+# Train
+python scripts/data/blink/preprocess_genre_blink.py \
+  data/blink/blink-train-kilt.jsonl \
+  data/blink/processed/blink-train-kilt-relik.jsonl
+
+# Dev
+python scripts/data/blink/preprocess_genre_blink.py \
+  data/blink/blink-dev-kilt.jsonl \
+  data/blink/processed/blink-dev-kilt-relik.jsonl
+```
+
+The AIDA dataset is not publicly available, but we provide the file we used without `text` field. You can find the file in ReLiK format in `data/aida/processed` folder.
+
+The Wikipedia index we used can be downloaded from [here](https://huggingface.co/sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-index/blob/main/documents.jsonl).
+
+### Relation Extraction
+
+TODO
 
 ## Retriever
 
@@ -163,27 +193,38 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 }
 ```
 
-#### BLINK
+The retriever also needs an index to search for the documents. The documents to index can be either a jsonl file or a tsv file similar to
+[DPR](https://github.com/facebookresearch/DPR):
 
-The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
-We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
-To convert the BLINK dataset to the ReLiK format, you can follow these steps:
+- `jsonl`: each line is a json object with the following keys: `id`, `text`, `metadata`
+- `tsv`: each line is a tab-separated string with the `id` and `text` column,
+  followed by any other column that will be stored in the `metadata` field
 
-1. Assuming the data is downloaded in `data/blink`, you can convert it to the ReLiK format with the following command:
+jsonl example:
 
-```bash
-# Train
-python scripts/data/blink/preprocess_genre_blink.py \
-  data/blink/blink-train-kilt.jsonl \
-  data/blink/processed/blink-train-kilt-relik.jsonl
-
-# Dev
-python scripts/data/blink/preprocess_genre_blink.py \
-  data/blink/blink-dev-kilt.jsonl \
-  data/blink/processed/blink-dev-kilt-relik.jsonl
+```json lines
+[
+  {
+    "id": "...",
+    "text": "...",
+    "metadata": ["{...}"]
+  },
+  ...
+]
 ```
 
-2. Then you can windowize the data with the following command:
+tsv example:
+
+```tsv
+id \t text \t any other column
+...
+```
+
+#### Entity Linking
+
+##### BLINK
+
+Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
 ```bash
 # train
@@ -197,7 +238,7 @@ python scripts/data/create_windows.py \
   data/blink/processed/blink-dev-kilt-relik-windowed.jsonl
 ```
 
-3. Finally, you can convert the data to the DPR format with the following command:
+and then convert it to the DPR format:
 
 ```bash
 # train
@@ -211,7 +252,7 @@ python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl
 ```
 
-#### AIDA
+##### AIDA
 
 Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
 Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
@@ -232,11 +273,19 @@ python scripts/data/convert_to_dpr.py \
 
 ### Training the model
 
-To train the model you need a configuration file. 
+The `relik retriever train` command can be used to train the retriever. It requires the following arguments:
+
+- `config_path`: The path to the configuration file.
+- `overrides`: A list of overrides to the configuration file, in the format `key=value`.
+
+Examples of configuration files can be found in the `relik/retriever/conf` folder.
+
+#### Entity Linking
+
 <!-- You can find an example in `relik/retriever/conf/finetune_iterable_in_batch.yaml`. -->
 The configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batch.yaml` and `finetune_iterable_in_batch.yaml`, which we used to pre-train and fine-tune the retriever, respectively.
 
-To train the retriever on the AIDA dataset, you can run the following command:
+For instance, to train the retriever on the AIDA dataset, you can run the following command:
 
 ```bash
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
@@ -246,10 +295,9 @@ relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
 ```
 
-The `relik retriever train` command takes the following arguments:
+#### Relation Extraction
 
-- `config_path`: The path to the configuration file.
-- `overrides`: A list of overrides to the configuration file, in the format `key=value`.
+TODO
 
 ### Inference
 
