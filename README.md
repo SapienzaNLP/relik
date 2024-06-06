@@ -119,7 +119,7 @@ from relik.reader import R
 reader = 
 ``` -->
 
-## Before you start
+## Before You Start
 
 In the following sections, we provide a step-by-step guide on how to prepare the data, train the retriever and reader, and evaluate the model.
 
@@ -224,7 +224,7 @@ id \t text \t any other column
 
 Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
-```shell
+```console
 # train
 python scripts/data/create_windows.py \
   data/blink/processed/blink-train-kilt-relik.jsonl \
@@ -238,7 +238,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```shell
+```console
 # train
 python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
@@ -382,27 +382,51 @@ retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top
 
 ## Reader
 
+The reader is responsible for extracting entities and relations from documents from a set of candidates (e.g., possible entities or relations).
+The reader can be trained for span extraction or triplet extraction.
+The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Linking , while the `RelikReaderForTripletExtraction` is used for triplet extraction, i.e. Relation Extraction.
+
 ### Data Preparation
 
-The reader requires the windowized dataset we created in section [Retriever](#retriever) augmented with the candidate from the retriever. 
+The reader requires the windowized dataset we created in section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
+The candidate can be added to the dataset using the `add_candidates.py` script in `scripts/data/retriever`.
 
 ```console
-python scripts/data/add_candidates.py \
-  --encoder riccorl/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder \
-  --index riccorl/retriever-relik-entity-linking-aida-wikipedia-base-index \
-  --input_path path/to/processed/data \
-  --output_path ... \
-  # --index_device cuda \
-  # --precision 16 \
-  # --topics \
-  # --log_recall
+python scripts/data/retriever/add_candidates.py -h
+
+usage: Add the candidates to the windowized dataset [-h] --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH --document-name-or-path DOCUMENT_NAME_OR_PATH [--passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH] --input-path INPUT_PATH
+                                                    --output-path OUTPUT_PATH [--top-k TOP_K] [--batch-size BATCH_SIZE] [--device DEVICE] [--index-device INDEX_DEVICE] [--precision PRECISION] [--use-doc-topics] [--num-workers NUM_WORKERS] [--log-recall]
+
+options:
+  -h, --help            show this help message and exit
+  --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH
+  --document-name-or-path DOCUMENT_NAME_OR_PATH
+  --passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH
+  --input-path INPUT_PATH
+  --output-path OUTPUT_PATH
+  --top-k TOP_K
+  --batch-size BATCH_SIZE
+  --device DEVICE
+  --index-device INDEX_DEVICE
+  --precision PRECISION
+  --use-doc-topics
+  --num-workers NUM_WORKERS
+  --log-recall
 ```
 
 ### Training the model
 
-Similar to the retriever, the reader requires a configuration file. The folder `relik/reader/conf` contains the configuration files we used to train the reader.
-For instance, `large.yaml` is the configuration file we used to train the large reader.
-By running the following command, you can train the reader on the AIDA dataset:
+Similar to the retriever, the `relik reader train` command can be used to train the retriever. It requires the following arguments:
+
+- `config_path`: The path to the configuration file.
+- `overrides`: A list of overrides to the configuration file, in the format `key=value`.
+
+Examples of configuration files can be found in the `relik/reader/conf` folder.
+
+#### Entity Linking
+
+The configuration files in `relik/reader/conf` are `large.yaml` and `base.yaml`, which we used to train the large and base reader, respectively.
+For instance, to train the large reader on the AIDA dataset run:
 
 ```console
 relik reader train relik/reader/conf/large.yaml \
@@ -411,9 +435,55 @@ relik reader train relik/reader/conf/large.yaml \
   test_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl
 ```
 
+#### Relation Extraction
+
+TODO
+
 ### Inference
 
-- TODO
+The reader can be saved from the checkpoint with the following command:
+
+```python
+from relik.reader.lightning_modules.relik_reader_pl_module import RelikReaderPLModule
+
+checkpoint_path = "path/to/checkpoint"
+reader_folder = "path/to/reader"
+
+# If you want to push the model to the Hugging Face Hub set push_to_hub=True
+push_to_hub = False
+# If you want to push the model to the Hugging Face Hub set the repo_id
+repo_id = "sapienzanlp/relik-reader-deberta-v3-large-aida"
+
+pl_model = RelikReaderPLModule.load_from_checkpoint(
+    trainer.checkpoint_callback.best_model_path
+)
+pl_model.relik_reader_core_model.save_pretrained(experiment_path, push_to_hub=push_to_hub, repo_id=repo_id)
+```
+
+with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
+
+The reader can be loaded from a repo id or a local path:
+
+```python
+from relik.reader import RelikReaderForSpanExtraction, RelikReaderForTripletExtraction
+
+# the reader for span extraction
+reader_span = RelikReaderForSpanExtraction.from_pretrained(
+  "sapienzanlp/relik-reader-deberta-v3-large-aida"
+)
+# the reader for triplet extraction
+reader_tripltes = RelikReaderForTripletExtraction.from_pretrained(
+  "sapienzanlp/relik-reader-deberta-v3-large-nyt"
+)
+```
+
+and used to extract entities and relations:
+
+```python
+# an example of candidates for the reader
+candidates = ["Michael Jordan", "NBA", "Chicago Bulls", "Basketball", "United States"]
+reader_span.read("Michael Jordan was one of the best players in the NBA.", candidates=candidates)
+```
 
 ## Performance
 
@@ -423,12 +493,14 @@ We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://ger
 
 | Model | AIDA-B | MSNBC | Der | K50 | R128 | R500 | OKE15 | OKE16 | AVG | AVG-OOD | Speed (ms) |
 |-------|--------|-------|-----|-----|------|------|-------|-------|-----|---------|------------|
-| Base | 85.87 | 71.85 | 55.5 | 67.2 | 49.23 | 41.54 | 62.57 | 53.93 | 60.96 | 57.4 | n |
-| Large | 87.37 | 73.2 | 58.24 | 68.25 | 50.13 | 42.75 | 66.67 | 56.7 | 62.91 | 59.42 | n |
+| Base | 85.25 | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2 | n |
+| Large | 86.37 | 75.04 | 56.25 | 72.8 | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15 | n |
 
 To evaluate ReLiK we use the following steps:
 
-1. Start the GERBIL server:
+1. Download the GERBIL server from [here](LINK).
+
+2. Start the GERBIL server:
 
 ```console
 cd gerbil && ./start.sh
