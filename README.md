@@ -22,7 +22,7 @@ A blazing fast and lightweight Information Extraction model for Entity Linking a
 
 Installation from PyPI
 
-```bash
+```console
 pip install relik
 ```
 
@@ -33,31 +33,31 @@ pip install relik
 
 Install with all the optional dependencies.
 
-```bash
+```console
 pip install relik[all]
 ```
 
 Install with optional dependencies for training and evaluation.
 
-```bash
+```console
 pip install relik[train]
 ```
 
 Install with optional dependencies for [FAISS](https://github.com/facebookresearch/faiss)
 
-```bash
+```console
 pip install relik[faiss] # or relik[faiss-gpu] for GPU support
 ```
 
 Install with optional dependencies for serving the models with [FastAPI](https://fastapi.tiangolo.com/) and [Ray](https://docs.ray.io/en/latest/serve/quickstart.html).
 
-```bash
+```console
 pip install relik[serve]
 ```
 
 #### Installation from source
 
-```bash
+```console
 git clone https://github.com/SapienzaNLP/relik.git
 cd relik
 pip install -e .[all]
@@ -147,7 +147,7 @@ The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebook
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
 Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
 
-```bash
+```console
 # Train
 python scripts/data/blink/preprocess_genre_blink.py \
   data/blink/blink-train-kilt.jsonl \
@@ -203,14 +203,12 @@ The retriever also needs an index to search for the documents. The documents to 
 jsonl example:
 
 ```json lines
-[
-  {
-    "id": "...",
-    "text": "...",
-    "metadata": ["{...}"]
-  },
-  ...
-]
+{
+  "id": "...",
+  "text": "...",
+  "metadata": ["{...}"]
+},
+...
 ```
 
 tsv example:
@@ -226,7 +224,7 @@ id \t text \t any other column
 
 Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
-```bash
+```console
 # train
 python scripts/data/create_windows.py \
   data/blink/processed/blink-train-kilt-relik.jsonl \
@@ -240,7 +238,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```bash
+```console
 # train
 python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
@@ -257,7 +255,7 @@ python scripts/data/blink/convert_to_dpr.py \
 Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
 Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
 
-```bash
+```console
 python scripts/data/create_windows.py \
   data/data/processed/aida-train-relik.jsonl \
   data/data/processed/aida-train-relik-windowed.jsonl
@@ -265,7 +263,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```bash
+```console
 python scripts/data/convert_to_dpr.py \
   data/data/processed/aida-train-relik-windowed.jsonl \
   data/data/processed/aida-train-relik-windowed-dpr.jsonl
@@ -287,7 +285,7 @@ The configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batc
 
 For instance, to train the retriever on the AIDA dataset, you can run the following command:
 
-```bash
+```console
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
   train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
@@ -304,7 +302,7 @@ TODO
 By passing `train.only_test=True` to the `relik retriever train` command, you can skip the training and only evaluate the model.
 It needs also the path to the PyTorch Lightning checkpoint and the dataset to evaluate on.
 
-```bash
+```console
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   train.only_test=True \
   test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
@@ -332,7 +330,7 @@ with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub wi
 
 The retriever needs a index to search for the documents. The index can be created using `create_index.py` script in `scripts/data/retriever`
 
-```bash
+```console
 
 python scripts/data/retriever/create_index.py -h 
 
@@ -388,7 +386,7 @@ retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top
 
 The reader requires the windowized dataset we created in section [Retriever](#retriever) augmented with the candidate from the retriever. 
 
-```bash
+```console
 python scripts/data/add_candidates.py \
   --encoder riccorl/retriever-relik-entity-linking-aida-wikipedia-base-question-encoder \
   --index riccorl/retriever-relik-entity-linking-aida-wikipedia-base-index \
@@ -406,7 +404,7 @@ Similar to the retriever, the reader requires a configuration file. The folder `
 For instance, `large.yaml` is the configuration file we used to train the large reader.
 By running the following command, you can train the reader on the AIDA dataset:
 
-```bash
+```console
 relik reader train relik/reader/conf/large.yaml \
   train_dataset_path=data/aida/processed/aida-train-relik-windowed-candidates.jsonl \
   val_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl \
@@ -432,19 +430,19 @@ To evaluate ReLiK we use the following steps:
 
 1. Start the GERBIL server:
 
-```bash
+```console
 cd gerbil && ./start.sh
 ```
 
 2. Start the following services:
 
-```bash
+```console
 cd gerbil-SpotWrapNifWS4Test && mvn clean -Dmaven.tomcat.port=1235 tomcat:run
 ```
 
 3. Start the ReLiK server for GERBIL providing the model name as an argument (e.g. `sapienzanlp/relik-entity-linking-large`):
 
-```bash
+```console
 python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-entity-linking-large
 ```
 
