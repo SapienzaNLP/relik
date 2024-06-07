@@ -61,6 +61,8 @@ class Relik:
     Args:
         retriever (:obj:`GoldenRetriever`):
             The retriever to use.
+        index (:obj:`BaseDocumentIndex`, `optional`):
+            The document index to use. If `None`, the retriever's document index will be used.
         reader (:obj:`RelikReaderBase`):
             The reader to use.
         document_index (:obj:`BaseDocumentIndex`, `optional`):

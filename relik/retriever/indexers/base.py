@@ -462,59 +462,6 @@ class BaseDocumentIndex:
             # set the attribute
             setattr(documents, attr, config[attr])
 
-        # # if cls.__name__ is FaissDocumentIndex, then we need to load the index
-        # if cls.__name__ == "FaissDocumentIndex":
-        #     # load the index
-        #     index_path = model_dir / "index.faiss"
-        #     if index_path.exists():
-        #         logger.info(f"Loading index from {index_path}")
-        #         index = faiss.read_index(str(index_path))
-        #     else:
-        #         logger.warning(f"Index file `{index_path}` does not exist.")
-        # else:
-        #     index = None
-
-        # check if there is a Faiss index in the folder
-        # index = None
-        # if (model_dir / "index.faiss").exists():
-        #     # there is a faiss index in the folder
-        #     if cls.__name__ == "FaissDocumentIndex":
-        #         # load the index
-        #         index_path = model_dir / "index.faiss"
-        #         if index_path.exists():
-        #             logger.info(f"Loading index from {index_path}")
-        #             if is_package_available("faiss"):
-        #                 import faiss
-
-        #                 index = faiss.read_index(str(index_path))
-        #             else:
-        #                 raise ImportError(
-        #                     "To load a Faiss index, the `faiss` package must be installed."
-        #                     "You can install it with `pip install relik[faiss]`."
-        #                     "Otherwise, you can load the index with a different class."
-        #                 )
-        #         else:
-        #             logger.warning(
-        #                 f"Index file `{index_path}` does not exist. If a torch index is present, it will be loaded from there."
-        #             )
-        #     else:
-        #         logger.warning(
-        #             f"Found a Faiss index in the folder, but the class `{cls.__name__}` is not `FaissDocumentIndex`. "
-        #             "We will try to extract the embeddings from the Faiss index. "
-        #             "If it fails, try to use `FaissDocumentIndex` instead."
-        #         )
-
-        # if index is None:
-        #     # load the passage embeddings
-        #     embedding_path = model_dir / embedding_file_name
-        #     # run some checks
-        #     embeddings = None
-        #     if embedding_path.exists():
-        #         logger.info(f"Loading embeddings from {embedding_path}")
-        #         embeddings = torch.load(embedding_path, map_location="cpu")
-        #     else:
-        #         logger.warning(f"Embedding file `{embedding_path}` does not exist.")
-
         # base variables
         index = None
         embeddings = None
@@ -544,19 +491,13 @@ class BaseDocumentIndex:
                         "FAISS index file does not exist, but a torch embeddings file was found. "
                         "We will create a new index from the embeddings."
                     )
-            # else:
-            #     logger.warning(
-            #         f"Found a Faiss index in the folder, but the class `{cls.__name__}` is not `FaissDocumentIndex`. "
-            #         "We will try to extract the embeddings from the Faiss index. "
-            #         "If it fails, try to use `FaissDocumentIndex` instead."
-            #     )
         
         if embeddings_exists:
             if index is None:
                 logger.info(f"Loading embeddings from {embedding_path}")
                 embeddings = torch.load(embedding_path, map_location="cpu")
         else:
-            if index_exists:
+            if index_exists and not use_faiss:
                 logger.warning(
                     "An embeddings file was not found, but a FAISS index file was found instead. "
                     "If you want to use it, try the `FaissDocumentIndex` class."
