@@ -32,6 +32,7 @@ class RelikReaderSample:
             self._d[key] = value
         else:
             super().__setattr__(key, value)
+            self._d[key] = value
 
 
 activation2functions = {

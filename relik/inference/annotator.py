@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 import os
 import time
@@ -14,6 +15,7 @@ from relik.common.upload import get_logged_in_username, upload
 from relik.common.utils import CONFIG_NAME, from_cache
 from relik.inference.data.objects import (
     AnnotationType,
+    Candidates,
     RelikOutput,
     Span,
     TaskType,
@@ -190,7 +192,7 @@ class Relik:
                 retriever = {TaskType(k): v for k, v in retriever.items()}
             else:
                 retriever = {task: retriever}
-            
+
             # instantiate each retriever
             if self.task in [TaskType.SPAN, TaskType.BOTH]:
                 self._retriever[TaskType.SPAN] = self._instantiate_retriever(
@@ -242,13 +244,13 @@ class Relik:
                         raise ValueError(
                             f"Please choose a valid task type (one of {list(TaskType)}) for each index."
                         ) from e
-            
+
             if isinstance(index, Dict):
                 # convert the key to TaskType
                 index = {TaskType(k): v for k, v in index.items()}
             else:
                 index = {task: index}
-            
+
             # instantiate each retriever
             if self.task in [TaskType.SPAN, TaskType.BOTH]:
                 self._index[TaskType.SPAN] = self._instantiate_index(
@@ -356,8 +358,10 @@ class Relik:
                 index_kwargs["device"] = index_device
             if index_precision is not None:
                 index_kwargs["precision"] = PRECISION_MAP[index_precision]
-            # convert to DictConfig
-            index: BaseDocumentIndex = hydra.utils.instantiate(index, **index_kwargs)
+
+            # merge the kwargs
+            index = OmegaConf.merge(index, OmegaConf.create(index_kwargs))
+            index: BaseDocumentIndex = hydra.utils.instantiate(index)
             if index.embeddings is None or (
                 hasattr(index, "index") and index.index is None
             ):
@@ -482,7 +486,7 @@ class Relik:
         is_split_into_words: bool = False,
         retriever_batch_size: int | None = 32,
         reader_batch_size: int | None = 32,
-        return_also_windows: bool = False,
+        return_windows: bool = False,
         use_doc_topic: bool = False,
         annotation_type: str | AnnotationType = AnnotationType.CHAR,
         progress_bar: bool = False,
@@ -511,7 +515,7 @@ class Relik:
                 The batch size to use for the retriever. The whole input is the batch for the retriever.
             reader_batch_size (`int`, `optional`, defaults to `None`):
                 The batch size to use for the reader. The whole input is the batch for the reader.
-            return_also_windows (`bool`, `optional`, defaults to `False`):
+            return_windows (`bool`, `optional`, defaults to `False`):
                 Whether to return the windows in the output.
             annotation_type (`str` or `AnnotationType`, `optional`, defaults to `char`):
                 The type of annotation to return. If `char`, the spans will be in terms of
@@ -547,20 +551,21 @@ class Relik:
             window_stride = self.window_stride
 
         if text:
+            # normalize text to a list
             if isinstance(text, str):
                 text = [text]
+                # normalize mentions to a list
                 if mentions is not None:
                     mentions = [mentions]
-            if file_logger is not None:
-                file_logger.info("Annotating the following text:")
-                for t in text:
-                    file_logger.info(f" {t}")
 
             if self.window_manager is None:
+                # no actual windowization, use the input as is
                 if window_size == "none":
                     self.sentence_splitter = BlankSentenceSplitter()
+                # sentence-based windowization, uses a sentence splitter to create windows
                 elif window_size == "sentence":
                     self.sentence_splitter = SpacySentenceSplitter()
+                # word-based windowization, uses a window size and stride to create windows
                 else:
                     self.sentence_splitter = WindowSentenceSplitter(
                         window_size=window_size, window_stride=window_stride
@@ -569,6 +574,7 @@ class Relik:
                     self.tokenizer, self.sentence_splitter
                 )
 
+            # sanity check for window size and stride
             if (
                 window_size not in ["sentence", "none"]
                 and window_stride is not None
@@ -578,6 +584,7 @@ class Relik:
                     f"Window size ({window_size}) must be greater than window stride ({window_stride})"
                 )
 
+        # if there are no windows, create them
         if windows is None:
             # TODO: make it more consistent (no tuples or single elements in output)
             # windows were provided, use them
@@ -598,6 +605,7 @@ class Relik:
                     is_split_into_words=is_split_into_words,
                 )
         else:
+            # otherwise, use the provided windows, `text` is ignored
             blank_windows = []
             text = {w.doc_id: w.text for w in windows}
 
@@ -610,6 +618,7 @@ class Relik:
             )
 
         windows_candidates = {TaskType.SPAN: None, TaskType.TRIPLET: None}
+        # candidates are provided, use them and skip retrieval
         if candidates is not None:
             # again, check if candidates is a dict
             if isinstance(candidates, Dict):
@@ -639,11 +648,16 @@ class Relik:
                     "No retriever was provided, please provide a retriever or candidates."
                 )
             start_retr = time.time()
+            # retrieve for each task type
             for task_type, retriever in self._retriever.items():
                 retriever_out = retriever.retrieve(
                     [w.text for w in windows],
                     text_pair=[
-                        w.doc_topic if (w.doc_topic is not None and use_doc_topic) else None
+                        (
+                            w.doc_topic
+                            if (w.doc_topic is not None and use_doc_topic)
+                            else None
+                        )
                         for w in windows
                     ],
                     k=top_k,
@@ -669,17 +683,21 @@ class Relik:
                 formatted_candidates = []
                 for candidate in candidates:
                     window_candidate_text = candidate.text
+                    # the metadata fields are concatenated to the text to be used by the reader
+                    # by default, the reader uses just the text as the candidate
+                    # but this behavior can be changed by the user by providing a list of metadata fields
                     for field in self.metadata_fields:
                         window_candidate_text += f"{candidate.metadata.get(field, '')}"
                     formatted_candidates.append(window_candidate_text)
                 # create a member for the windows that is named like the task
-                setattr(window, f"{task_type.value}_candidates", formatted_candidates)
+                window._d[f"{task_type.value}_candidates"] = formatted_candidates
 
         for task_type, task_candidates in windows_candidates.items():
             for window in blank_windows:
-                setattr(window, f"{task_type.value}_candidates", [])
-                setattr(window, "predicted_spans", [])
-                setattr(window, "predicted_triples", [])
+                window._d[f"{task_type.value}_candidates"] = []
+                window._d["predicted_spans"] = []
+                window._d["predicted_triples"] = []
+
         if self.reader is not None:
             start_read = time.time()
             windows = self.reader.read(
@@ -691,9 +709,15 @@ class Relik:
             )
             end_read = time.time()
             logger.debug(f"Reading took {end_read - start_read} seconds.")
-            # TODO: check merging behavior without a reader
-            # do we want to merge windows if there is no reader?
 
+            # replace the reader "text" candidates with the full Document ones
+            for task_type, task_candidates in windows_candidates.items():
+                for i, task_candidate in enumerate(task_candidates):
+                    if f"{task_type.value}_candidates" in windows[i]._d:
+                        windows[i]._d[f"{task_type.value}_candidates"] = task_candidate
+
+            # TODO: check merging behavior without a reader
+            # do we want to merge windows if there is no reader? I don't think so :)
             if self.window_size is not None and self.window_size not in [
                 "sentence",
                 "none",
@@ -707,6 +731,7 @@ class Relik:
             else:
                 merged_windows = windows
         else:
+            # if there is no reader, just return the windows
             windows = windows + blank_windows
             windows.sort(key=lambda x: (x.doc_id, x.offset))
             merged_windows = windows
@@ -740,28 +765,31 @@ class Relik:
                         )
                         for subj, label, obj, conf in w.predicted_triples
                     ]
-            # create the output
+            # we also want to add the candidates to the output
+            candidates_labels = defaultdict(list)
+            for task_type, _ in windows_candidates.items():
+                if f"{task_type.value}_candidates" in w._d:
+                    candidates_labels[task_type].append(
+                        w._d[f"{task_type.value}_candidates"]
+                    )
+
             sample_output = RelikOutput(
-                text=text[w.doc_id],
+                text=w.text,
                 tokens=w.words,
                 spans=span_labels,
                 triples=triples_labels,
-                # candidates={
-                #     task_type: [
-                #         r.document_index.documents.get_document_from_text(c)
-                #         for c in getattr(w, f"{task_type.value}_candidates", [])
-                #         if r.document_index.documents.get_document_from_text(c) is not None
-                #     ]
-                #     for task_type, r in self._retriever.items()
-                # },
+                candidates=Candidates(
+                    span=candidates_labels.get(TaskType.SPAN, []),
+                    triplet=candidates_labels.get(TaskType.TRIPLET, []),
+                ),
             )
             output.append(sample_output)
 
         # add windows to the output if requested
         # do we want to force windows to be returned if there is no reader?
-        if return_also_windows:
+        if return_windows:
             for i, sample_output in enumerate(output):
-                sample_output.windows = [w for w in windows if w.doc_id == i]
+                sample_output.windows = [w.to_dict() for w in windows if w.doc_id == i]
 
         # if only one text was provided, return a single RelikOutput object
         if len(output) == 1:

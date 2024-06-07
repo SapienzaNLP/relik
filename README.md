@@ -1,7 +1,7 @@
 ![](https://drive.google.com/uc?export=view&id=1UwPIfBrG021siM9SBAku2JNqG4R6avs6)
 
-<div align="center">    
- 
+<div align="center">
+
 # Retrieve, Read and LinK: Fast and Accurate Entity Linking and Relation Extraction on an Academic Budget
 
 [![Conference](http://img.shields.io/badge/ACL-2024-4b44ce.svg)](https://2024.aclweb.org/)
@@ -42,25 +42,46 @@ pip install relik[all]
 
 Install with optional dependencies for training and evaluation.
 
-```console
+```shell
 pip install relik[train]
 ```
 
 Install with optional dependencies for [FAISS](https://github.com/facebookresearch/faiss)
 
-```console
-pip install relik[faiss] # or relik[faiss-gpu] for GPU support
+FAISS pypi package is only available for CPU. If you want to use GPU, you need to install it from source or use the conda package.
+
+For CPU:
+
+```shell
+pip install relik[faiss]
+```
+
+For GPU:
+
+```shell
+conda create -n relik python=3.10
+conda activate relik
+
+# install pytorch
+conda install -y pytorch=2.1.0 pytorch-cuda=12.1 -c pytorch -c nvidia
+
+# GPU
+conda install -y -c pytorch -c nvidia faiss-gpu=1.8.0
+# or GPU with NVIDIA RAFT
+conda install -y -c pytorch -c nvidia -c rapidsai -c conda-forge faiss-gpu-raft=1.8.0
+
+pip install relik
 ```
 
 Install with optional dependencies for serving the models with [FastAPI](https://fastapi.tiangolo.com/) and [Ray](https://docs.ray.io/en/latest/serve/quickstart.html).
 
-```console
+```shell
 pip install relik[serve]
 ```
 
 #### Installation from source
 
-```console
+```shell
 git clone https://github.com/SapienzaNLP/relik.git
 cd relik
 pip install -e .[all]

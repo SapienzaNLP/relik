@@ -37,7 +37,7 @@ class RelikReaderSample:
             self._d[key] = value
         else:
             super().__setattr__(key, value)
-
+    
     def to_jsons(self) -> str:
         if "predicted_window_labels" in self._d:
             new_obj = {
@@ -51,6 +51,9 @@ class RelikReaderSample:
             ]
         else:
             return json.dumps(self._d, cls=NpEncoder)
+
+    def to_dict(self) -> dict:
+        return self._d
 
 
 def load_relik_reader_samples(path: str) -> Iterable[RelikReaderSample]:

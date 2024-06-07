@@ -104,18 +104,21 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         else:
             # TODO: a bit redundant, fix this eventually
             if (
-                (self.device == "cpu" or self.device == torch.device("cpu"))
+                # here we trust the device_in_init, since we don't know yet 
+                # the device of the embeddings
+                (self.device_in_init == "cpu" or self.device_in_init == torch.device("cpu"))
                 and self.embeddings is not None
                 and self.embeddings.dtype != torch.float32
             ):
                 logger.info(
-                    f"Index vectors are of type {self.embeddings.dtype}. "
+                    f"Index vectors are of type {self.embeddings.dtype} but the device is CPU. "
                     f"Converting to {PRECISION_MAP[32]}."
                 )
                 self.embeddings = self.embeddings.to(PRECISION_MAP[32])
+
         # move the embeddings to the desired device
-        if self.embeddings is not None and not self.embeddings.device == self.device:
-            self.embeddings = self.embeddings.to(self.device)
+        if self.embeddings is not None and not self.embeddings.device == self.device_in_init:
+            self.embeddings = self.embeddings.to(self.device_in_init)
 
         # TODO: check interactions with the embeddings
         # self.mm = MatrixMultiplicationModule(embeddings=self.embeddings)

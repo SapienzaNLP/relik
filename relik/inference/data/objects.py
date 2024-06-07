@@ -64,6 +64,10 @@ class Triples(NamedTuple):
     object: Span
     confidence: float
 
+class Candidates(NamedTuple):
+    span: Dict[List[Document]] = []
+    triplet: Dict[List[Document]] = []
+
 @dataclass
 class RelikOutput:
     text: str

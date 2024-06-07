@@ -365,22 +365,30 @@ class WindowManager:
         # TODO: add programmatically
         span_candidates = []
         if getattr(window1, "span_candidates", None) is not None:
-            span_candidates = window1.span_candidates
+            if isinstance(window1.span_candidates[0], list):
+                span_candidates = window1.span_candidates
+            else:
+                span_candidates.append(window1.span_candidates)
         if getattr(window2, "span_candidates", None) is not None:
-            span_candidates += window2.span_candidates
+            span_candidates.append(window2.span_candidates)
 
         triplet_candidates = []
         if getattr(window1, "triplet_candidates", None) is not None:
+            if isinstance(window1.triplet_candidates[0], list):
+                triplet_candidates = window1.triplet_candidates
+            else:
+                triplet_candidates.append(window1.triplet_candidates)
             triplet_candidates = window1.triplet_candidates
         if getattr(window2, "triplet_candidates", None) is not None:
-            triplet_candidates += window2.triplet_candidates
+            # triplet_candidates += window2.triplet_candidates
+            triplet_candidates.append(window2.triplet_candidates)
 
         # make them unique
         candidates = list(set(candidates))
         windows_candidates = list(set(windows_candidates))
 
-        span_candidates = list(set(span_candidates))
-        triplet_candidates = list(set(triplet_candidates))
+        # span_candidates = list(set(span_candidates))
+        # triplet_candidates = list(set(triplet_candidates))
 
         return candidates, windows_candidates, span_candidates, triplet_candidates
 
@@ -430,8 +438,12 @@ class WindowManager:
             predicted_triples_probs,
         ) = self._merge_predictions(window1, window2)
 
+        # merge text, take into account overlapping chars
+        m_text = window1.text[:window2.offset ] + window2.text
+
         merging_output.update(
             dict(
+                text=m_text,
                 tokens=m_tokens,
                 words=m_words,
                 token2char_start=m_token2char_start,
