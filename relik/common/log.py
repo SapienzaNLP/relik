@@ -8,6 +8,8 @@ from typing import Any, Dict, Optional
 from art import text2art, tprint
 from colorama import Fore, Style, init
 from rich import get_console
+from termcolor import colored, cprint
+
 
 _lock = threading.Lock()
 _default_handler: Optional[logging.Handler] = None
@@ -170,5 +172,11 @@ def get_console_logger():
     return _console
 
 
-def print_relik_text_art(text: str = "relik", font: str = "larry3d", **kwargs):
-    tprint(text, font=font, **kwargs)
+def print_relik_text_art(
+    text: str = "relik", font: str = "larry3d", color: str = "magenta", **kwargs
+):
+    # tprint(text, font=font, **kwargs)
+    art = text2art(text, font=font, **kwargs)#.rstrip()
+    # art += "\n\n           Retrieve, Read, and Link"
+    # art += "\nA fast and lightweight Information Extraction framework"
+    cprint(art, color, attrs=["bold"])

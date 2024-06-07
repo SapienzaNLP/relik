@@ -14,6 +14,7 @@ from relik.common.log import get_logger
 from relik.common.upload import upload
 from relik.common.utils import (
     from_cache,
+    is_package_available,
     is_str_a_path,
     relative_to_absolute_path,
     to_config,
@@ -45,6 +46,7 @@ class BaseDocumentIndex:
     CONFIG_NAME = "config.yaml"
     DOCUMENTS_FILE_NAME = "documents.jsonl"
     EMBEDDINGS_FILE_NAME = "embeddings.pt"
+    INDEX_FILE_NAME = "index.faiss"
 
     def __init__(
         self,
@@ -409,6 +411,7 @@ class BaseDocumentIndex:
         config_file_name: str | None = None,
         document_file_name: str | None = None,
         embedding_file_name: str | None = None,
+        index_file_name: str | None = None,
         *args,
         **kwargs,
     ) -> "BaseDocumentIndex":
@@ -418,6 +421,7 @@ class BaseDocumentIndex:
         config_file_name = config_file_name or cls.CONFIG_NAME
         document_file_name = document_file_name or cls.DOCUMENTS_FILE_NAME
         embedding_file_name = embedding_file_name or cls.EMBEDDINGS_FILE_NAME
+        index_file_name = index_file_name or cls.INDEX_FILE_NAME
 
         model_dir = from_cache(
             name_or_path,
@@ -458,20 +462,116 @@ class BaseDocumentIndex:
             # set the attribute
             setattr(documents, attr, config[attr])
 
-        # load the passage embeddings
-        embedding_path = model_dir / embedding_file_name
-        # run some checks
+        # # if cls.__name__ is FaissDocumentIndex, then we need to load the index
+        # if cls.__name__ == "FaissDocumentIndex":
+        #     # load the index
+        #     index_path = model_dir / "index.faiss"
+        #     if index_path.exists():
+        #         logger.info(f"Loading index from {index_path}")
+        #         index = faiss.read_index(str(index_path))
+        #     else:
+        #         logger.warning(f"Index file `{index_path}` does not exist.")
+        # else:
+        #     index = None
+
+        # check if there is a Faiss index in the folder
+        # index = None
+        # if (model_dir / "index.faiss").exists():
+        #     # there is a faiss index in the folder
+        #     if cls.__name__ == "FaissDocumentIndex":
+        #         # load the index
+        #         index_path = model_dir / "index.faiss"
+        #         if index_path.exists():
+        #             logger.info(f"Loading index from {index_path}")
+        #             if is_package_available("faiss"):
+        #                 import faiss
+
+        #                 index = faiss.read_index(str(index_path))
+        #             else:
+        #                 raise ImportError(
+        #                     "To load a Faiss index, the `faiss` package must be installed."
+        #                     "You can install it with `pip install relik[faiss]`."
+        #                     "Otherwise, you can load the index with a different class."
+        #                 )
+        #         else:
+        #             logger.warning(
+        #                 f"Index file `{index_path}` does not exist. If a torch index is present, it will be loaded from there."
+        #             )
+        #     else:
+        #         logger.warning(
+        #             f"Found a Faiss index in the folder, but the class `{cls.__name__}` is not `FaissDocumentIndex`. "
+        #             "We will try to extract the embeddings from the Faiss index. "
+        #             "If it fails, try to use `FaissDocumentIndex` instead."
+        #         )
+
+        # if index is None:
+        #     # load the passage embeddings
+        #     embedding_path = model_dir / embedding_file_name
+        #     # run some checks
+        #     embeddings = None
+        #     if embedding_path.exists():
+        #         logger.info(f"Loading embeddings from {embedding_path}")
+        #         embeddings = torch.load(embedding_path, map_location="cpu")
+        #     else:
+        #         logger.warning(f"Embedding file `{embedding_path}` does not exist.")
+
+        # base variables
+        index = None
         embeddings = None
-        if embedding_path.exists():
-            logger.info(f"Loading embeddings from {embedding_path}")
-            embeddings = torch.load(embedding_path, map_location="cpu")
+        index_path = model_dir / index_file_name
+        embedding_path = model_dir / embedding_file_name
+        # boolean variables to check if the index and embeddings exist
+        index_exists = index_path.exists()
+        embeddings_exists = embedding_path.exists()
+        use_faiss = "FaissDocumentIndex" in cls.__name__
+
+        if use_faiss:
+            if index_exists:
+                logger.info(f"Loading index from {index_path}")
+                if is_package_available("faiss"):
+                    import faiss
+
+                    index = faiss.read_index(str(index_path))
+                else:
+                    raise ImportError(
+                        "To load a FAISS index, the `faiss` package must be installed."
+                        "You can install it with `pip install relik[faiss]`."
+                        "Otherwise, you can load the index with a different class."
+                    )
+            else:
+                if embeddings_exists:
+                    logger.warning(
+                        "FAISS index file does not exist, but a torch embeddings file was found. "
+                        "We will create a new index from the embeddings."
+                    )
+            # else:
+            #     logger.warning(
+            #         f"Found a Faiss index in the folder, but the class `{cls.__name__}` is not `FaissDocumentIndex`. "
+            #         "We will try to extract the embeddings from the Faiss index. "
+            #         "If it fails, try to use `FaissDocumentIndex` instead."
+            #     )
+        
+        if embeddings_exists:
+            if index is None:
+                logger.info(f"Loading embeddings from {embedding_path}")
+                embeddings = torch.load(embedding_path, map_location="cpu")
         else:
-            logger.warning(f"Embedding file `{embedding_path}` does not exist.")
+            if index_exists:
+                logger.warning(
+                    "An embeddings file was not found, but a FAISS index file was found instead. "
+                    "If you want to use it, try the `FaissDocumentIndex` class."
+                )
+
+        if not index_exists and not embeddings_exists:
+            logger.warning(
+                "No index or embeddings found in the directory. Remember to index the documents before using the retriever."
+            )
 
         document_index = hydra.utils.instantiate(
             config,
             documents=documents,
             embeddings=embeddings,
+            index=index,
             device=device,
             precision=precision,
             name_or_path=name_or_path,

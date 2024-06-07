@@ -362,13 +362,6 @@ class Relik:
             # merge the kwargs
             index = OmegaConf.merge(index, OmegaConf.create(index_kwargs))
             index: BaseDocumentIndex = hydra.utils.instantiate(index)
-            if index.embeddings is None or (
-                hasattr(index, "index") and index.index is None
-            ):
-                logger.warning(
-                    "The document index does not have embeddings. "
-                    "Please remember to provide documents and to build the index."
-                )
         else:
             index = index
             if index_device is not None:

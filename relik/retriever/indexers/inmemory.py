@@ -34,8 +34,6 @@ class MatrixMultiplicationModule(torch.nn.Module):
 
 
 class InMemoryDocumentIndex(BaseDocumentIndex):
-    DOCUMENTS_FILE_NAME = "documents.jsonl"
-    EMBEDDINGS_FILE_NAME = "embeddings.pt"
 
     def __init__(
         self,
