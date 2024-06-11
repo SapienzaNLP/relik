@@ -29,6 +29,7 @@ def create_windows(
     is_split_into_words: bool = False,
     write_batch_size: int = 10_000,
 ):
+    
     # windowization stuff
     tokenizer = SpacyTokenizer(language=language, use_gpu=tokenizer_device == "cuda")
     if window_size == "none":

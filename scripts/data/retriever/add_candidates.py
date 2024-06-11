@@ -130,8 +130,8 @@ def add_candidates(
                         ]
                         # TODO: compatibility shit
                         sample["span_candidates"] = candidate_titles
-                        sample["window_candidates"] = candidate_titles
-                        sample["window_candidates_scores"] = [
+                        # sample["window_candidates"] = candidate_titles
+                        sample["span_candidates_scores"] = [
                             c.score for c in retrieved
                         ]
                         output_data.append(sample)
@@ -159,8 +159,8 @@ def add_candidates(
                     ]
                     # TODO: compatibility shit
                     sample["span_candidates"] = candidate_titles
-                    sample["window_candidates"] = candidate_titles
-                    sample["window_candidates_scores"] = [c.score for c in retrieved]
+                    # sample["window_candidates"] = candidate_titles
+                    sample["span_candidates_scores"] = [c.score for c in retrieved]
                     output_data.append(sample)
 
                 for sample in output_data:

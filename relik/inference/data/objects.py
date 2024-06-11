@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Dict, List, NamedTuple, Optional
 
 from relik.reader.pytorch_modules.hf.modeling_relik import RelikReaderSample
@@ -64,9 +65,11 @@ class Triples(NamedTuple):
     object: Span
     confidence: float
 
+
 class Candidates(NamedTuple):
-    span: Dict[List[Document]] = []
-    triplet: Dict[List[Document]] = []
+    span: Dict[List[Document]]
+    triplet: Dict[List[Document]]
+
 
 @dataclass
 class RelikOutput:
@@ -74,11 +77,30 @@ class RelikOutput:
     tokens: List[str]
     spans: List[Span]
     triples: List[Triples]
-    candidates: Dict[TaskType, List[Document]] = None
+    candidates: Candidates = None
     windows: Optional[List[RelikReaderSample]] = None
 
-
-from enum import Enum
+    # convert to dict
+    def to_dict(self):
+        self_dict = {
+            "text": self.text,
+            "tokens": self.tokens,
+            "spans": self.spans,
+            "triples": self.triples,
+            "candidates": {
+                "span": [
+                    [[doc.to_dict() for doc in documents] for documents in window]
+                    for window in self.candidates.span
+                ],
+                "triplet": [
+                    [[doc.to_dict() for doc in documents] for documents in window]
+                    for window in self.candidates.triplet
+                ],
+            },
+        }
+        if self.windows is not None:
+            self_dict["windows"] = [window.to_dict() for window in self.windows]
+        return self_dict
 
 
 class AnnotationType(Enum):

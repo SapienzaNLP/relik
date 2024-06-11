@@ -8,7 +8,7 @@ import tempfile
 from functools import partial
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Optional, Union
+from typing import Any, BinaryIO, Dict, Iterable, List, Optional, Protocol, Union
 from urllib.parse import urlparse
 from zipfile import ZipFile, is_zipfile
 
@@ -608,3 +608,34 @@ def get_callable_from_string(callable_fn: str) -> Any:
     module = importlib.import_module(module_name)
     # get the function
     return getattr(module, function_name)
+
+
+def batch_generator(samples: Iterable[Any], batch_size: int) -> Iterable[Any]:
+    """
+    Generate batches from samples.
+
+    Args:
+        samples (`Iterable[Any]`): Iterable of samples.
+        batch_size (`int`): Batch size.
+
+    Returns:
+        `Iterable[Any]`: Iterable of batches.
+    """
+    batch = []
+    for sample in samples:
+        batch.append(sample)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+
+    # leftover batch
+    if len(batch) > 0:
+        yield batch
+
+
+class JsonSerializable(Protocol):
+    def to_json(self) -> str:
+        return json.dumps(self.__dict__)
+
+    def __repr__(self) -> str:
+        return self.to_json()

@@ -15,6 +15,18 @@ app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 def train():
+    """
+    Trains the reader model.
+
+    This function prints the Relik text art, resolves the configuration file path,
+    and then calls the `_reader_train` function to train the reader model.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     print_relik_text_art()
     config_dir, config_name, overrides = resolve_config("reader")
 

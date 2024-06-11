@@ -359,7 +359,7 @@ class Relik:
             if index_device is not None:
                 index_kwargs["device"] = index_device
             if index_precision is not None:
-                index_kwargs["precision"] = PRECISION_MAP[index_precision]
+                index_kwargs["precision"] = index_precision
 
             # merge the kwargs
             index = OmegaConf.merge(index, OmegaConf.create(index_kwargs))
@@ -476,8 +476,8 @@ class Relik:
         ) = None,
         mentions: List[List[int]] | List[List[List[int]]] | None = None,
         top_k: int | None = None,
-        window_size: int | None = None,
-        window_stride: int | None = None,
+        window_size: int | str | None = None,
+        window_stride: int | str | None = None,
         is_split_into_words: bool = False,
         retriever_batch_size: int | None = 32,
         reader_batch_size: int | None = 32,
@@ -664,7 +664,7 @@ class Relik:
                     [p.document for p in predictions] for predictions in retriever_out
                 ]
             end_retr = time.time()
-            logger.debug(f"Retrieval took {end_retr - start_retr} seconds.")
+            # logger.debug(f"Retrieval took {end_retr - start_retr} seconds.")
 
         # clean up None's
         windows_candidates = {
@@ -703,13 +703,13 @@ class Relik:
                 **kwargs,
             )
             end_read = time.time()
-            logger.debug(f"Reading took {end_read - start_read} seconds.")
+            # logger.debug(f"Reading took {end_read - start_read} seconds.")
 
             # replace the reader "text" candidates with the full Document ones
             for task_type, task_candidates in windows_candidates.items():
                 for i, task_candidate in enumerate(task_candidates):
-                    if f"{task_type.value}_candidates" in windows[i]._d:
-                        windows[i]._d[f"{task_type.value}_candidates"] = task_candidate
+                    # if f"{task_type.value}_candidates" in windows[i]._d:
+                    windows[i]._d[f"{task_type.value}_candidates"] = task_candidate
 
             # TODO: check merging behavior without a reader
             # do we want to merge windows if there is no reader? I don't think so :)
@@ -722,7 +722,7 @@ class Relik:
                 windows.sort(key=lambda x: (x.doc_id, x.offset))
                 merged_windows = self.window_manager.merge_windows(windows)
                 end_w = time.time()
-                logger.debug(f"Merging took {end_w - start_w} seconds.")
+                # logger.debug(f"Merging took {end_w - start_w} seconds.")
             else:
                 merged_windows = windows
         else:
@@ -824,6 +824,11 @@ class Relik:
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
 
+        # pop possible models overrides
+        retriever = kwargs.pop("retriever", None)
+        index = kwargs.pop("index", None)
+        reader = kwargs.pop("reader", None)
+
         model_dir = from_cache(
             model_name_or_dir,
             filenames=[config_file_name],
@@ -839,7 +844,58 @@ class Relik:
 
         # overwrite config with config_kwargs
         config = OmegaConf.load(config_path)
-        # if kwargs is not None:
+        # add model overrides if provided
+        # search for the model overrides in the config
+        # if index is not None:
+        #     # copy the index config in a new dictionary
+        #     index_config = OmegaConf.to_container(config.index, resolve=True)
+        #     if isinstance(index, dict):
+        #         tasks = index.keys()
+        #         for task in tasks:
+        #             # add the task to the index config
+        #             if task not in index_config:
+        #                 logger.warning(
+        #                     f"Task `{task}` not found in the index config, adding it."
+        #                 )
+        #                 index_config[task] = {
+        #                     "_target_": "relik.retriever.indexers.base.BaseDocumentIndex"
+        #                 }
+        #             index_config[task]["name_or_path"] = index[task]
+        #     else:
+        #         pretrained_tasks = index_config.keys()
+        #         if len(pretrained_tasks) > 1:
+        #             raise ValueError(
+        #                 f"Multiple tasks found in the index config (`{pretrained_tasks}`), "
+        #                 "please provide a dictionary with the task as key."
+        #             )
+        #         task = list(pretrained_tasks)[0]
+        #         index_config[task]["name_or_path"] = index
+        
+        # if retriever is not None:
+        #     # copy the retriever config in a new dictionary
+        #     retriever_config = OmegaConf.to_container(config.retriever, resolve=True)
+        #     if isinstance(retriever, dict):
+        #         tasks = retriever.keys()
+        #         for task in tasks:
+        #             # add the task to the retriever config
+        #             if task not in retriever_config:
+        #                 logger.warning(
+        #                     f"Task `{task}` not found in the retriever config, adding it."
+        #                 )
+        #                 retriever_config[task] = {
+        #                     "_target_": "relik.retriever.retrievers.goldenretriever.GoldenRetriever"
+        #                 }
+        #             retriever_config[task]["name_or_path"] = retriever[task]
+        #     else:
+        #         pretrained_tasks = retriever_config.keys()
+        #         if len(pretrained_tasks) > 1:
+        #             raise ValueError(
+        #                 f"Multiple tasks found in the retriever config (`{pretrained_tasks}`), "
+        #                 "please provide a dictionary with the task as key."
+        #             )
+        #         task = list(pretrained_tasks)[0]
+        #         retriever_config[task]["name_or_path"] = retriever
+
         config = OmegaConf.merge(config, OmegaConf.create(kwargs))
         # do we want to print the config? I like it
         logger.info(f"Loading Relik from {model_name_or_dir}")

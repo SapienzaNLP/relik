@@ -46,7 +46,7 @@ class StrongMatching:
             )
 
             for ss, se, ge in gold_annotations.difference(predicted_annotations):
-                if ge not in sample.window_candidates:
+                if ge not in sample.span_candidates:
                     miss_due_to_candidates += 1
                 if ge in predicted_annotations_probabilities.get((ss, se), set()):
                     correct_predictions_at_k += 1
@@ -64,13 +64,13 @@ class StrongMatching:
                     continue
 
                 # missing candidate
-                if gold_ent not in sample.window_candidates:
+                if gold_ent not in sample.span_candidates:
                     continue
 
-                gold_idx = sample.window_candidates.index(gold_ent)
+                gold_idx = sample.span_candidates.index(gold_ent)
                 if gold_idx is None:
                     continue
-                pred_idx = sample.window_candidates.index(pred_ent)
+                pred_idx = sample.span_candidates.index(pred_ent)
 
                 if gold_ent != pred_ent:
                     avg_wrong_predicted_index.append(pred_idx)

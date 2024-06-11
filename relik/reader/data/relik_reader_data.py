@@ -511,9 +511,9 @@ class RelikDataset(IterableDataset):
             for batch in self.materialize_batches(current_dataset_elements):
                 yield batch
 
-        if i is not None:
-            logger.debug(f"Dataset finished: {i} number of elements processed")
-        else:
+        if i is None:
+            # logger.debug(f"Dataset finished: {i} number of elements processed")
+        # else:
             logger.warning("Dataset empty")
 
     def dataset_iterator_func(self):
@@ -530,8 +530,8 @@ class RelikDataset(IterableDataset):
             current_patch = 0
             sample_bag, used_candidates = None, None
             # TODO: compatibility shit
-            sample.window_candidates = sample.span_candidates
-            remaining_candidates = list(sample.window_candidates)
+            # sample.window_candidates = sample.span_candidates
+            remaining_candidates = list(sample.span_candidates)
 
             if not self.for_inference:
                 # randomly drop gold candidates at training time

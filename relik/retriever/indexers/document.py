@@ -6,6 +6,7 @@ import sys
 from typing import Any, Dict, List, Union
 
 from relik.common.log import get_logger
+from relik.common.utils import JsonSerializable
 
 csv.field_size_limit(sys.maxsize)
 
@@ -30,7 +31,7 @@ class Document:
         return f"{self.id}:{self.text}"
 
     def __repr__(self):
-        return self.__str__()
+        return  json.dumps(self.to_dict())
 
     def __eq__(self, other):
         if isinstance(other, Document):
@@ -46,6 +47,9 @@ class Document:
 
     def to_dict(self):
         return {"text": self.text, "id": self.id, "metadata": self.metadata}
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     @classmethod
     def from_dict(cls, d: Dict):
