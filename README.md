@@ -42,7 +42,7 @@ pip install relik[all]
 
 Install with optional dependencies for training and evaluation.
 
-```shell
+```bash
 pip install relik[train]
 ```
 
@@ -52,13 +52,13 @@ FAISS pypi package is only available for CPU. If you want to use GPU, you need t
 
 For CPU:
 
-```shell
+```bash
 pip install relik[faiss]
 ```
 
 For GPU:
 
-```shell
+```bash
 conda create -n relik python=3.10
 conda activate relik
 
@@ -75,13 +75,13 @@ pip install relik
 
 Install with optional dependencies for serving the models with [FastAPI](https://fastapi.tiangolo.com/) and [Ray](https://docs.ray.io/en/latest/serve/quickstart.html).
 
-```shell
+```bash
 pip install relik[serve]
 ```
 
 #### Installation from source
 
-```shell
+```bash
 git clone https://github.com/SapienzaNLP/relik.git
 cd relik
 pip install -e .[all]
@@ -352,32 +352,32 @@ pl_module.model.save_pretrained(retriever_folder, push_to_hub=push_to_hub, repo_
 
 with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
 
-The retriever needs a index to search for the documents. The index can be created using `create_index.py` script in `scripts/data/retriever`
+The retriever needs a index to search for the documents. The index can be created using `relik retriever build-index` command
 
 ```console
+relik retriever build-index --help 
 
-python scripts/data/retriever/create_index.py -h 
-
-usage: Create retriever index. [-h] --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH --document-path DOCUMENT_PATH [--passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH] [--indexer_class INDEXER_CLASS]
-                               [--document-file-type DOCUMENT_FILE_TYPE] --output-folder OUTPUT_FOLDER [--batch-size BATCH_SIZE] [--passage-max-length PASSAGE_MAX_LENGTH] [--device DEVICE] [--index-device INDEX_DEVICE] [--precision PRECISION]
-                               [--num-workers NUM_WORKERS] [--push-to-hub] [--repo-id REPO_ID]
-
-options:
-  -h, --help            show this help message and exit
-  --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH
-  --document-path DOCUMENT_PATH
-  --passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH
-  --indexer_class INDEXER_CLASS
-  --document-file-type DOCUMENT_FILE_TYPE
-  --output-folder OUTPUT_FOLDER
-  --batch-size BATCH_SIZE
-  --passage-max-length PASSAGE_MAX_LENGTH
-  --device DEVICE
-  --index-device INDEX_DEVICE
-  --precision PRECISION
-  --num-workers NUM_WORKERS
-  --push-to-hub
-  --repo-id REPO_ID
+ Usage: relik retriever build-index [OPTIONS] QUESTION_ENCODER_NAME_OR_PATH                                                                   
+                                    DOCUMENT_PATH OUTPUT_FOLDER                                                                                                                                              
+╭─ Arguments ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    question_encoder_name_or_path      TEXT  [default: None] [required]                                                                   │
+│ *    document_path                      TEXT  [default: None] [required]                                                                   │
+│ *    output_folder                      TEXT  [default: None] [required]                                                                   │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --document-file-type                                  TEXT     [default: jsonl]                                                            │
+│ --passage-encoder-name-or-path                        TEXT     [default: None]                                                             │
+│ --indexer-class                                       TEXT     [default: relik.retriever.indexers.inmemory.InMemoryDocumentIndex]          │
+│ --batch-size                                          INTEGER  [default: 512]                                                              │
+│ --num-workers                                         INTEGER  [default: 4]                                                                │
+│ --passage-max-length                                  INTEGER  [default: 64]                                                               │
+│ --device                                              TEXT     [default: cuda]                                                             │
+│ --index-device                                        TEXT     [default: cpu]                                                              │
+│ --precision                                           TEXT     [default: fp32]                                                             │
+│ --push-to-hub                     --no-push-to-hub             [default: no-push-to-hub]                                                   │
+│ --repo-id                                             TEXT     [default: None]                                                             │
+│ --help                                                         Show this message and exit.                                                 │
+╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 With the encoder and the index, the retriever can be loaded from a repo id or a local path:
@@ -413,29 +413,32 @@ The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Link
 ### Data Preparation
 
 The reader requires the windowized dataset we created in section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
-The candidate can be added to the dataset using the `add_candidates.py` script in `scripts/data/retriever`.
+The candidate can be added to the dataset using the `relik retriever add-candidates` command.
 
 ```console
-python scripts/data/retriever/add_candidates.py -h
+relik retriever add-candidates --help
 
-usage: Add the candidates to the windowized dataset [-h] --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH --document-name-or-path DOCUMENT_NAME_OR_PATH [--passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH] --input-path INPUT_PATH
-                                                    --output-path OUTPUT_PATH [--top-k TOP_K] [--batch-size BATCH_SIZE] [--device DEVICE] [--index-device INDEX_DEVICE] [--precision PRECISION] [--use-doc-topics] [--num-workers NUM_WORKERS] [--log-recall]
+ Usage: relik retriever add-candidates [OPTIONS] QUESTION_ENCODER_NAME_OR_PATH                                 
+                                       DOCUMENT_NAME_OR_PATH INPUT_PATH                                        
+                                       OUTPUT_PATH
 
-options:
-  -h, --help            show this help message and exit
-  --question-encoder-name-or-path QUESTION_ENCODER_NAME_OR_PATH
-  --document-name-or-path DOCUMENT_NAME_OR_PATH
-  --passage-encoder-name-or-path PASSAGE_ENCODER_NAME_OR_PATH
-  --input-path INPUT_PATH
-  --output-path OUTPUT_PATH
-  --top-k TOP_K
-  --batch-size BATCH_SIZE
-  --device DEVICE
-  --index-device INDEX_DEVICE
-  --precision PRECISION
-  --use-doc-topics
-  --num-workers NUM_WORKERS
-  --log-recall
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    question_encoder_name_or_path      TEXT  [default: None] [required]                                    │
+│ *    document_name_or_path              TEXT  [default: None] [required]                                    │
+│ *    input_path                         TEXT  [default: None] [required]                                    │
+│ *    output_path                        TEXT  [default: None] [required]                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --passage-encoder-name-or-path                           TEXT     [default: None]                           │
+│ --top-k                                                  INTEGER  [default: 100]                            │
+│ --batch-size                                             INTEGER  [default: 128]                            │
+│ --num-workers                                            INTEGER  [default: 4]                              │
+│ --device                                                 TEXT     [default: cuda]                           │
+│ --index-device                                           TEXT     [default: cpu]                            │
+│ --precision                                              TEXT     [default: fp32]                           │
+│ --use-doc-topics                  --no-use-doc-topics             [default: no-use-doc-topics]              │
+│ --help                                                            Show this message and exit.               │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 ### Training the model
