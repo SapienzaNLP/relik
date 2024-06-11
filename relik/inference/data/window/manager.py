@@ -4,6 +4,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
 from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSplitter
+from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.base_tokenizer import BaseTokenizer
 from relik.reader.data.relik_reader_sample import RelikReaderSample
 
@@ -163,9 +164,6 @@ class WindowManager:
         for window in windows:
             windows_by_doc_id[window.doc_id].append(window)
 
-        # for doc_id, doc_windows in windows_by_doc_id.items():
-        #     print(f"doc id {doc_id} has {len(doc_windows)} windows")
-
         merged_window_by_doc = {
             doc_id: self._merge_doc_windows(doc_windows)
             for doc_id, doc_windows in windows_by_doc_id.items()
@@ -176,6 +174,11 @@ class WindowManager:
     def _merge_doc_windows(self, windows: List[RelikReaderSample]) -> RelikReaderSample:
         if len(windows) == 1:
             return self._normalize_single_window(windows[0])
+
+        if not isinstance(self.splitter, WindowSentenceSplitter):
+            # here we don't really need to merge windows, just normalize them
+            # TODO: check if we need to merge windows in this case
+            return [self._normalize_single_window(w) for w in windows]
 
         if len(windows) > 0 and getattr(windows[0], "offset", None) is not None:
             windows = sorted(windows, key=(lambda x: x.offset))

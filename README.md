@@ -73,7 +73,8 @@ conda install -y -c pytorch -c nvidia -c rapidsai -c conda-forge faiss-gpu-raft=
 pip install relik
 ```
 
-Install with optional dependencies for serving the models with [FastAPI](https://fastapi.tiangolo.com/) and [Ray](https://docs.ray.io/en/latest/serve/quickstart.html).
+Install with optional dependencies for serving the models with
+[FastAPI](https://fastapi.tiangolo.com/) and [Ray](https://docs.ray.io/en/latest/serve/quickstart.html).
 
 ```bash
 pip install relik[serve]
@@ -93,55 +94,142 @@ pip install -e .[all]
 
 [//]: # (Write a short description of the model and how to use it with the `from_pretrained` method.)
 
-ReLiK is a lightweight and fast model for **Entity Linking** and **Relation Extraction**. It is composed of two main components: a retriever and a reader. The retriever is responsible for retrieving relevant documents from a large collection of documents, while the reader is responsible for extracting entities and relations from the retrieved documents. ReLiK can be used with the `from_pretrained` method to load a pre-trained pipeline.
+ReLiK is a lightweight and fast model for **Entity Linking** and **Relation Extraction**.
+It is composed of two main components: a retriever and a reader.
+The retriever is responsible for retrieving relevant documents from a large collection of documents,
+while the reader is responsible for extracting entities and relations from the retrieved documents.
+ReLiK can be used with the `from_pretrained` method to load a pre-trained pipeline.
 
 Here is an example of how to use ReLiK for Entity Linking:
 
 ```python
 from relik import Relik
+from relik.inference.data.objects import RelikOutput
 
 relik = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large")
-relik("Michael Jordan was one of the best players in the NBA.")
+relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
+
+# RelikOutput(
+#     text="Michael Jordan was one of the best players in the NBA.",
+#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+#     id=0,
+#     spans=[
+#         Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
+#         Span(start=50, end=53, label="National Basketball Association", text="NBA"),
+#     ],
+#     triples=[],
+#     candidates=Candidates(
+#         span=[
+#             [
+#                 [
+#                     {"text": "Michael Jordan", "id": 4484083},
+#                     {"text": "National Basketball Association", "id": 5209815},
+#                     {"text": "Walter Jordan", "id": 2340190},
+#                     {"text": "Jordan", "id": 3486773},
+#                     {"text": "50 Greatest Players in NBA History", "id": 1742909},
+#                     ...
+#                 ]
+#             ]
+#         ]
+#     ),
+# )
 ```
 
 and for Relation Extraction:
 
 ```python
 from relik import Relik
+from relik.inference.data.objects import RelikOutput
 
 relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
-relik("Michael Jordan was one of the best players in the NBA.")
+relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
 The full list of available models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
 
-Retrievers and Readers can be used separately:
+Retrievers and Readers can be used separately.
+In the case of retriever-only ReLiK, the output will contain the candidates for the input text.
 
 ```python
 from relik import Relik
+from relik.inference.data.objects import RelikOutput
 
-# If you want to use the retriever only
-retriever = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large", reader=None)
-
-# If you want to use the reader only
-reader = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large", retriever=None)
+# If you want to use only the retriever
+retriever = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large", reader=None)
+relik_out: RelikOutput = retriever("Michael Jordan was one of the best players in the NBA.")
+# RelikOutput(
+#     text="Michael Jordan was one of the best players in the NBA.",
+#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+#     id=0,
+#     spans=[],
+#     triples=[],
+#     candidates=Candidates(
+#         span=[
+#                 [
+#                     {"text": "Michael Jordan", "id": 4484083},
+#                     {"text": "National Basketball Association", "id": 5209815},
+#                     {"text": "Walter Jordan", "id": 2340190},
+#                     {"text": "Jordan", "id": 3486773},
+#                     {"text": "50 Greatest Players in NBA History", "id": 1742909},
+#                     ...
+#                 ]
+#         ],
+#         triplet=[],
+#     ),
+# )
 ```
-<!-- 
-or
 
 ```python
-from relik.retriever import GoldenRetriever
+from relik import Relik
+from relik.inference.data.objects import RelikOutput
 
-# If you want to use the retriever only
-retriever = GoldenRetriever(
-    question_encoder="path/to/relik/retriever-question-encoder",
-    document_index="path/to/relik/retriever-document-index",
-)
-
-from relik.reader import R
-# If you want to use the reader only
-reader = 
-``` -->
+# If you want to use only the reader
+reader = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large", retriever=None)
+candidates = [
+    "Michael Jordan",
+    "National Basketball Association",
+    "Walter Jordan",
+    "Jordan",
+    "50 Greatest Players in NBA History",
+]
+relik_out: RelikOutput = reader("Michael Jordan was one of the best players in the NBA.", candidates=candidates)
+# RelikOutput(
+#     text="Michael Jordan was one of the best players in the NBA.",
+#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+#     id=0,
+#     spans=[
+#         Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
+#         Span(start=50, end=53, label="National Basketball Association", text="NBA"),
+#     ],
+#     triples=[],
+#     candidates=Candidates(
+#         span=[
+#             [
+#                 [
+#                     {
+#                         "text": "Michael Jordan",
+#                         "id": -731245042436891448,
+#                     },
+#                     {
+#                         "text": "National Basketball Association",
+#                         "id": 8135443493867772328,
+#                     },
+#                     {
+#                         "text": "Walter Jordan",
+#                         "id": -5873847607270755146,
+#                         "metadata": {},
+#                     },
+#                     {"text": "Jordan", "id": 6387058293887192208, "metadata": {}},
+#                     {
+#                         "text": "50 Greatest Players in NBA History",
+#                         "id": 2173802663468652889,
+#                     },
+#                 ]
+#             ]
+#         ],
+#     ),
+# )
+```
 
 ### CLI
 
@@ -203,7 +291,8 @@ All your data should have the following starting structure:
 We used BLINK (Wu et al., 2019) and AIDA (Hoffart et al, 2011) datasets for training and evaluation.
 More specifically, we used the BLINK dataset for pre-training the retriever and the AIDA dataset for fine-tuning the retriever and training the reader.
 
-The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from [here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
+The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from
+[here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
 Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
 
@@ -260,7 +349,7 @@ The retriever also needs an index to search for the documents. The documents to 
 - `tsv`: each line is a tab-separated string with the `id` and `text` column,
   followed by any other column that will be stored in the `metadata` field
 
-jsonl example:
+`jsonl` example:
 
 ```json lines
 {
@@ -271,7 +360,7 @@ jsonl example:
 ...
 ```
 
-tsv example:
+`tsv` example:
 
 ```tsv
 id \t text \t any other column

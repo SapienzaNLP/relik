@@ -623,6 +623,9 @@ class Relik:
                         f"Please choose one of {list(TaskType)}."
                     )
             else:
+                # check if the candidates are a list of lists
+                if not isinstance(candidates[0], list):
+                    candidates = [candidates]
                 candidates = {self.task: candidates}
 
             for task_type, _candidates in candidates.items():
@@ -635,14 +638,14 @@ class Relik:
                         for w in windows
                     ]
                 windows_candidates[task_type] = _candidates
-
+        
         else:
             # retrieve candidates first
             if self._retriever is None:
                 raise ValueError(
                     "No retriever was provided, please provide a retriever or candidates."
                 )
-            start_retr = time.time()
+            # start_retr = time.time()
             # retrieve for each task type
             for task_type, retriever in self._retriever.items():
                 retriever_out = retriever.retrieve(
@@ -663,7 +666,7 @@ class Relik:
                 windows_candidates[task_type] = [
                     [p.document for p in predictions] for predictions in retriever_out
                 ]
-            end_retr = time.time()
+            # end_retr = time.time()
             # logger.debug(f"Retrieval took {end_retr - start_retr} seconds.")
 
         # clean up None's
@@ -694,7 +697,7 @@ class Relik:
                 window._d["predicted_triples"] = []
 
         if self.reader is not None:
-            start_read = time.time()
+            # start_read = time.time()
             windows = self.reader.read(
                 samples=windows,
                 max_batch_size=reader_batch_size,
@@ -702,34 +705,25 @@ class Relik:
                 progress_bar=progress_bar,
                 **kwargs,
             )
-            end_read = time.time()
+            # end_read = time.time()
             # logger.debug(f"Reading took {end_read - start_read} seconds.")
 
-            # replace the reader "text" candidates with the full Document ones
-            for task_type, task_candidates in windows_candidates.items():
-                for i, task_candidate in enumerate(task_candidates):
-                    # if f"{task_type.value}_candidates" in windows[i]._d:
-                    windows[i]._d[f"{task_type.value}_candidates"] = task_candidate
+        # replace the reader "text" candidates with the full Document ones
+        for task_type, task_candidates in windows_candidates.items():
+            for i, task_candidate in enumerate(task_candidates):
+                windows[i]._d[f"{task_type.value}_candidates"] = task_candidate
 
-            # TODO: check merging behavior without a reader
-            # do we want to merge windows if there is no reader? I don't think so :)
-            if self.window_size is not None and self.window_size not in [
-                "sentence",
-                "none",
-            ]:
-                start_w = time.time()
-                windows = windows + blank_windows
-                windows.sort(key=lambda x: (x.doc_id, x.offset))
-                merged_windows = self.window_manager.merge_windows(windows)
-                end_w = time.time()
-                # logger.debug(f"Merging took {end_w - start_w} seconds.")
-            else:
-                merged_windows = windows
+        windows = windows + blank_windows
+        windows.sort(key=lambda x: (x.doc_id, x.offset))
+
+        # if there is no reader, just return the windows
+        if self.reader is None:
+            # normalize window candidates to be a list of lists, like when the reader is used
+            merged_windows = [
+                self.window_manager._normalize_single_window(w) for w in windows
+            ]
         else:
-            # if there is no reader, just return the windows
-            windows = windows + blank_windows
-            windows.sort(key=lambda x: (x.doc_id, x.offset))
-            merged_windows = windows
+            merged_windows = self.window_manager.merge_windows(windows)
 
         # transform predictions into RelikOutput objects
         output = []
@@ -771,6 +765,7 @@ class Relik:
             sample_output = RelikOutput(
                 text=w.text,
                 tokens=w.words,
+                id=w.doc_id,
                 spans=span_labels,
                 triples=triples_labels,
                 candidates=Candidates(
