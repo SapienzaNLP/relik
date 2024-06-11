@@ -143,6 +143,36 @@ from relik.reader import R
 reader = 
 ``` -->
 
+### CLI
+
+ReLiK provides a CLI to perform inference on a text file or a directory of text files. The CLI can be used as follows:
+
+```bash
+relik inference --help
+
+  Usage: relik inference [OPTIONS] MODEL_NAME_OR_PATH INPUT_PATH OUTPUT_PATH
+
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    model_name_or_path      TEXT  [default: None] [required]                                           │
+│ *    input_path              TEXT  [default: None] [required]                                           │
+│ *    output_path             TEXT  [default: None] [required]                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --batch-size                               INTEGER  [default: 8]                                        │
+│ --num-workers                              INTEGER  [default: 4]                                        │
+│ --device                                   TEXT     [default: cuda]                                     │
+│ --precision                                TEXT     [default: fp16]                                     │
+│ --top-k                                    INTEGER  [default: 100]                                      │
+│ --window-size                              INTEGER  [default: None]                                     │
+│ --window-stride                            INTEGER  [default: None]                                     │
+│ --annotation-type                          TEXT     [default: char]                                     │
+│ --progress-bar        --no-progress-bar             [default: progress-bar]                             │
+│ --model-kwargs                             TEXT     [default: None]                                     │
+│ --inference-kwargs                         TEXT     [default: None]                                     │
+│ --help                                              Show this message and exit.                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
 ## Before You Start
 
 In the following sections, we provide a step-by-step guide on how to prepare the data, train the retriever and reader, and evaluate the model.
