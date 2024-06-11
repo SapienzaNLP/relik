@@ -173,6 +173,12 @@ relik inference --help
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
+For example:
+
+```bash
+relik inference sapienzanlp/relik-entity-linking-large data.txt output.jsonl
+```
+
 ## Before You Start
 
 In the following sections, we provide a step-by-step guide on how to prepare the data, train the retriever and reader, and evaluate the model.
