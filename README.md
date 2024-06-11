@@ -36,7 +36,7 @@ pip install relik
 
 Install with all the optional dependencies.
 
-```console
+```bash
 pip install relik[all]
 ```
 
@@ -192,7 +192,8 @@ candidates = [
     "Jordan",
     "50 Greatest Players in NBA History",
 ]
-relik_out: RelikOutput = reader("Michael Jordan was one of the best players in the NBA.", candidates=candidates)
+text = "Michael Jordan was one of the best players in the NBA."
+relik_out: RelikOutput = reader(text, candidates=candidates)
 # RelikOutput(
 #     text="Michael Jordan was one of the best players in the NBA.",
 #     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
