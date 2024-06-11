@@ -824,10 +824,9 @@ class Relik:
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
 
-        # pop possible models overrides
-        retriever = kwargs.pop("retriever", None)
-        index = kwargs.pop("index", None)
-        reader = kwargs.pop("reader", None)
+        if "retriever" in kwargs and kwargs["retriever"] is None:
+            # if retriever is None, we don't want to load the index
+            kwargs["index"] = None
 
         model_dir = from_cache(
             model_name_or_dir,
@@ -844,58 +843,6 @@ class Relik:
 
         # overwrite config with config_kwargs
         config = OmegaConf.load(config_path)
-        # add model overrides if provided
-        # search for the model overrides in the config
-        # if index is not None:
-        #     # copy the index config in a new dictionary
-        #     index_config = OmegaConf.to_container(config.index, resolve=True)
-        #     if isinstance(index, dict):
-        #         tasks = index.keys()
-        #         for task in tasks:
-        #             # add the task to the index config
-        #             if task not in index_config:
-        #                 logger.warning(
-        #                     f"Task `{task}` not found in the index config, adding it."
-        #                 )
-        #                 index_config[task] = {
-        #                     "_target_": "relik.retriever.indexers.base.BaseDocumentIndex"
-        #                 }
-        #             index_config[task]["name_or_path"] = index[task]
-        #     else:
-        #         pretrained_tasks = index_config.keys()
-        #         if len(pretrained_tasks) > 1:
-        #             raise ValueError(
-        #                 f"Multiple tasks found in the index config (`{pretrained_tasks}`), "
-        #                 "please provide a dictionary with the task as key."
-        #             )
-        #         task = list(pretrained_tasks)[0]
-        #         index_config[task]["name_or_path"] = index
-        
-        # if retriever is not None:
-        #     # copy the retriever config in a new dictionary
-        #     retriever_config = OmegaConf.to_container(config.retriever, resolve=True)
-        #     if isinstance(retriever, dict):
-        #         tasks = retriever.keys()
-        #         for task in tasks:
-        #             # add the task to the retriever config
-        #             if task not in retriever_config:
-        #                 logger.warning(
-        #                     f"Task `{task}` not found in the retriever config, adding it."
-        #                 )
-        #                 retriever_config[task] = {
-        #                     "_target_": "relik.retriever.retrievers.goldenretriever.GoldenRetriever"
-        #                 }
-        #             retriever_config[task]["name_or_path"] = retriever[task]
-        #     else:
-        #         pretrained_tasks = retriever_config.keys()
-        #         if len(pretrained_tasks) > 1:
-        #             raise ValueError(
-        #                 f"Multiple tasks found in the retriever config (`{pretrained_tasks}`), "
-        #                 "please provide a dictionary with the task as key."
-        #             )
-        #         task = list(pretrained_tasks)[0]
-        #         retriever_config[task]["name_or_path"] = retriever
-
         config = OmegaConf.merge(config, OmegaConf.create(kwargs))
         # do we want to print the config? I like it
         logger.info(f"Loading Relik from {model_name_or_dir}")
