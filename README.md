@@ -354,7 +354,7 @@ with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub wi
 
 The retriever needs a index to search for the documents. The index can be created using `relik retriever build-index` command
 
-```console
+```bash
 relik retriever build-index --help 
 
  Usage: relik retriever build-index [OPTIONS] QUESTION_ENCODER_NAME_OR_PATH                                                                   
@@ -415,7 +415,7 @@ The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Link
 The reader requires the windowized dataset we created in section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
 The candidate can be added to the dataset using the `relik retriever add-candidates` command.
 
-```console
+```bash
 relik retriever add-candidates --help
 
  Usage: relik retriever add-candidates [OPTIONS] QUESTION_ENCODER_NAME_OR_PATH                                 
