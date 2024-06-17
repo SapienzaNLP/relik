@@ -280,7 +280,7 @@ All your data should have the following starting structure:
 {
   "doc_id": int,  # Unique identifier for the document
   "doc_text": txt,  # Text of the document
-  "doc_annotations": # Char level annotations
+  "doc_span_annotations": # Char level annotations
     [
       [start, end, label],
       [start, end, label],
@@ -315,7 +315,41 @@ The Wikipedia index we used can be downloaded from [here](https://huggingface.co
 
 ### Relation Extraction
 
-TODO
+All your data should have the following starting structure:
+
+```jsonl
+{
+  "doc_id": int,  # Unique identifier for the document
+  "doc_words: list[txt] # Tokenized text of the document
+  "doc_span_annotations": # Token level annotations of mentions (label is optional)
+    [
+      [start, end, label],
+      [start, end, label],
+      ...
+    ],
+  "doc_triplet_annotations": # Triplet annotations
+  [
+    {
+      "subject": [start, end, label], # label is optional
+      "relation": name, # type is optional
+      "object": [start, end, label], # label is optional
+    },
+    {
+      "subject": [start, end, label], # label is optional
+      "relation": name, # type is optional
+      "object": [start, end, label], # label is optional
+    },
+  ]
+}
+```
+
+For Relation Extraction, we provide an example on how to preprocess the NYT datase from [raw_nyt](https://drive.google.com/file/d/1kAVwR051gjfKn3p6oKc7CzNT9g2Cjy6N/view) taken from the [CopyRE](https://github.com/xiangrongzeng/copy_re?tab=readme-ov-file). Download the dataset to data/raw_nyt and then run:
+
+```console
+scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
+```
+
+Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surfaceforms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
 
 ## Retriever
 
@@ -325,7 +359,7 @@ We perform a two-step training process for the retriever. First, we "pre-train" 
 
 The retriever requires a dataset in a format similar to [DPR](https://github.com/facebookresearch/DPR): a `jsonl` file where each line is a dictionary with the following keys:
 
-```json lines
+```jsonl
 {
   "question": "....",
   "positive_ctxs": [{
@@ -419,6 +453,26 @@ python scripts/data/convert_to_dpr.py \
   data/data/processed/aida-train-relik-windowed-dpr.jsonl
 ```
 
+#### Relation Extraction
+
+##### NYT
+
+```console
+python scripts/data/create_windows.py \
+  data/data/processed/nyt/train.jsonl \
+  data/data/processed/nyt/train-windowed.jsonl \
+  --is-split-into-words \
+  --window-size none 
+```
+
+and then convert it to the DPR format:
+
+```console
+python scripts/data/convert_to_dpr.py \
+  data/data/processed/nyt/train-windowed.jsonl \
+  data/data/processed/nyt/train-windowed-dpr.jsonl
+```
+
 ### Training the model
 
 The `relik retriever train` command can be used to train the retriever. It requires the following arguments:
@@ -445,7 +499,18 @@ relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
 
 #### Relation Extraction
 
-TODO
+The configuration files in `relik/retriever/conf` is `finetune_nyt_iterable_in_batch.yaml`, which we used to fine-tune the retriever for the NYT dataset. For cIE we repurpose the one pretrained from BLINK in the previous step.
+
+For instance, to train the retriever on the NYT dataset, you can run the following command:
+
+```console
+relik retriever train relik/retriever/conf/finetune_nyt_iterable_in_batch.yaml \
+  model.language_model=intfloat/e5-base-v2 \
+  train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-dpr.jsonl \
+  val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-dpr.jsonl \
+  test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-dpr.jsonl
+```
+
 
 ### Inference
 
@@ -556,6 +621,7 @@ relik retriever add-candidates --help
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ --passage-encoder-name-or-path                           TEXT     [default: None]                           │
+│ --relations                                              BOOLEAN  [default: False]                          │
 │ --top-k                                                  INTEGER  [default: 100]                            │
 │ --batch-size                                             INTEGER  [default: 128]                            │
 │ --num-workers                                            INTEGER  [default: 4]                              │
@@ -565,6 +631,22 @@ relik retriever add-candidates --help
 │ --use-doc-topics                  --no-use-doc-topics             [default: no-use-doc-topics]              │
 │ --help                                                            Show this message and exit.               │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+#### Entity Linking
+
+We need to add candidates to each window that will be used by the Reader, using our previously trained Retriever. Here is an example using our already trained retriever on Aida for the train split:
+
+```console
+relik retriever add-candidates sapienzanlp/relik-retriever-e5-base-v2-aida-blink-encoder sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-index data/aida/processed/aida-train-relik-windowed.jsonl data/aida/processed/aida-train-relik-windowed-candidates.jsonl
+```
+
+#### Relation Extraction
+
+The same thing happens for Relation Extraction. If you want to use our already trained retriever:
+
+```console
+relik retriever add-candidates sapienzanlp/relik-retriever-small-nyt-question-encoder sapienzanlp/relik-retriever-small-nyt-document-index data/nyt/processed/nyt-train-relik-windowed.jsonl data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl
 ```
 
 ### Training the model
@@ -590,7 +672,15 @@ relik reader train relik/reader/conf/large.yaml \
 
 #### Relation Extraction
 
-TODO
+The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml` and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
+For instance, to train the large reader on the AIDA dataset run:
+
+```console
+relik reader train relik/reader/conf/large_nyt.yaml \
+  train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl \
+  val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-candidates.jsonl \
+  test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-candidates.jsonl
+```
 
 ### Inference
 
@@ -681,7 +771,17 @@ python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-
 
 ### Relation Extraction
 
-- TODO
+To evalute Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our already trained Reader:
+
+```console
+python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/test.window.candidates.jsonl --is-eval
+```
+
+Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run:
+
+```console
+python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/dev.window.candidates.jsonl --is-eval --compute-threshold
+```
 
 ## Cite this work
 
@@ -701,5 +801,4 @@ If you use any part of this work, please consider citing the paper as follows:
 
 ## License
 
-TODO
-<!-- The data is licensed under [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/). -->
+The data is licensed under [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
