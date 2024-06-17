@@ -292,8 +292,8 @@ All your data should have the following starting structure:
 We used BLINK (Wu et al., 2019) and AIDA (Hoffart et al, 2011) datasets for training and evaluation.
 More specifically, we used the BLINK dataset for pre-training the retriever and the AIDA dataset for fine-tuning the retriever and training the reader.
 
-The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo from
-[here](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
+The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebookresearch/GENRE) repo using this
+[script](https://github.com/facebookresearch/GENRE/blob/main/scripts_genre/download_all_datasets.sh).
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
 Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
 
@@ -349,7 +349,7 @@ For Relation Extraction, we provide an example on how to preprocess the NYT data
 scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
 ```
 
-Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surfaceforms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
+Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surface forms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
 
 ## Retriever
 
@@ -543,7 +543,7 @@ pl_module.model.save_pretrained(retriever_folder, push_to_hub=push_to_hub, repo_
 
 with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
 
-The retriever needs a index to search for the documents. The index can be created using `relik retriever build-index` command
+The retriever needs an index to search for the documents. The index can be created using `relik retriever build-index` command
 
 ```bash
 relik retriever build-index --help 
