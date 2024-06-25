@@ -43,20 +43,20 @@ class StrongMatching:
 
         # collect data from samples
         for sample in predicted_samples:
-            if sample.triplets is None:
-                sample.triplets = []
+            if sample.window_triplet_labels_tokens is None:
+                sample.window_triplet_labels_tokens = []
 
             if sample.span_candidates:
                 predicted_annotations_strict = set(
                     [
                         (
-                            triplet["subject"]["start"],
-                            triplet["subject"]["end"],
-                            triplet["subject"]["type"],
-                            triplet["relation"]["name"],
-                            triplet["object"]["start"],
-                            triplet["object"]["end"],
-                            triplet["object"]["type"],
+                            triplet["subject"][0],
+                            triplet["subject"][1],
+                            triplet["subject"][2],
+                            triplet["relation"],
+                            triplet["object"][0],
+                            triplet["object"][1],
+                            triplet["object"][2],
                         )
                         for triplet in sample.predicted_relations
                     ]
@@ -64,33 +64,33 @@ class StrongMatching:
                 gold_annotations_strict = set(
                     [
                         (
-                            triplet["subject"]["start"],
-                            triplet["subject"]["end"],
-                            triplet["subject"]["type"],
-                            triplet["relation"]["name"],
-                            triplet["object"]["start"],
-                            triplet["object"]["end"],
-                            triplet["object"]["type"],
+                            triplet["subject"][0],
+                            triplet["subject"][1],
+                            triplet["subject"][2],
+                            triplet["relation"],
+                            triplet["object"][0],
+                            triplet["object"][1],
+                            triplet["object"][2],
                         )
-                        for triplet in sample.triplets
+                        for triplet in sample.window_triplet_labels_tokens 
                     ]
                 )
                 predicted_spans_strict = set((ss, se, st) for (ss, se, st) in sample.predicted_entities)
-                gold_spans_strict = set(sample.entities)
+                gold_spans_strict = set((ss, se, st) for (ss, se, st) in sample.window_labels_tokens)
                 predicted_spans_in_triplets = set(
                     [
                         (
-                            triplet["subject"]["start"],
-                            triplet["subject"]["end"],
-                            triplet["subject"]["type"],
+                            triplet["subject"][0],
+                            triplet["subject"][1],
+                            triplet["subject"][2],
                         )
                         for triplet in sample.predicted_relations
                     ]
                     + [
                         (
-                            triplet["object"]["start"],
-                            triplet["object"]["end"],
-                            triplet["object"]["type"],
+                            triplet["object"][0],
+                            triplet["object"][1],
+                            triplet["object"][2],
                         )
                         for triplet in sample.predicted_relations
                     ]
@@ -98,19 +98,19 @@ class StrongMatching:
                 gold_spans_in_triplets = set(
                     [
                         (
-                            triplet["subject"]["start"],
-                            triplet["subject"]["end"],
-                            triplet["subject"]["type"],
+                            triplet["subject"][0],
+                            triplet["subject"][1],
+                            triplet["subject"][2],
                         )
-                        for triplet in sample.triplets
+                        for triplet in sample.window_triplet_labels_tokens 
                     ]
                     + [
                         (
-                            triplet["object"]["start"],
-                            triplet["object"]["end"],
-                            triplet["object"]["type"],
+                            triplet["object"][0],
+                            triplet["object"][1],
+                            triplet["object"][2],
                         )
-                        for triplet in sample.triplets
+                        for triplet in sample.window_triplet_labels_tokens 
                     ]
                 )
                 # strict
@@ -133,12 +133,12 @@ class StrongMatching:
             predicted_annotations = set(
                 [
                     (
-                        triplet["subject"]["start"],
-                        triplet["subject"]["end"],
+                        triplet["subject"][0],
+                        triplet["subject"][1],
                         -1,
-                        triplet["relation"]["name"],
-                        triplet["object"]["start"],
-                        triplet["object"]["end"],
+                        triplet["relation"],
+                        triplet["object"][0],
+                        triplet["object"][1],
                         -1,
                     )
                     for triplet in sample.predicted_relations
@@ -147,21 +147,21 @@ class StrongMatching:
             gold_annotations = set(
                 [
                     (
-                        triplet["subject"]["start"],
-                        triplet["subject"]["end"],
+                        triplet["subject"][0],
+                        triplet["subject"][1],
                         -1,
-                        triplet["relation"]["name"],
-                        triplet["object"]["start"],
-                        triplet["object"]["end"],
+                        triplet["relation"],
+                        triplet["object"][0],
+                        triplet["object"][1],
                         -1,
                     )
-                    for triplet in sample.triplets
+                    for triplet in sample.window_triplet_labels_tokens 
                 ]
             )
             predicted_spans = set(
                 [(ss, se) for (ss, se, _) in sample.predicted_entities]
             )
-            gold_spans = set([(ss, se) for (ss, se, _) in sample.entities])
+            gold_spans = set([(ss, se) for (ss, se, _) in sample.window_labels_tokens])
             total_gold_spans += len(gold_spans)
 
             correct_predictions_bound += len(predicted_spans.intersection(gold_spans))
@@ -238,67 +238,67 @@ class StrongMatchingPerRelation:
         )
         # collect data from samples
         for sample in predicted_samples:
-            if sample.triplets is None:
-                sample.triplets = []
+            if sample.window_triplet_labels_tokens is None:
+                sample.window_triplet_labels_tokens = []
 
             if sample.span_candidates:
                 gold_annotations_strict = set(
                     [
                         (
-                            triplet["subject"]["start"],
-                            triplet["subject"]["end"],
-                            triplet["subject"]["type"],
-                            triplet["relation"]["name"],
-                            triplet["object"]["start"],
-                            triplet["object"]["end"],
-                            triplet["object"]["type"],
+                            triplet["subject"][0],
+                            triplet["subject"][1],
+                            triplet["subject"][2],
+                            triplet["relation"],
+                            triplet["object"][0],
+                            triplet["object"][1],
+                            triplet["object"][2],
                         )
-                        for triplet in sample.triplets
+                        for triplet in sample.window_triplet_labels_tokens 
                     ]
                 )
-                # compute correct preds per triplet["relation"]["name"]
+                # compute correct preds per triplet["relation"]
                 for triplet in sample.predicted_relations:
                     predicted_annotations_strict = (
-                        triplet["subject"]["start"],
-                        triplet["subject"]["end"],
-                        triplet["subject"]["type"],
-                        triplet["relation"]["name"],
-                        triplet["object"]["start"],
-                        triplet["object"]["end"],
-                        triplet["object"]["type"],
+                        triplet["subject"][0],
+                        triplet["subject"][1],
+                        triplet["subject"][2],
+                        triplet["relation"],
+                        triplet["object"][0],
+                        triplet["object"][1],
+                        triplet["object"][2],
                     )
                     if predicted_annotations_strict in gold_annotations_strict:
-                        correct_predictions_strict[triplet["relation"]["name"]] += 1
-                    total_predictions_strict[triplet["relation"]["name"]] += 1
+                        correct_predictions_strict[triplet["relation"]] += 1
+                    total_predictions_strict[triplet["relation"]] += 1
             gold_annotations = set(
                 [
                     (
-                        triplet["subject"]["start"],
-                        triplet["subject"]["end"],
+                        triplet["subject"][0],
+                        triplet["subject"][1],
                         -1,
-                        triplet["relation"]["name"],
-                        triplet["object"]["start"],
-                        triplet["object"]["end"],
+                        triplet["relation"],
+                        triplet["object"][0],
+                        triplet["object"][1],
                         -1,
                     )
-                    for triplet in sample.triplets
+                    for triplet in sample.window_triplet_labels_tokens 
                 ]
             )
             for triplet in sample.predicted_relations:
                 predicted_annotations = (
-                    triplet["subject"]["start"],
-                    triplet["subject"]["end"],
+                    triplet["subject"][0],
+                    triplet["subject"][1],
                     -1,
-                    triplet["relation"]["name"],
-                    triplet["object"]["start"],
-                    triplet["object"]["end"],
+                    triplet["relation"],
+                    triplet["object"][0],
+                    triplet["object"][1],
                     -1,
                 )
                 if predicted_annotations in gold_annotations:
-                    correct_predictions[triplet["relation"]["name"]] += 1
-                total_predictions[triplet["relation"]["name"]] += 1
-            for triplet in sample.triplets:
-                total_gold[triplet["relation"]["name"]] += 1
+                    correct_predictions[triplet["relation"]] += 1
+                total_predictions[triplet["relation"]] += 1
+            for triplet in sample.window_triplet_labels_tokens :
+                total_gold[triplet["relation"]] += 1
         metrics = {}
         metrics_non_zero = 0
         for relation in total_gold.keys():

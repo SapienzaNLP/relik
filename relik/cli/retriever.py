@@ -172,6 +172,7 @@ def add_candidates(
     input_path: str,
     output_path: str,
     passage_encoder_name_or_path: Optional[str] = None,
+    relations: bool = False,
     top_k: int = 100,
     batch_size: int = 128,
     num_workers: int = 4,
@@ -194,6 +195,8 @@ def add_candidates(
             The path to the output file where the samples with candidates will be saved.
         passage_encoder_name_or_path (Optional[str]): 
             The name or path of the passage encoder model. Defaults to None.
+        relations (bool):
+            Whether to add the candidates as relations. Defaults to False.
         top_k (int): 
             The number of candidates to retrieve for each sample. Defaults to 100.
         batch_size (int): 
@@ -255,7 +258,7 @@ def add_candidates(
                 )
             )
 
-        logger.info(f"Creating dataloader with batch size {batch_size}")
+        logger.info(f"Creating dataloader with batch size {batch_size} and {num_workers} workers")
         dataloader = torch.utils.data.DataLoader(
             BaseDataset(name="passage", data=samples),
             batch_size=batch_size,
@@ -280,7 +283,7 @@ def add_candidates(
                 batch_out = retriever.retrieve(**retrieve_kwargs)
                 retrieved_accumulator.extend(batch_out)
 
-                if len(retrieved_accumulator) % 300_000 == 0:
+                if len(retrieved_accumulator) % 10_000 == 0:
                     output_data = []
                     # get the correct document from the original dataset
                     # the dataloader is not shuffled, so we can just count the number of
@@ -297,11 +300,17 @@ def add_candidates(
                             for c in retrieved  # TODO: add metadata if needed
                         ]
                         # TODO: compatibility shit
-                        sample["span_candidates"] = candidate_titles
-                        # sample["window_candidates"] = candidate_titles
-                        sample["span_candidates_scores"] = [
-                            c.score for c in retrieved
-                        ]
+                        if relations:
+                            sample["triplet_candidates"] = candidate_titles
+                            sample["triplet_candidates_scores"] = [
+                                c.score for c in retrieved
+                            ]
+                        else:
+                            sample["span_candidates"] = candidate_titles
+                            # sample["window_candidates"] = candidate_titles
+                            sample["span_candidates_scores"] = [
+                                c.score for c in retrieved
+                            ]
                         output_data.append(sample)
 
                     for sample in output_data:
@@ -323,13 +332,18 @@ def add_candidates(
                     retrieved_accumulator,
                 ):
                     candidate_titles = [
-                        c.document.text
-                        for c in retrieved  # TODO: add metadata if needed
+                        c.document.text for c in retrieved # TODO: add metadata if needed
                     ]
                     # TODO: compatibility shit
-                    sample["span_candidates"] = candidate_titles
-                    # sample["window_candidates"] = candidate_titles
-                    sample["span_candidates_scores"] = [c.score for c in retrieved]
+                    if relations:
+                        sample["triplet_candidates"] = candidate_titles
+                        sample["triplet_candidates_scores"] = [
+                            c.score for c in retrieved
+                        ]
+                    else:
+                        sample["span_candidates"] = candidate_titles
+                        # sample["window_candidates"] = candidate_titles
+                        sample["span_candidates_scores"] = [c.score for c in retrieved]
                     output_data.append(sample)
 
                 for sample in output_data:

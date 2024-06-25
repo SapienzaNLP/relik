@@ -100,7 +100,7 @@ class GoldenRetriever(torch.nn.Module):
         #     )
         if isinstance(document_index, str):
             document_index = index_class.from_pretrained(
-                document_index#, device=index_device, precision=index_precision, **kwargs
+                document_index, device=index_device, precision=index_precision, **kwargs
             )
         self.document_index = document_index
 

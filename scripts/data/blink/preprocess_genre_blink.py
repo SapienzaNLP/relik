@@ -59,7 +59,7 @@ def preprocess_genre_el_file(
         for i, line in tqdm(enumerate(fi)):
             text, annotations = preprocess_line(line.strip())
             fo.write(
-                json.dumps(dict(doc_id=i, doc_text=text, doc_annotations=annotations))
+                json.dumps(dict(doc_id=i, doc_text=text, doc_span_annotations=annotations))
                 + "\n"
             )
             if limit_lines == i:

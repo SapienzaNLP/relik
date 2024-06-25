@@ -50,11 +50,11 @@ class RelikREDataset(IterableDataset):
         dataset_path: str,
         materialize_samples: bool,
         transformer_model: Union[str, PreTrainedTokenizer],
-        special_symbols: List[str],
+        special_symbols_re: List[str],
+        special_symbols: Optional[List[str]] = [],
         shuffle_candidates: Optional[Union[bool, float]] = False,
         flip_candidates: Optional[Union[bool, float]] = False,
         for_inference: bool = False,
-        special_symbols_types=None,
         noise_param: float = 0.1,
         sorting_fields: Optional[str] = None,
         tokens_per_batch: int = 2048,
@@ -75,24 +75,22 @@ class RelikREDataset(IterableDataset):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        # mutable default arguments
-        if special_symbols_types is None:
-            special_symbols_types = []
-
         self.dataset_path = dataset_path
         self.materialize_samples = materialize_samples
         self.samples: Optional[List[RelikReaderSample]] = samples
         if self.materialize_samples and self.samples is None:
             self.samples = list()
 
+        self.special_symbols = special_symbols_re
+        self.special_symbols_types = special_symbols
+
         if isinstance(transformer_model, str):
             self.tokenizer = self._build_tokenizer(
-                transformer_model, special_symbols + special_symbols_types
+                transformer_model, self.special_symbols + self.special_symbols_types
             )
         else:
             self.tokenizer = transformer_model
-        self.special_symbols = special_symbols
-        self.special_symbols_types = special_symbols_types
+
         self.shuffle_candidates = shuffle_candidates
         self.flip_candidates = flip_candidates
         self.for_inference = for_inference
@@ -238,124 +236,143 @@ class RelikREDataset(IterableDataset):
         sample,
         tokenization_output: TokenizationOutput,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        start_labels = [0] * len(tokenization_output.input_ids)
+        len_input_ids = len(tokenization_output.input_ids)
+        start_labels = [0] * len_input_ids
         end_labels = []
-        end_labels_tensor = [0] * len(tokenization_output.input_ids)
-
-        sample.entities.sort(key=lambda x: (x[0], x[1]))
-
+        end_labels_tensor = [0] * len_input_ids
+        
+        # Pre-process entities to handle edge cases and duplicates.
+        sample.window_labels_tokens.sort(key=lambda x: (x[0], x[1]))
+        processed_entities = []
+        entities_untyped = set()
+        for entity in sample.window_labels_tokens:
+            entity = self._adjust_entity_boundaries(entity, sample.word2token)
+            if entity:
+                processed_entities.append(entity)
+                entities_untyped.add((entity[0], entity[1]))
+        
+        # Initialize disambiguation and relation labels.
+        entities_untyped = sorted(entities_untyped)
+        num_disambiguation_labels = len(sample.span_candidates) + len(sample.triplet_candidates) if self.special_symbols_types else len(sample.triplet_candidates)
+        disambiguation_labels = torch.zeros((len(entities_untyped), num_disambiguation_labels))
+        
+        # Main loop to fill in start and end labels.
         prev_start_bpe = -1
-        entities_untyped = list(set([(ce[0], ce[1]) for ce in sample.entities]))
-        entities_untyped.sort(key=lambda x: (x[0], x[1]))
-        if len(self.special_symbols_types) > 0:
-            sample.entities = [(ce[0], ce[1], ce[2]) for ce in sample.entities]
-            disambiguation_labels = torch.zeros(
-                len(entities_untyped),
-                len(sample.span_candidates) + len(sample.triplet_candidates),
-            )
-        else:
-            sample.entities = [(ce[0], ce[1], "") for ce in sample.entities]
-            disambiguation_labels = torch.zeros(
-                len(entities_untyped), len(sample.triplet_candidates)
-            )
-        ignored_labels_indices = tokenization_output.prediction_mask == 1
         offset = 0
-        for idx, c_ent in enumerate(sample.entities):
-            while len(sample.word2token[c_ent[0]]) == 0:
-                c_ent = (c_ent[0] + 1, c_ent[1], c_ent[2])
-                if len(sample.word2token) == c_ent[0]:
-                    c_ent = None
-                    break
-            if c_ent is None:
-                continue
-            while len(sample.word2token[c_ent[1] - 1]) == 0:
-                c_ent = (c_ent[0], c_ent[1] + 1, c_ent[2])
-                if len(sample.word2token) == c_ent[1]:
-                    c_ent = None
-                    break
-            if c_ent is None:
-                continue
-            start_bpe = sample.word2token[c_ent[0]][0] + 1
-            end_bpe = sample.word2token[c_ent[1] - 1][-1] + 1
-            class_index = idx
-            start_labels[start_bpe] = class_index + 1  # +1 for the NONE class
+        for idx, entity in enumerate(processed_entities):
+            start_bpe, end_bpe = self._get_bpe_positions(entity, sample.word2token)
+            class_index = idx + 1  # Offset by 1 for NONE class
+            
+            # Update start labels
+            start_labels[start_bpe] = class_index
+            
+            # Handle end labels, considering overlapping entities.
             if start_bpe != prev_start_bpe:
                 end_labels.append(end_labels_tensor.copy())
                 end_labels[-1][:start_bpe] = [-100] * start_bpe
-                end_labels[-1][end_bpe] = class_index + 1
-            elif end_labels[-1][end_bpe] == 0:
-                end_labels[-1][end_bpe] = class_index + 1
-            else:
+            elif end_labels[-1][end_bpe] != 0:
+                # Handle overlapping entities by adjusting the start position.
                 offset += 1
                 prev_start_bpe = start_bpe
                 continue
-            if len(self.special_symbols_types) > 0:
-                if c_ent[2] in sample.span_candidates:
-                    entity_type_idx = sample.span_candidates.index(c_ent[2])
-                else:
-                    entity_type_idx = 0
-                disambiguation_labels[idx - offset, entity_type_idx] = 1
+            end_labels[-1][end_bpe] = class_index
+            
+            # Update disambiguation labels if applicable.
+            if self.special_symbols_types and entity[2] in sample.span_candidates:
+                disambiguation_labels[idx - offset, sample.span_candidates.index(entity[2])] = 1
             prev_start_bpe = start_bpe
+        
+        # Handle ignored indices for start and end labels.
+        ignored_indices = tokenization_output.prediction_mask == 1
+        start_labels_tensor = torch.tensor(start_labels, dtype=torch.long)
+        start_labels_tensor[ignored_indices] = -100
+        end_labels_tensor = torch.stack([torch.tensor(label) for label in end_labels])
+        end_labels_tensor[ignored_indices.repeat(len(end_labels), 1)] = -100
+        
+        # Initialize and update relation labels.
+        relation_labels = self._init_relation_labels(entities_untyped, sample)
+        
+        return start_labels_tensor, end_labels_tensor, disambiguation_labels, relation_labels
+    
+    def _adjust_entity_boundaries(self, entity, word2token):
+        """Adjust entity boundaries to ensure they map to valid token positions."""
+        # Adjust start position
+        while not word2token.get(entity[0], []):
+            entity = (entity[0] + 1, entity[1], entity[2])
+            if entity[0] >= len(word2token):
+                return None
+        # Adjust end position
+        while not word2token.get(entity[1] - 1, []):
+            entity = (entity[0], entity[1] - 1, entity[2])
+            if entity[1] <= 0:
+                return None
+        return entity
 
-        start_labels = torch.tensor(start_labels, dtype=torch.long)
-        start_labels[ignored_labels_indices] = -100
+    def _get_bpe_positions(self, entity, word2token):
+        """Get the start and end positions in BPE tokens for an entity."""
+        return word2token[entity[0]][0] + 1, word2token[entity[1] - 1][-1] + 1
+    
+    def _init_relation_labels(self, entities_untyped, sample):
+        """
+        Initialize the tensor for relation labels between entities.
+        """
+        num_entities = len(entities_untyped)
+        num_relations = len(sample.triplet_candidates)
+        relation_labels = torch.zeros((num_entities, num_entities, num_relations))
 
-        end_labels = torch.tensor(end_labels, dtype=torch.long)
-        end_labels[ignored_labels_indices.repeat(len(end_labels), 1)] = -100
+        if sample.window_triplet_labels is None:
+            return relation_labels
 
-        relation_labels = torch.zeros(
-            len(entities_untyped), len(entities_untyped), len(sample.triplet_candidates)
-        )
+        for relation in sample.window_triplet_labels:
+            # Determine the index of this relation type in the triplet_candidates list.
+            # If the relation type is not found, use a default index (e.g., for 'unknown' relation types).
+            relation_idx = sample.triplet_candidates.index(relation["relation"]) \
+                if relation["relation"] in sample.triplet_candidates else -1
 
-        for re in sample.triplets:
-            if re["relation"]["name"] not in sample.triplet_candidates:
-                re_class_index = len(sample.triplet_candidates) - 1
-            else:
-                re_class_index = sample.triplet_candidates.index(re["relation"]["name"])
+            # Find the indices of the subject and object entities within the entities_untyped list.
+            subject_idx = next((i for i, entity in enumerate(entities_untyped)
+                                if entity[0] == relation["subject"][0] and entity[1] == relation["subject"][1]), None)
+            object_idx = next((i for i, entity in enumerate(entities_untyped)
+                            if entity[0] == relation["object"][0] and entity[1] == relation["object"][1]), None)
 
-            subject_class_index = self._subindex(
-                entities_untyped, (re["subject"]["start"], re["subject"]["end"]), (0, 1)
-            )
-            object_class_index = self._subindex(
-                entities_untyped, (re["object"]["start"], re["object"]["end"]), (0, 1)
-            )
+            # If both the subject and object entity indices are found, mark the relation in the tensor.
+            if subject_idx is not None and object_idx is not None and relation_idx != -1:
+                relation_labels[subject_idx, object_idx, relation_idx] = 1
 
-            relation_labels[subject_class_index, object_class_index, re_class_index] = 1
-
-            if len(self.special_symbols_types) > 0:
-                disambiguation_labels[
-                    subject_class_index, re_class_index + len(sample.span_candidates)
-                ] = 1
-                disambiguation_labels[
-                    object_class_index, re_class_index + len(sample.span_candidates)
-                ] = 1
-            else:
-                disambiguation_labels[subject_class_index, re_class_index] = 1
-                disambiguation_labels[object_class_index, re_class_index] = 1
-        return start_labels, end_labels, disambiguation_labels, relation_labels
+        return relation_labels
 
     def __iter__(self):
         dataset_iterator = self.dataset_iterator_func()
-        current_dataset_elements = []
         i = None
-        for i, dataset_elem in enumerate(dataset_iterator, start=1):
-            if (
-                self.section_size is not None
-                and len(current_dataset_elements) == self.section_size
-            ):
+        if self.section_size is not None:
+            current_dataset_elements = []
+            for i, dataset_elem in enumerate(dataset_iterator, start=1):
+                if (
+                    len(current_dataset_elements) == self.section_size
+                ):
+                    for batch in self.materialize_batches(current_dataset_elements):
+                        yield batch
+                    current_dataset_elements = []
+                current_dataset_elements.append(dataset_elem)
+                if i % 50_000 == 0:
+                    logger.info(f"Processed: {i} number of elements")
+            if len(current_dataset_elements) != 0:
                 for batch in self.materialize_batches(current_dataset_elements):
                     yield batch
-                current_dataset_elements = []
-            current_dataset_elements.append(dataset_elem)
-            if i % 50_000 == 0:
-                logger.info(f"Processed: {i} number of elements")
-        if len(current_dataset_elements) != 0:
-            for batch in self.materialize_batches(current_dataset_elements):
-                yield batch
-        if i is not None:
-            logger.debug(f"Dataset finished: {i} number of elements processed")
+            if i is not None:
+                logger.debug(f"Dataset finished: {i} number of elements processed")
+            else:
+                logger.warning("Dataset empty")
         else:
-            logger.warning("Dataset empty")
+            for batch in self.materialize_batches(dataset_iterator):
+                if i is None:
+                    i = 0
+                i += batch["input_ids"].shape[0]
+                yield batch
+            if i is not None:
+                logger.debug(f"Dataset finished: {i} number of elements processed")
+            else:
+                logger.warning("Dataset empty")
 
     def dataset_iterator_func(self):
         data_samples = (
@@ -427,7 +444,7 @@ class RelikREDataset(IterableDataset):
             if not self.for_inference:
                 # check whether the sample has labels if not skip
                 if (
-                    sample.triplets is None or len(sample.triplets) == 0
+                    sample.window_triplet_labels is None or len(sample.window_triplet_labels) == 0
                 ) and self.skip_empty_training_samples:
                     logger.warning(
                         "Sample {} has no labels, skipping".format(sample.id)
@@ -438,16 +455,16 @@ class RelikREDataset(IterableDataset):
                 if self.add_gold_candidates:
                     candidates_set = set(sample.triplet_candidates)
                     candidates_to_add = set()
-                    for candidate_title in sample.triplets:
-                        if candidate_title["relation"]["name"] not in candidates_set:
-                            candidates_to_add.add(candidate_title["relation"]["name"])
+                    for candidate_title in sample.window_triplet_labels:
+                        if candidate_title["relation"] not in candidates_set:
+                            candidates_to_add.add(candidate_title["relation"])
                     if len(candidates_to_add) > 0:
                         # replacing last candidates with the gold ones
                         # this is done in order to preserve the ordering
                         candidates_to_add = list(candidates_to_add)
                         added_gold_candidates = 0
                         gold_candidates_titles_set = set(
-                            set(ct["relation"]["name"] for ct in sample.triplets)
+                            set(ct["relation"] for ct in sample.window_triplet_labels)
                         )
                         for i in reversed(range(len(sample.triplet_candidates))):
                             if (
@@ -651,7 +668,7 @@ class RelikREDataset(IterableDataset):
                         sample.triplet_candidates = sample.triplet_candidates[:i]
                 else:
                     gold_candidates_set = set(
-                        [wl["relation"]["name"] for wl in sample.triplets]
+                        [wl["relation"] for wl in sample.window_triplet_labels]
                     )
                     gold_candidates_indices = [
                         i
@@ -754,7 +771,7 @@ class RelikREDataset(IterableDataset):
                 None,
                 None,
             )
-            if sample.entities is not None and len(sample.entities) > 0:
+            if sample.window_labels_tokens is not None and len(sample.window_labels_tokens) > 0:
                 (
                     start_labels,
                     end_labels,
@@ -990,7 +1007,7 @@ class RelikREDataset(IterableDataset):
 
         # sort the spans by start so that we can use the index of the span to get the entity
         predicted_spans = sorted(predicted_spans, key=lambda x: x[0])
-        predicted_triples = []
+        predicted_triplets = []
         # now search for the spans in each triplet
         for prediction in sample.predicted_relations:
             # get the index of the entity that has the same start and end
@@ -998,24 +1015,24 @@ class RelikREDataset(IterableDataset):
                 i
                 for i, p in enumerate(predicted_spans)
                 if p[:2]
-                == (prediction["subject"]["start"], prediction["subject"]["end"])
+                == (prediction["subject"][0], prediction["subject"][1])
             ][0]
             end_entity_index = [
                 i
                 for i, p in enumerate(predicted_spans)
-                if p[:2] == (prediction["object"]["start"], prediction["object"]["end"])
+                if p[:2] == (prediction["object"][0], prediction["object"][1])
             ][0]
 
-            predicted_triples.append(
+            predicted_triplets.append(
                 (
                     start_entity_index,
-                    prediction["relation"]["name"],
+                    prediction["relation"],
                     end_entity_index,
-                    prediction["relation"]["probability"],
+                    prediction["probability"],
                 )
             )
         sample.predicted_spans = predicted_spans
-        sample.predicted_triples = predicted_triples
+        sample.predicted_triplets = predicted_triplets
         return sample
 
     @staticmethod
@@ -1064,22 +1081,10 @@ class RelikREDataset(IterableDataset):
             relation = sample.triplet_candidates[relation]
             triplets.append(
                 {
-                    "subject": {
-                        "start": subject[0],
-                        "end": subject[1],
-                        "type": subject[2],
-                        # "name": " ".join(sample.tokens[subject[0] : subject[1]]),
-                    },
-                    "relation": {
-                        "name": relation,
-                        "probability": float(predicted_triplet_probabilities.round(2)),
-                    },
-                    "object": {
-                        "start": object_[0],
-                        "end": object_[1],
-                        "type": object_[2],
-                        # "name": " ".join(sample.tokens[object_[0] : object_[1]]),
-                    },
+                    "subject": subject,
+                    "relation": relation,
+                    "object": object_,
+                    "probability": float(predicted_triplet_probabilities.round(2)),
                 }
             )
         # convert to list since we need to modify the sample down the road
@@ -1111,17 +1116,17 @@ class RelikREDataset(IterableDataset):
                 entities.append(entity)
             sample.predicted_entities = entities
             for triplet in sample.predicted_relations:
-                triplet["subject"]["start"] = sample.token2char_start[
-                    str(sample.word2token_start[str(triplet["subject"]["start"])])
+                triplet["subject"][0] = sample.token2char_start[
+                    str(sample.word2token_start[str(triplet["subject"][0])])
                 ]
-                triplet["subject"]["end"] = sample.token2char_end[
-                    str(sample.word2token_end[str(triplet["subject"]["end"] - 1)])
+                triplet["subject"][1] = sample.token2char_end[
+                    str(sample.word2token_end[str(triplet["subject"][1] - 1)])
                 ]
-                triplet["object"]["start"] = sample.token2char_start[
-                    str(sample.word2token_start[str(triplet["object"]["start"])])
+                triplet["object"][0] = sample.token2char_start[
+                    str(sample.word2token_start[str(triplet["object"][0])])
                 ]
-                triplet["object"]["end"] = sample.token2char_end[
-                    str(sample.word2token_end[str(triplet["object"]["end"] - 1)])
+                triplet["object"][1] = sample.token2char_end[
+                    str(sample.word2token_end[str(triplet["object"][1] - 1)])
                 ]
 
             sample = RelikREDataset._new_output_format(sample)

@@ -19,7 +19,7 @@ from relik.inference.data.objects import (
     RelikOutput,
     Span,
     TaskType,
-    Triples,
+    Triplets,
 )
 from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSplitter
 from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
@@ -512,6 +512,8 @@ class Relik:
                 The batch size to use for the reader. The whole input is the batch for the reader.
             return_windows (`bool`, `optional`, defaults to `False`):
                 Whether to return the windows in the output.
+            use_doc_topic (`bool`, `optional`, defaults to `False`):
+                Whether to use the document topic for the retriever in each window. Used by some EL systems where the first word of the document as the topic.
             annotation_type (`str` or `AnnotationType`, `optional`, defaults to `char`):
                 The type of annotation to return. If `char`, the spans will be in terms of
                 character offsets. If `word`, the spans will be in terms of word offsets.
@@ -583,22 +585,13 @@ class Relik:
         if windows is None:
             # TODO: make it more consistent (no tuples or single elements in output)
             # windows were provided, use them
-            if mentions is not None:
-                windows, blank_windows = self.window_manager.create_windows(
-                    text,
-                    window_size,
-                    window_stride,
-                    is_split_into_words=is_split_into_words,
-                    mentions=mentions,
-                )
-            else:
-                blank_windows = []
-                windows = self.window_manager.create_windows(
-                    text,
-                    window_size,
-                    window_stride,
-                    is_split_into_words=is_split_into_words,
-                )
+            windows, blank_windows, documents_tokens = self.window_manager.create_windows(
+                text,
+                window_size,
+                window_stride,
+                is_split_into_words=is_split_into_words,
+                mentions=mentions,
+            )
         else:
             # otherwise, use the provided windows, `text` is ignored
             blank_windows = []
@@ -694,7 +687,7 @@ class Relik:
             for window in blank_windows:
                 window._d[f"{task_type.value}_candidates"] = []
                 window._d["predicted_spans"] = []
-                window._d["predicted_triples"] = []
+                window._d["predicted_triplets"] = []
 
         if self.reader is not None:
             # start_read = time.time()
@@ -729,7 +722,7 @@ class Relik:
         output = []
         for w in merged_windows:
             span_labels = []
-            triples_labels = []
+            triplets_labels = []
             # span extraction should always be present
             if getattr(w, "predicted_spans", None) is not None:
                 span_labels = sorted(
@@ -737,22 +730,22 @@ class Relik:
                         (
                             Span(start=ss, end=se, label=sl, text=text[w.doc_id][ss:se])
                             if annotation_type == AnnotationType.CHAR
-                            else Span(start=ss, end=se, label=sl, text=w.words[ss:se])
+                            else Span(start=ss, end=se, label=sl, text=documents_tokens[w.doc_id][ss:se])
                         )
                         for ss, se, sl in w.predicted_spans
                     ],
                     key=lambda x: x.start,
                 )
                 # triple extraction is optional, if here add it
-                if getattr(w, "predicted_triples", None) is not None:
-                    triples_labels = [
-                        Triples(
+                if getattr(w, "predicted_triplets", None) is not None:
+                    triplets_labels = [
+                        Triplets(
                             subject=span_labels[subj],
                             label=label,
                             object=span_labels[obj],
                             confidence=conf,
                         )
-                        for subj, label, obj, conf in w.predicted_triples
+                        for subj, label, obj, conf in w.predicted_triplets
                     ]
             # we also want to add the candidates to the output
             candidates_labels = defaultdict(list)
@@ -764,10 +757,10 @@ class Relik:
 
             sample_output = RelikOutput(
                 text=w.text,
-                tokens=w.words,
+                tokens=documents_tokens[w.doc_id],
                 id=w.doc_id,
                 spans=span_labels,
-                triples=triples_labels,
+                triplets=triplets_labels,
                 candidates=Candidates(
                     span=candidates_labels.get(TaskType.SPAN, []),
                     triplet=candidates_labels.get(TaskType.TRIPLET, []),

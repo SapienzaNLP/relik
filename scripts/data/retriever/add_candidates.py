@@ -35,6 +35,22 @@ def compute_retriever_stats(dataset, top_k) -> None:
     recall = correct / total
     logger.info(f"Recall@{top_k}: {recall}")
 
+def compute_retriever_stats_triplets(dataset, top_k) -> None:
+    correct, total = 0, 0
+    for sample in dataset:
+        window_candidates = sample["triplet_candidates"]
+        window_candidates = [c.lower() for c in window_candidates]
+
+        for triplet in sample["window_triplet_labels"]:
+            relation = triplet["relation"]
+            if relation.lower() in window_candidates:
+                correct += 1
+            else:
+                logger.debug(f"Did not find `{relation.lower()}` in candidates")
+            total += 1
+
+    recall = correct / total
+    logger.info(f"Recall@{top_k}: {recall}")
 
 @torch.no_grad()
 def add_candidates(
@@ -43,6 +59,7 @@ def add_candidates(
     input_path: Union[str, os.PathLike],
     output_path: Union[str, os.PathLike],
     passage_encoder_name_or_path: Optional[Union[str, os.PathLike]] = None,
+    relations: bool = False,
     top_k: int = 100,
     batch_size: int = 128,
     num_workers: int = 4,
@@ -129,11 +146,17 @@ def add_candidates(
                             c.document.text for c in retrieved # TODO: add metadata if needed
                         ]
                         # TODO: compatibility shit
-                        sample["span_candidates"] = candidate_titles
-                        # sample["window_candidates"] = candidate_titles
-                        sample["span_candidates_scores"] = [
-                            c.score for c in retrieved
-                        ]
+                        if relations:
+                            sample["triplet_candidates"] = candidate_titles
+                            sample["triplet_candidates_scores"] = [
+                                c.score for c in retrieved
+                            ]
+                        else:
+                            sample["span_candidates"] = candidate_titles
+                            # sample["window_candidates"] = candidate_titles
+                            sample["span_candidates_scores"] = [
+                                c.score for c in retrieved
+                            ]
                         output_data.append(sample)
 
                     for sample in output_data:
@@ -158,9 +181,15 @@ def add_candidates(
                         c.document.text for c in retrieved # TODO: add metadata if needed
                     ]
                     # TODO: compatibility shit
-                    sample["span_candidates"] = candidate_titles
-                    # sample["window_candidates"] = candidate_titles
-                    sample["span_candidates_scores"] = [c.score for c in retrieved]
+                    if relations:
+                        sample["triplet_candidates"] = candidate_titles
+                        sample["triplet_candidates_scores"] = [
+                            c.score for c in retrieved
+                        ]
+                    else:
+                        sample["span_candidates"] = candidate_titles
+                        # sample["window_candidates"] = candidate_titles
+                        sample["span_candidates_scores"] = [c.score for c in retrieved]
                     output_data.append(sample)
 
                 for sample in output_data:
@@ -175,7 +204,10 @@ def add_candidates(
     if log_recall:
         with open(output_path) as f:
             annotated_samples = [json.loads(line) for line in f.readlines()]
-        compute_retriever_stats(annotated_samples, top_k)
+        if relations:
+            compute_retriever_stats_triplets(annotated_samples, top_k)
+        else:
+            compute_retriever_stats(annotated_samples, top_k)
 
 
 if __name__ == "__main__":
@@ -185,6 +217,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("--passage-encoder-name-or-path", type=str)
     arg_parser.add_argument("--input-path", type=str, required=True)
     arg_parser.add_argument("--output-path", type=str, required=True)
+    arg_parser.add_argument("--relations", action="store_true")
     arg_parser.add_argument("--top-k", type=int, default=100)
     arg_parser.add_argument("--batch-size", type=int, default=128)
     arg_parser.add_argument("--device", type=str, default="cuda")

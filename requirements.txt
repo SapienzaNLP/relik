@@ -9,6 +9,7 @@ overrides>=7.4,<7.5
 art==6.1
 pprintpp==0.4.0
 colorama==0.4.6
+termcolor==2.4.0
 
 #------- Optional dependencies -------
 

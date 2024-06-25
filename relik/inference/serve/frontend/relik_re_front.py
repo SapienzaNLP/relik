@@ -58,7 +58,7 @@ def generate_graph(dict_ents, response, filename, options):
             labelHighlightBold=True,
         )
 
-    for rel in response.triples:
+    for rel in response.triplets:
         g.add_edge(
             dict_ents[(rel.subject.start, rel.subject.end)][0],
             dict_ents[(rel.object.start, rel.object.end)][0],

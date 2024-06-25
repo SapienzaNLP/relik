@@ -18,7 +18,7 @@ from relik.reader.pytorch_modules.optim import (
 )
 from relik.reader.utils.relation_matching_eval import REStrongMatchingCallback
 from relik.reader.utils.special_symbols import get_special_symbols_re
-import wandb
+from relik.reader.utils.shuffle_train_callback import ShuffleTrainCallback
 
 @hydra.main(config_path="../conf", config_name="config")
 def train(cfg: DictConfig) -> None:
@@ -89,6 +89,10 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
+
+    if cfg.data.section_size == None: # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
+        callbacks.append(ShuffleTrainCallback())
+
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
 
     # trainer declaration
@@ -107,15 +111,13 @@ def train(cfg: DictConfig) -> None:
     )
 
     # Load best checkpoint
-    if True:
-        model = RelikReaderREPLModule.load_from_checkpoint(
-            trainer.checkpoint_callback.best_model_path
-        )
-        # model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
-        # model.relik_reader_re_model.save_pretrained(cfg.training.save_model_path)
-        experiment_path = Path(wandb_logger.experiment.dir)
-        model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
-        model.relik_reader_re_model.save_pretrained(experiment_path / "hf_model")
+    # if cfg.training.save_model_path:
+    model = RelikReaderREPLModule.load_from_checkpoint(
+        trainer.checkpoint_callback.best_model_path
+    )
+    experiment_path = Path(wandb_logger.experiment.dir)
+    model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
+    model.relik_reader_re_model.save_pretrained(experiment_path / "hf_model")
 
 def main():
     train()

@@ -489,32 +489,36 @@ class RelikDataset(IterableDataset):
 
     def __iter__(self):
         dataset_iterator = self.dataset_iterator_func()
-
-        current_dataset_elements = []
-
         i = None
-        for i, dataset_elem in enumerate(dataset_iterator, start=1):
-            if (
-                self.section_size is not None
-                and len(current_dataset_elements) == self.section_size
-            ):
+        if self.section_size is not None:
+            current_dataset_elements = []
+            for i, dataset_elem in enumerate(dataset_iterator, start=1):
+                if (
+                    len(current_dataset_elements) == self.section_size
+                ):
+                    for batch in self.materialize_batches(current_dataset_elements):
+                        yield batch
+                    current_dataset_elements = []
+                current_dataset_elements.append(dataset_elem)
+                if i % 50_000 == 0:
+                    logger.info(f"Processed: {i} number of elements")
+            if len(current_dataset_elements) != 0:
                 for batch in self.materialize_batches(current_dataset_elements):
                     yield batch
-                current_dataset_elements = []
-
-            current_dataset_elements.append(dataset_elem)
-
-            if i % 50_000 == 0:
-                logger.info(f"Processed: {i} number of elements")
-
-        if len(current_dataset_elements) != 0:
-            for batch in self.materialize_batches(current_dataset_elements):
+            if i is not None:
+                logger.debug(f"Dataset finished: {i} number of elements processed")
+            else:
+                logger.warning("Dataset empty")
+        else:
+            for batch in self.materialize_batches(dataset_iterator):
+                if i is None:
+                    i = 0
+                i += batch["input_ids"].shape[0]
                 yield batch
-
-        if i is None:
-            # logger.debug(f"Dataset finished: {i} number of elements processed")
-        # else:
-            logger.warning("Dataset empty")
+            if i is not None:
+                logger.debug(f"Dataset finished: {i} number of elements processed")
+            else:
+                logger.warning("Dataset empty")
 
     def dataset_iterator_func(self):
         skipped_instances = 0

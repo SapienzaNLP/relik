@@ -120,6 +120,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
         precision: str = 32,
         annotation_type: AnnotationType = AnnotationType.CHAR,
         progress_bar: bool = False,
+        remove_nmes: bool = True,
         *args: object,
         **kwargs: object,
     ) -> List[RelikReaderSample] | List[List[RelikReaderSample]]:
@@ -219,9 +220,9 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
             for sample in outputs:
                 self.dataset.merge_patches_predictions(sample)
                 if annotation_type == AnnotationType.CHAR:
-                    self.dataset.convert_to_char_annotations(sample)
+                    self.dataset.convert_to_char_annotations(sample, remove_nmes)
                 elif annotation_type == AnnotationType.WORD:
-                    self.dataset.convert_to_word_annotations(sample)
+                    self.dataset.convert_to_word_annotations(sample, remove_nmes)
                 else:
                     raise ValueError(
                         f"Annotation type {annotation_type} not recognized. "

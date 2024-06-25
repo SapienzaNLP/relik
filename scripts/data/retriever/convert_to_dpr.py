@@ -17,6 +17,7 @@ def convert_to_dpr(
     output_path: Union[str, os.PathLike],
     documents_path: Optional[Union[str, os.PathLike]] = None,
     title_map: Optional[Union[str, os.PathLike]] = None,
+    label_type: Optional[bool] = False,
 ) -> List[Dict[str, Any]]:
     documents = {}
     output_path = Path(output_path)
@@ -64,25 +65,45 @@ def convert_to_dpr(
             # for sentence in aida_data:
             question = sentence["text"]
             positive_pssgs = []
-            for idx, entity in enumerate(sentence["window_labels"]):
-                entity = entity[2]
-                if not entity:
-                    continue
-                entity = entity.strip().lower().replace("_", " ")
-                # if title_map and entity in title_to_lower_map:
-                entity = title_to_lower_map.get(entity, entity)
-                if entity in documents:
-                    def_text = documents[entity]
-                    positive_pssgs.append(
-                        {
-                            "title": title_to_lower_map[entity.lower()],
-                            "text": f"{title_to_lower_map[entity.lower()]} <def> {def_text}",
-                            "passage_id": f"{sentence['doc_id']}_{sentence['offset']}_{idx}",
-                        }
-                    )
-                else:
-                    missing.add(entity)
-                    print(f"Entity {entity} not found in definitions")
+            if label_type:
+                for idx, triplet in enumerate(sentence["window_triplet_labels"]):
+                    relation = triplet["relation"]
+                    if not relation:
+                        continue
+                    relation = relation.strip().lower()
+                    relation = title_to_lower_map.get(relation, relation)
+                    if relation in documents:
+                        def_text = documents[relation]
+                        positive_pssgs.append(
+                            {
+                                "title": title_to_lower_map[relation.lower()],
+                                "text": f"{title_to_lower_map[relation.lower()]} <def> {def_text}",
+                                "passage_id": f"{sentence['doc_id']}_{sentence['offset']}_{idx}",
+                            }
+                        )
+                    else:
+                        missing.add(relation)
+                        print(f"Relation {relation} not found in definitions")
+            else:
+                for idx, entity in enumerate(sentence["window_labels"]):
+                    entity = entity[2]
+                    if not entity:
+                        continue
+                    entity = entity.strip().lower().replace("_", " ")
+                    # if title_map and entity in title_to_lower_map:
+                    entity = title_to_lower_map.get(entity, entity)
+                    if entity in documents:
+                        def_text = documents[entity]
+                        positive_pssgs.append(
+                            {
+                                "title": title_to_lower_map[entity.lower()],
+                                "text": f"{title_to_lower_map[entity.lower()]} <def> {def_text}",
+                                "passage_id": f"{sentence['doc_id']}_{sentence['offset']}_{idx}",
+                            }
+                        )
+                    else:
+                        missing.add(entity)
+                        print(f"Entity {entity} not found in definitions")
 
             if len(positive_pssgs) == 0:
                 continue
@@ -112,7 +133,8 @@ if __name__ == "__main__":
     parser.add_argument("output", type=str, help="Path to output file")
     parser.add_argument("documents", type=str, help="Path to entities definitions file")
     parser.add_argument("--title_map", type=str, help="Path to title map file")
+    parser.add_argument("--relations", action="store_true", help="Use relation labels")
     args = parser.parse_args()
 
     # Convert to DPR
-    convert_to_dpr(args.input, args.output, args.documents, args.title_map)
+    convert_to_dpr(args.input, args.output, args.documents, args.title_map, args.relations)

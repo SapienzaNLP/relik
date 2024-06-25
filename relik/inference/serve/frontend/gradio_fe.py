@@ -75,7 +75,7 @@ def generate_graph(dict_ents, response, options):
             labelHighlightBold=True,
         )
 
-    for rel in response.triples:
+    for rel in response.triplets:
         g.add_edge(
             dict_ents[(rel.subject.start, rel.subject.end)][0],
             dict_ents[(rel.object.start, rel.object.end)][0],
@@ -121,7 +121,7 @@ def text_analysis(Text, Model):
         "span id='el' style",
     )
     display_re = ""
-    if annotated_text.triples:
+    if annotated_text.triplets:
         display_re = generate_graph(dict_ents, annotated_text, options)
     return display_el, display_re
 

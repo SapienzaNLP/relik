@@ -322,20 +322,26 @@ class RelikReaderSpanModel(PreTrainedModel):
             # flattening end predictions
             #   (flattening can happen only if the
             #   end boundaries were not predicted using the gold labels)
-            if not self.training:
-                flattened_end_predictions = torch.clone(ned_start_predictions)
-                flattened_end_predictions[flattened_end_predictions > 0] = 0
+            if not self.training and ned_end_logits is not None:
+                flattened_end_predictions = torch.zeros_like(ned_start_predictions)
 
-                batch_start_predictions = list()
-                for elem_idx in range(batch_size):
-                    batch_start_predictions.append(
-                        torch.where(ned_start_predictions[elem_idx] > 0)[0].tolist()
-                    )
+                row_indices, start_positions = torch.where(ned_start_predictions > 0)
+                ned_end_predictions[ned_end_predictions<start_positions] = start_positions[ned_end_predictions<start_positions]
 
-                # check that the total number of start predictions
-                # is equal to the end predictions
-                total_start_predictions = sum(map(len, batch_start_predictions))
-                total_end_predictions = len(ned_end_predictions)
+                end_spans_repeated = (row_indices + 1)* seq_len + ned_end_predictions
+                cummax_values, _ = end_spans_repeated.cummax(dim=0)
+
+                end_spans_repeated = (end_spans_repeated > torch.cat((end_spans_repeated[:1], cummax_values[:-1])))
+                end_spans_repeated[0] = True
+
+                ned_start_predictions[row_indices[~end_spans_repeated], start_positions[~end_spans_repeated]] = 0
+
+                row_indices, start_positions, ned_end_predictions = row_indices[end_spans_repeated], start_positions[end_spans_repeated], ned_end_predictions[end_spans_repeated]
+
+                flattened_end_predictions[row_indices, ned_end_predictions] = 1
+
+                total_start_predictions, total_end_predictions = ned_start_predictions.sum(), flattened_end_predictions.sum()
+
                 assert (
                     total_start_predictions == 0
                     or total_start_predictions == total_end_predictions
@@ -343,23 +349,9 @@ class RelikReaderSpanModel(PreTrainedModel):
                     f"Total number of start predictions = {total_start_predictions}. "
                     f"Total number of end predictions = {total_end_predictions}"
                 )
-
-                curr_end_pred_num = 0
-                for elem_idx, bsp in enumerate(batch_start_predictions):
-                    for sp in bsp:
-                        ep = ned_end_predictions[curr_end_pred_num].item()
-                        if ep < sp:
-                            ep = sp
-
-                        # if we already set this span throw it (no overlap)
-                        if flattened_end_predictions[elem_idx, ep] == 1:
-                            ned_start_predictions[elem_idx, sp] = 0
-                        else:
-                            flattened_end_predictions[elem_idx, ep] = 1
-
-                        curr_end_pred_num += 1
-
                 ned_end_predictions = flattened_end_predictions
+            else:
+                ned_end_predictions = torch.zeros_like(ned_start_predictions)
 
         start_position, end_position = (
             (start_labels, end_labels)
@@ -462,7 +454,7 @@ class RelikReaderREModel(PreTrainedModel):
         self.transformer_model.resize_token_embeddings(
             self.transformer_model.config.vocab_size
             + config.additional_special_symbols
-            + config.additional_special_symbols_types
+            + config.additional_special_symbols_types,
         )
 
         # named entity detection layers
@@ -479,17 +471,17 @@ class RelikReaderREModel(PreTrainedModel):
         )
 
         if self.config.entity_type_loss and self.config.add_entity_embedding:
-            input_hidden_ents = 3 * self.transformer_model.config.hidden_size
+            input_hidden_ents = 3 * self.config.linears_hidden_size
         else:
-            input_hidden_ents = 2 * self.transformer_model.config.hidden_size
+            input_hidden_ents = 2 * self.config.linears_hidden_size
 
-        self.re_subject_projector = self._get_projection_layer(
-            config.activation, input_hidden=input_hidden_ents
+        self.re_projector = self._get_projection_layer(
+            config.activation, input_hidden=2*self.transformer_model.config.hidden_size, hidden=input_hidden_ents, last_hidden=2*self.config.linears_hidden_size
         )
-        self.re_object_projector = self._get_projection_layer(
-            config.activation, input_hidden=input_hidden_ents
+
+        self.re_relation_projector = self._get_projection_layer(
+            config.activation, input_hidden=self.transformer_model.config.hidden_size,
         )
-        self.re_relation_projector = self._get_projection_layer(config.activation)
 
         if self.config.entity_type_loss or self.relation_disambiguation_loss:
             self.re_entities_projector = self._get_projection_layer(
@@ -517,6 +509,7 @@ class RelikReaderREModel(PreTrainedModel):
         self,
         activation: str,
         last_hidden: Optional[int] = None,
+        hidden: Optional[int] = None,
         input_hidden=None,
         layer_norm: bool = True,
     ) -> torch.nn.Sequential:
@@ -529,12 +522,12 @@ class RelikReaderREModel(PreTrainedModel):
                     if input_hidden is None
                     else input_hidden
                 ),
-                self.config.linears_hidden_size,
+                self.config.linears_hidden_size if hidden is None else hidden,
             ),
             activation2functions[activation],
             torch.nn.Dropout(0.1),
             torch.nn.Linear(
-                self.config.linears_hidden_size,
+                self.config.linears_hidden_size if hidden is None else hidden,
                 self.config.linears_hidden_size if last_hidden is None else last_hidden,
             ),
         ]
@@ -636,8 +629,13 @@ class RelikReaderREModel(PreTrainedModel):
         model_entity_features,
         special_symbols_features,
     ) -> torch.Tensor:
-        model_subject_features = self.re_subject_projector(model_entity_features)
-        model_object_features = self.re_object_projector(model_entity_features)
+        model_subject_object_features = self.re_projector(model_entity_features)
+        model_subject_features = model_subject_object_features[
+            :, :, : model_subject_object_features.shape[-1] // 2
+        ]
+        model_object_features = model_subject_object_features[
+            :, :, model_subject_object_features.shape[-1] // 2 :
+        ]
         special_symbols_start_representation = self.re_relation_projector(
             special_symbols_features
         )
@@ -721,13 +719,16 @@ class RelikReaderREModel(PreTrainedModel):
         end_labels: Optional[torch.Tensor] = None,
         disambiguation_labels: Optional[torch.Tensor] = None,
         relation_labels: Optional[torch.Tensor] = None,
-        relation_threshold: float = 0.5,
+        relation_threshold: float = None,
         is_validation: bool = False,
         is_prediction: bool = False,
         use_predefined_spans: bool = False,
         *args,
         **kwargs,
     ) -> Dict[str, Any]:
+
+        relation_threshold = self.config.threshold if relation_threshold is None else relation_threshold
+
         batch_size = input_ids.shape[0]
 
         model_features = self._get_model_features(
@@ -899,19 +900,7 @@ class RelikReaderREModel(PreTrainedModel):
             re_probabilities = torch.softmax(re_logits, dim=-1)
             # we set a thresshold instead of argmax in cause it needs to be tweaked
             re_predictions = re_probabilities[:, :, :, :, 1] > relation_threshold
-            # re_predictions = re_probabilities.argmax(dim=-1)
             re_probabilities = re_probabilities[:, :, :, :, 1]
-            # re_logits, re_probabilities, re_predictions = (
-            #     torch.zeros(
-            #         [batch_size, 1, 1, special_symbols_mask.sum(1)[0]], dtype=torch.long
-            #     ).to(input_ids.device),
-            #     torch.zeros(
-            #         [batch_size, 1, 1, special_symbols_mask.sum(1)[0]], dtype=torch.long
-            #     ).to(input_ids.device),
-            #     torch.zeros(
-            #         [batch_size, 1, 1, special_symbols_mask.sum(1)[0]], dtype=torch.long
-            #     ).to(input_ids.device),
-            # )
 
         else:
             (
@@ -982,10 +971,9 @@ class RelikReaderREModel(PreTrainedModel):
                 ) / 4
                 output_dict["ned_type_loss"] = ned_type_loss
             else:
-                output_dict["loss"] = ((1 / 4) * (ned_start_loss + ned_end_loss)) + (
-                    (1 / 2) * relation_loss
+                output_dict["loss"] = ((1 / 20) * (ned_start_loss + ned_end_loss)) + (
+                    (9 / 10) * relation_loss
                 )
-
             output_dict["ned_start_loss"] = ned_start_loss
             output_dict["ned_end_loss"] = ned_end_loss
             output_dict["re_loss"] = relation_loss

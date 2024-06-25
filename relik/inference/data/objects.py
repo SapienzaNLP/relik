@@ -59,17 +59,15 @@ class Span(NamedTuple):
     text: str
 
 
-class Triples(NamedTuple):
+class Triplets(NamedTuple):
     subject: Span
     label: str
     object: Span
     confidence: float
 
-
 class Candidates(NamedTuple):
     span: Dict[List[Document]]
     triplet: Dict[List[Document]]
-
 
 @dataclass
 class RelikOutput:
@@ -98,7 +96,7 @@ class RelikOutput:
     tokens: List[str]
     id: str | int
     spans: List[Span]
-    triples: List[Triples]
+    triplets: List[Triplets]
     candidates: Candidates = None
     windows: Optional[List[RelikReaderSample]] = None
 
@@ -108,7 +106,7 @@ class RelikOutput:
             "text": self.text,
             "tokens": self.tokens,
             "spans": self.spans,
-            "triples": self.triples,
+            "triplets": self.triplets,
             "candidates": {
                 "span": [
                     [[doc.to_dict() for doc in documents] for documents in window]

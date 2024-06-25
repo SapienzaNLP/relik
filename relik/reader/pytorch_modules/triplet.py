@@ -102,11 +102,11 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
                 dataset_path=None,
                 materialize_samples=False,
                 transformer_model=self.tokenizer,
-                special_symbols=self.default_data_class.get_special_symbols_re(
+                special_symbols_re=self.default_data_class.get_special_symbols_re(
                     self.relik_reader_model.config.additional_special_symbols,
                     use_nme=kwargs.get("use_nme_re", False),
                 ),
-                special_symbols_types=self.default_data_class.get_special_symbols(
+                special_symbols=self.default_data_class.get_special_symbols(
                     self.relik_reader_model.config.additional_special_symbols_types - 1
                 )
                 if self.relik_reader_model.config.additional_special_symbols_types > 0
@@ -132,7 +132,7 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
         max_batch_size: int = 128,
         token_batch_size: int = 2048,
         precision: str = 32,
-        annotation_type: AnnotationType = AnnotationType.CHAR,
+        annotation_type: AnnotationType = AnnotationType.WORD,
         progress_bar: bool = False,
         *args: object,
         **kwargs: object,
@@ -208,7 +208,7 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
                                 if span_start < 0 or span_end > int(list(sample.char2token_end.keys())[-1]):
                                     continue
                                 entities.append([sample.char2token_start[str(span_start)]-offset_span, sample.char2token_end[str(span_end)]+1-offset_span, ""])
-                            sample.entities = entities
+                            sample.window_labels_tokens = entities
                         yield sample
 
                 next_prediction_position = 0
@@ -389,8 +389,24 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
             ts._d["predicted_relations"] = predicted_triplets
             ts._d["predicted_entities"] = entities
             ts._d["predicted_relations_probabilities"] = predicted_triplets_prob
-
+            if "return_threshold_utils" in kwargs and kwargs["return_threshold_utils"]:
+                assert ts.window_triplet_labels_tokens is not None, "The triplet labels are not provided, cannot return thresshold utils"
+                ts._d["re_probabilities"] = re_prob
+                # reconstruct the labels based on predicted_entities and ts.entities (gold)
+                labels = np.zeros(re_prob.shape)
+                for t in ts.window_triplet_labels_tokens:
+                    i, j, r = t['subject'], t['object'], t['relation']
+                    subject_entity = [ts.word2token_start[str(i[0])]+1, ts.word2token_end[str(i[1]-1)]+1]
+                    object_entity = [ts.word2token_start[str(j[0])]+1, ts.word2token_end[str(j[1]-1)]+1]
+                    try:
+                        subject_entity = entities.index(subject_entity)
+                        object_entity = entities.index(object_entity)
+                        relation_label = ts.triplet_candidates.index(r)
+                        labels[subject_entity, object_entity, relation_label] = 1
+                    except ValueError:
+                        pass
+                ts._d["re_labels"] = labels
             # try-out for a new format
-            ts._d["predicted_triples"] = predicted_triplets
+            ts._d["predicted_triplets"] = predicted_triplets
 
             yield ts

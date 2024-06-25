@@ -53,7 +53,7 @@ class WindowManager:
             :obj:`List[RelikReaderSample]`: The windows created from the documents.
         """
         # normalize input
-        if isinstance(documents, str) or is_split_into_words:
+        if isinstance(documents, str):
             documents = [documents]
 
         if doc_ids is not None:
@@ -152,9 +152,9 @@ class WindowManager:
 
             windowed_documents.extend(document_windows)
         if mentions is not None:
-            return windowed_documents, windowed_blank_documents
+            return windowed_documents, windowed_blank_documents, documents_tokens
         else:
-            return windowed_documents
+            return windowed_documents, [], documents_tokens
 
     def merge_windows(
         self, windows: List[RelikReaderSample]
@@ -306,7 +306,7 @@ class WindowManager:
     ) -> Tuple[Set[Tuple[int, int, str]], dict]:
         # a RelikReaderSample should have a filed called `predicted_spans`
         # that stores the span-level predictions, or a filed called
-        # `predicted_triples` that stores the triple-level predictions
+        # `predicted_triplets` that stores the triple-level predictions
 
         # span predictions
         merged_span_predictions: Set = set()
@@ -340,10 +340,10 @@ class WindowManager:
                     merged_span_probabilities[span_prediction] = predicted_probs
 
             if (
-                getattr(window1, "predicted_triples", None) is not None
-                and getattr(window2, "predicted_triples", None) is not None
+                getattr(window1, "predicted_triplets", None) is not None
+                and getattr(window2, "predicted_triplets", None) is not None
             ):
-                # try to merge the triples predictions
+                # try to merge the triplets predictions
                 # add offset to the second window
                 window1_triplets = [
                     (
@@ -352,7 +352,7 @@ class WindowManager:
                         merged_span_predictions.index(window1.predicted_spans[t[2]]),
                         t[3],
                     )
-                    for t in window1.predicted_triples
+                    for t in window1.predicted_triplets
                 ]
                 window2_triplets = [
                     (
@@ -361,7 +361,7 @@ class WindowManager:
                         merged_span_predictions.index(window2.predicted_spans[t[2]]),
                         t[3],
                     )
-                    for t in window2.predicted_triples
+                    for t in window2.predicted_triplets
                 ]
                 merged_triplet_predictions = set(window1_triplets).union(
                     set(window2_triplets)
@@ -428,13 +428,14 @@ class WindowManager:
         merging_output["doc_id"] = window1.doc_id
         merging_output["offset"] = window2.offset
 
-        m_tokens, m_token2char_start, m_token2char_end = self._merge_tokens(
-            window1, window2
-        )
+        # We no longer merge these fields, as they are not used in the current implementation and caused lag
+        # m_tokens, m_token2char_start, m_token2char_end = self._merge_tokens(
+        #     window1, window2
+        # )
 
-        m_words, m_token2word_start, m_token2word_end = self._merge_words(
-            window1, window2
-        )
+        # m_words, m_token2word_start, m_token2word_end = self._merge_words(
+        #     window1, window2
+        # )
 
         (m_span_candidates, m_triplet_candidates) = self._merge_candidates(
             window1, window2
@@ -449,8 +450,8 @@ class WindowManager:
         (
             predicted_spans,
             predicted_spans_probs,
-            predicted_triples,
-            predicted_triples_probs,
+            predicted_triplets,
+            predicted_triplets_probs,
         ) = self._merge_predictions(window1, window2)
 
         # merge text, take into account overlapping chars
@@ -459,19 +460,13 @@ class WindowManager:
         merging_output.update(
             dict(
                 text=m_text,
-                tokens=m_tokens,
-                words=m_words,
-                token2char_start=m_token2char_start,
-                token2char_end=m_token2char_end,
-                token2word_start=m_token2word_start,
-                token2word_end=m_token2word_end,
                 window_labels=window_labels,
                 span_candidates=m_span_candidates,
                 triplet_candidates=m_triplet_candidates,
                 predicted_spans=predicted_spans,
                 predicted_spans_probs=predicted_spans_probs,
-                predicted_triples=predicted_triples,
-                predicted_triples_probs=predicted_triples_probs,
+                predicted_triplets=predicted_triplets,
+                predicted_triplets_probs=predicted_triplets_probs,
             )
         )
 
