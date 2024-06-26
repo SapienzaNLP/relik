@@ -591,6 +591,7 @@ class Relik:
                 window_stride,
                 is_split_into_words=is_split_into_words,
                 mentions=mentions,
+                annotation_type=annotation_type,
             )
         else:
             # otherwise, use the provided windows, `text` is ignored

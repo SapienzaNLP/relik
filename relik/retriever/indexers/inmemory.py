@@ -299,7 +299,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         batch_scores: List[List[float]] = retriever_out.values.detach().cpu().tolist()
         # Retrieve the passages corresponding to the indices
         batch_docs = [
-            [self.documents.get_document_from_id(i) for i in indices]
+            [self.documents.get_document_from_index(i) for i in indices]
             for indices in batch_top_k
         ]
         # build the output object

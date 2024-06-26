@@ -7,6 +7,7 @@ from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSp
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.base_tokenizer import BaseTokenizer
 from relik.reader.data.relik_reader_sample import RelikReaderSample
+from relik.inference.data.objects import AnnotationType, TaskType
 
 
 class WindowManager:
@@ -26,6 +27,8 @@ class WindowManager:
         doc_topic: str | None = None,
         is_split_into_words: bool = False,
         mentions: List[List[List[int]]] = None,
+        annotation_type: str | AnnotationType = AnnotationType.CHAR,
+        task_type: str | TaskType = TaskType.SPAN,
     ) -> Tuple[List[RelikReaderSample], List[RelikReaderSample]]:
         """
         Create windows from a list of documents.
@@ -70,6 +73,39 @@ class WindowManager:
         documents_tokens = self.tokenizer(
             documents, is_split_into_words=is_split_into_words
         )
+
+        if task_type == TaskType.SPAN and annotation_type == AnnotationType.WORD:
+            # we need to move the mentions to the char level
+            mentions = [
+                [
+                    [
+                        documents_tokens[i][m[0]].idx,
+                        documents_tokens[i][m[1] - 1].idx + len(documents_tokens[i][m[1] - 1].text),
+                    ]
+                    for m in doc_mentions
+                ]
+                for i, doc_mentions in enumerate(mentions)
+            ]
+        elif task_type == TaskType.TRIPLET and annotation_type == AnnotationType.CHAR:
+            # we need to move the mentions to the word level, i.e. find the start of the word with character m[0] and the end of the word with character m[1]
+            mentions = [
+                [
+                    [
+                        next(
+                            i
+                            for i, token in enumerate(doc_tokens)
+                            if token.idx >= m[0]
+                        ),
+                        next(
+                            i
+                            for i, token in enumerate(doc_tokens)
+                            if token.idx + len(token.text) >= m[1]
+                        ),
+                    ]
+                    for m in doc_mentions
+                ]
+                for doc_tokens, doc_mentions in zip(documents_tokens, mentions)
+            ]
 
         # set splitter params
         if hasattr(self.splitter, "window_size"):
@@ -122,6 +158,21 @@ class WindowManager:
                     # window_text_start = window[0].idx
                     # window_text_end = window[-1].i
                     text = " ".join([w.text for w in window])
+
+                if annotation_type == AnnotationType.WORD:
+                    spans = [
+                        [m[0] - window[0].i, m[1] - window[0].i]
+                        for m in document_mentions
+                        if window[-1].i > m[0] >= window[0].i
+                        and window[-1].i >= m[1] >= window[0].i
+                    ]
+                else:
+                    spans = [
+                        [m[0], m[1]]
+                        for m in document_mentions
+                        if window_text_end > m[0] >= window_text_start
+                        and window_text_end >= m[1] >= window_text_start
+                    ]
                 sample = RelikReaderSample(
                     doc_id=doc_id,
                     window_id=window_id,
@@ -130,12 +181,7 @@ class WindowManager:
                     words=[w.text for w in window],
                     doc_topic=doc_topic,
                     offset=window_text_start,
-                    spans=[
-                        [m[0], m[1]]
-                        for m in document_mentions
-                        if window_text_end > m[0] >= window_text_start
-                        and window_text_end >= m[1] >= window_text_start
-                    ],
+                    spans=spans,
                     token2char_start={str(i): w.idx for i, w in enumerate(window)},
                     token2char_end={
                         str(i): w.idx + len(w.text) for i, w in enumerate(window)
