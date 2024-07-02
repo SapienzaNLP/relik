@@ -211,7 +211,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--relik-model-name", required=True)
     parser.add_argument("--retriever-device", default="cuda")
-    parser.add_argument("--index-device", type=int, default=32)
+    parser.add_argument("--index-device", default="cuda")
     parser.add_argument("--reader-device", default="cuda")
     parser.add_argument("--precision", default="fp16")
     parser.add_argument("--retriever-batch-size", type=int, default=32)
@@ -233,11 +233,11 @@ def main():
     manager.response_logger_dir = args.responses_log_dir
     manager.annotator = Relik.from_pretrained(
         args.relik_model_name,
-        document_index_device=args.retriever_device,
+        index_device=args.index_device,
         retriever_device=args.retriever_device,
         reader_device=args.reader_device,
         precision=args.precision,
-        dataset_kwargs={"use_nme": True},
+        reader_kwargs={"dataset_kwargs":{"use_nme": True}},
     )
 
     # set global batch sizes

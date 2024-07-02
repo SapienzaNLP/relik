@@ -30,6 +30,8 @@ from relik.reader.data.relik_reader_sample import (
     load_relik_reader_samples,
 )
 from relik.reader.utils.special_symbols import NME_SYMBOL
+from torch.utils.data import get_worker_info
+import torch.distributed as dist
 
 logger = logging.getLogger(__name__)
 
@@ -346,8 +348,21 @@ class RelikDataset(IterableDataset):
                 else:
                     continue
             # +1 is to account for the CLS token
-            start_bpe = char_start2token[cs] + 1
-            end_bpe = char_end2token[ce] + 1
+            try:
+                start_bpe = char_start2token[cs] + 1
+            except:
+                # find the closest token to the start of the entity
+                while cs not in char_start2token:
+                    cs -= 1
+                start_bpe = char_start2token[cs] + 1
+            try:
+                end_bpe = char_end2token[ce] + 1
+            except:
+                # find the closest token to the end of the entity
+                while ce not in char_end2token:
+                    ce += 1
+                end_bpe = char_end2token[ce] + 1
+
             class_index = predictable_candidates.index(gold_candidate_title)
             if (
                 start_labels[start_bpe] == 0 and end_labels[end_bpe] == 0
@@ -527,7 +542,24 @@ class RelikDataset(IterableDataset):
             if self.samples is None
             else self.samples
         )
-        for sample in data_samples:
+
+        # Handle DDP
+        world_size = 1
+        rank = 0
+        if dist.is_available() and dist.is_initialized():
+            world_size = dist.get_world_size()
+            rank = dist.get_rank()
+
+        def partition_data_samples(iterable, world_size, rank):
+            def generator():
+                for i, x in enumerate(iterable):
+                    if i % world_size == rank:
+                        yield x
+            return generator
+
+        samples_per_rank = partition_data_samples(data_samples, world_size, rank)()
+
+        for sample in samples_per_rank:
             preprocess_sample(
                 sample, self.tokenizer, lowercase_policy=self.lowercase_policy
             )
@@ -653,7 +685,7 @@ class RelikDataset(IterableDataset):
     def materialize_batches(
         self, dataset_elements: List[Dict[str, Any]]
     ) -> Generator[Dict[str, Any], None, None]:
-        if self.prebatch:
+        if self.prebatch and self.section_size is not None:
             dataset_elements = self.preshuffle_elements(dataset_elements)
 
         current_batch = []

@@ -75,7 +75,7 @@ class RelikReaderBase(torch.nn.Module):
                     **kwargs,
                 )
                 transformer_model = self.default_reader_class(reader_config)
-                self.name_or_path = self.relik_reader_model.config.transformer_model
+                self.name_or_path = transformer_model.config.transformer_model
 
         self.relik_reader_model = transformer_model
 

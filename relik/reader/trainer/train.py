@@ -17,6 +17,7 @@ from relik.reader.lightning_modules.relik_reader_pl_module import RelikReaderPLM
 from relik.reader.pytorch_modules.optim import LayerWiseLRDecayOptimizer
 from relik.reader.utils.special_symbols import get_special_symbols
 from relik.reader.utils.strong_matching_eval import ELStrongMatchingCallback
+from relik.reader.utils.shuffle_train_callback import ShuffleTrainCallback
 
 def train(cfg: DictConfig) -> None:
 
@@ -82,6 +83,8 @@ def train(cfg: DictConfig) -> None:
         ),
         LearningRateMonitor(),
     ]
+    if cfg.data.train_dataset.section_size == None: # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
+        callbacks.append(ShuffleTrainCallback())
 
     wandb_logger = WandbLogger(
         cfg.model_name, project=cfg.project_name, offline=cfg.offline
@@ -94,7 +97,7 @@ def train(cfg: DictConfig) -> None:
         logger=wandb_logger,
     )
 
-    model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
+    # model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
 
     # Trainer fit
     trainer.fit(
@@ -108,7 +111,7 @@ def train(cfg: DictConfig) -> None:
     model = RelikReaderPLModule.load_from_checkpoint(
         trainer.checkpoint_callback.best_model_path
     )
-    # model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
+    model.relik_reader_core_model._tokenizer = train_dataset.tokenizer
     model.relik_reader_core_model.save_pretrained(experiment_path)
 
 

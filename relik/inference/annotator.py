@@ -697,6 +697,7 @@ class Relik:
                 max_batch_size=reader_batch_size,
                 annotation_type=annotation_type,
                 progress_bar=progress_bar,
+                use_predefined_spans=mentions is not None,
                 **kwargs,
             )
             # end_read = time.time()

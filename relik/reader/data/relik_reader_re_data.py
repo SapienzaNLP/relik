@@ -32,6 +32,9 @@ from relik.reader.data.relik_reader_sample import (
 )
 from relik.reader.utils.special_symbols import NME_SYMBOL
 
+from torch.utils.data import get_worker_info
+import torch.distributed as dist
+
 logger = logging.getLogger(__name__)
 
 
@@ -385,7 +388,24 @@ class RelikREDataset(IterableDataset):
             data_acc = []
         # take care of the tqdm nesting
         # for sample in tqdm.tqdm(data_samples, desc="Reading dataset"):
-        for sample in data_samples:
+
+        # Handle DDP
+        world_size = 1
+        rank = 0
+        if dist.is_available() and dist.is_initialized():
+            world_size = dist.get_world_size()
+            rank = dist.get_rank()
+
+        def partition_data_samples(iterable, world_size, rank):
+            def generator():
+                for i, x in enumerate(iterable):
+                    if i % world_size == rank:
+                        yield x
+            return generator
+
+        samples_per_rank = partition_data_samples(data_samples, world_size, rank)()
+
+        for sample in samples_per_rank:
             if self.materialize_samples and sample.materialize is not None:
                 # tokenization_output = sample.materialize["tokenization_output"]
                 materialized = sample.materialize
