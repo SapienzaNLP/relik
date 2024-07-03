@@ -148,7 +148,15 @@ relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
-The full list of available models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+### Models
+
+Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+
+- **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
+- **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
+- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-large)
+
+### Usage
 
 Retrievers and Readers can be used separately.
 In the case of retriever-only ReLiK, the output will contain the candidates for the input text.
