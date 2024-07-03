@@ -749,12 +749,12 @@ class Relik:
                 # we need to update the config with the model ids that will
                 # result from the push to hub
                 for task_type, retriever_names in retrievers_names.items():
-                    retriever_names[
-                        "question_encoder_name"
-                    ] = f"{user}/{retriever_names['question_encoder_name']}"
-                    retriever_names[
-                        "passage_encoder_name"
-                    ] = f"{user}/{retriever_names['passage_encoder_name']}"
+                    retriever_names["question_encoder_name"] = (
+                        f"{user}/{retriever_names['question_encoder_name']}"
+                    )
+                    retriever_names["passage_encoder_name"] = (
+                        f"{user}/{retriever_names['passage_encoder_name']}"
+                    )
                 for task_type, index_name in index_names.items():
                     if index_name is not None:
                         index_names[task_type] = f"{user}/{index_name}"
@@ -774,12 +774,12 @@ class Relik:
                 retriever = self._retriever.get(task_type, None)
                 if retriever is None:
                     continue
-                retriever_names[
-                    "question_encoder_name"
-                ] = retriever.question_encoder.name_or_path
-                retriever_names[
-                    "passage_encoder_name"
-                ] = retriever.passage_encoder.name_or_path
+                retriever_names["question_encoder_name"] = (
+                    retriever.question_encoder.name_or_path
+                )
+                retriever_names["passage_encoder_name"] = (
+                    retriever.passage_encoder.name_or_path
+                )
 
             for task_type, index in self._index.items():
                 index_names[task_type] = index.name_or_path
@@ -800,16 +800,16 @@ class Relik:
                         "_target_": f"{retriever.__class__.__module__}.{retriever.__class__.__name__}",
                     }
                     if retriever.question_encoder is not None:
-                        config["retriever"][task_type.value][
-                            "question_encoder"
-                        ] = retrievers_names[task_type]["question_encoder_name"]
+                        config["retriever"][task_type.value]["question_encoder"] = (
+                            retrievers_names[task_type]["question_encoder_name"]
+                        )
                     if (
                         retriever.passage_encoder is not None
                         and not retriever.passage_encoder_is_question_encoder
                     ):
-                        config["retriever"][task_type.value][
-                            "passage_encoder"
-                        ] = retrievers_names[task_type]["passage_encoder_name"]
+                        config["retriever"][task_type.value]["passage_encoder"] = (
+                            retrievers_names[task_type]["passage_encoder_name"]
+                        )
             if self._index is not None:
                 config["index"] = {}
                 for task_type, index in self._index.items():

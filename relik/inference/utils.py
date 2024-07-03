@@ -60,7 +60,7 @@ def _instantiate_retriever(
 
 
 def load_retriever(
-    retriever: GoldenRetriever | DictConfig | Dict,
+    retriever: GoldenRetriever | DictConfig | Dict | str,
     device: str | None,
     precision: int | str | torch.dtype | None,
     task: TaskType,
@@ -102,11 +102,18 @@ def load_retriever(
     }
 
     # check retriever type, it can be a GoldenRetriever, a DictConfig or a Dict
-    if not isinstance(retriever, (GoldenRetriever, DictConfig, Dict)):
+    if not isinstance(retriever, (GoldenRetriever, DictConfig, Dict, str)):
         raise ValueError(
-            f"`retriever` must be a `GoldenRetriever`, a `DictConfig` or "
-            f"a `Dict`, got `{type(retriever)}`."
+            f"`retriever` must be a `GoldenRetriever`, a `DictConfig`, "
+            f"a `Dict`, or a `str`, got `{type(retriever)}`."
         )
+    if isinstance(retriever, str):
+        logger.warning(
+            "Using a string to instantiate the retriever. "
+            f"We will use the same model `{retriever}` for both query and passage encoder. "
+            "If you want to use different models, please provide a dictionary with keys `question_encoder` and `passage_encoder`."
+        )
+        retriever = {"question_encoder": retriever}
     # we need to check weather the DictConfig is a DictConfig for an instance of GoldenRetriever
     # or a primitive Dict
     if isinstance(retriever, DictConfig):
@@ -207,7 +214,7 @@ def _instantiate_index(
 
 
 def load_index(
-    index: BaseDocumentIndex | DictConfig | Dict,
+    index: BaseDocumentIndex | DictConfig | Dict | str,
     device: str | None,
     precision: int | str | torch.dtype | None,
     task: TaskType,
@@ -245,13 +252,15 @@ def load_index(
     }
 
     # check retriever type, it can be a BaseDocumentIndex, a DictConfig or a Dict
-    if not isinstance(index, (BaseDocumentIndex, DictConfig, Dict)):
+    if not isinstance(index, (BaseDocumentIndex, DictConfig, Dict, str)):
         raise ValueError(
-            f"`index` must be a `BaseDocumentIndex`, a `DictConfig` or "
-            f"a `Dict`, got `{type(index)}`."
+            f"`index` must be a `BaseDocumentIndex`, a `DictConfig`, "
+            f"a `Dict`, or a `str`, got `{type(index)}`."
         )
     # we need to check weather the DictConfig is a DictConfig for an instance of BaseDocumentIndex
     # or a primitive Dict
+    if isinstance(index, str):
+        index = {"name_or_path": index}
     if isinstance(index, DictConfig):
         # then it is probably a primitive Dict
         if "_target_" not in index:
