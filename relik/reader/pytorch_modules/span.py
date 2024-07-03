@@ -172,7 +172,9 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                         assert sample._mixin_prediction_position is None
                         sample._mixin_prediction_position = i
                         if sample.spans is not None and len(sample.spans) > 0:
-                            sample.window_labels = [[s[0], s[1], ""] for s in sample.spans]
+                            sample.window_labels = [
+                                [s[0], s[1], ""] for s in sample.spans
+                            ]
                         yield sample
 
                 next_prediction_position = 0
@@ -187,6 +189,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                 self.dataset.model_max_length = max_length
                 self.dataset.tokens_per_batch = token_batch_size
                 self.dataset.max_batch_size = max_batch_size
+                # self.dataset.batch_size = max_batch_size
 
                 # instantiate dataloader
                 iterator = DataLoader(

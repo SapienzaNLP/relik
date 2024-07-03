@@ -176,7 +176,7 @@ def print_relik_text_art(
     text: str = "relik", font: str = "larry3d", color: str = "magenta", **kwargs
 ):
     # tprint(text, font=font, **kwargs)
-    art = text2art(text, font=font, **kwargs)#.rstrip()
+    art = text2art(text, font=font, **kwargs)  # .rstrip()
     # art += "\n\n           Retrieve, Read, and Link"
     # art += "\nA fast and lightweight Information Extraction framework"
     cprint(art, color, attrs=["bold"])

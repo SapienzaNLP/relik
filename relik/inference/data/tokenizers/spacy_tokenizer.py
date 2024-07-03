@@ -192,4 +192,3 @@ class SpacyTokenizer(BaseTokenizer):
         except AttributeError:
             # a WhitespaceSpacyTokenizer has no `pipe()` method, we use simple for loop
             return [self.spacy(tokens) for tokens in texts]
-

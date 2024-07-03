@@ -37,7 +37,7 @@ class RelikReaderSample:
             self._d[key] = value
         else:
             super().__setattr__(key, value)
-    
+
     def to_jsons(self) -> str:
         if "predicted_window_labels" in self._d:
             new_obj = {

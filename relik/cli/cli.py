@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import subprocess
@@ -34,14 +35,11 @@ def inference(
     device: str = "cuda",
     precision: str = "fp16",
     top_k: int = 100,
-    # bug in typer, it doesn't support type | type syntax
-    window_size: Optional[int] = None,
-    # bug in typer, it doesn't support type | type syntax
-    window_stride: Optional[int] = None,
+    io_batch_size: int = 1_000,
     annotation_type: str = "char",
     progress_bar: bool = True,
-    model_kwargs=None,
-    inference_kwargs=None,
+    model_kwargs: str = None,
+    inference_kwargs: str = None,
 ):
     """
     Perform inference on raw text files using a pre-trained model.
@@ -79,18 +77,22 @@ def inference(
     """
     if model_kwargs is None:
         model_kwargs = {}
+    else:
+        model_kwargs = ast.literal_eval(model_kwargs)
 
     model_kwargs.update(dict(device=device, precision=precision))
 
     if inference_kwargs is None:
         inference_kwargs = {}
+    else:
+        inference_kwargs = ast.literal_eval(inference_kwargs)
 
     inference_kwargs.update(
         dict(
             num_workers=num_workers,
             top_k=top_k,
             annotation_type=annotation_type,
-            # progress_bar=progress_bar,
+            progress_bar=progress_bar,
         )
     )
     if "retriever_batch_size" not in inference_kwargs:
@@ -99,18 +101,42 @@ def inference(
         inference_kwargs["reader_batch_size"] = batch_size
 
     # create folder if it doesn't exist
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+
+    if input_path.is_dir():
+        input_files = list(input_path.glob("*.txt"))
+    else:
+        input_files = [input_path]
+    if output_path.is_dir():
+        output_path.mkdir(parents=True, exist_ok=True)
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
     relik = Relik.from_pretrained(model_name_or_path, **model_kwargs)
 
-    logger.info("Starting annotation for %s", input_path)
-    with open(input_path, "r") as f_in, open(output_path, "w") as f_out:
-        for batch in tqdm(batch_generator(f_in, batch_size)):
-            # clean batch
-            batch = [line.strip() for line in batch if line.strip()]
-            predictions = relik(batch, **inference_kwargs)
-            for prediction in predictions:
-                f_out.write(json.dumps(prediction.to_dict()) + "\n")
+    for i, path in enumerate(input_files):
+        logger.info("Starting annotation for %s", path)
+        if output_path.is_dir():
+            output_path = output_path / f"{path.stem}.jsonl"
+            out_context = open(output_path, "w")
+        else:
+            # if we are writing to a single file, we need to append
+            # but only if we are doing inference on multiple files
+            # and if we are at the second file
+            out_context = open(output_path, "w" if i == 0 else "a")
+        with open(path, "r") as f_in, out_context as f_out:
+            for batch in tqdm(batch_generator(f_in, io_batch_size)):
+                # clean batch
+                batch = [line.strip() for line in batch if line.strip()]
+                predictions = relik(batch, **inference_kwargs)
+                for prediction in predictions:
+                    prdiction_dict = prediction.to_dict()
+                    prediction_dict = {
+                        "text": prdiction_dict["text"],
+                        "spans": prdiction_dict["spans"],
+                    }
+                    f_out.write(json.dumps(prediction_dict) + "\n")
 
 
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
@@ -129,23 +155,23 @@ def create_windows(
     Create windows from input documents and save them to an output file.
 
     Args:
-        input_file (str): 
+        input_file (str):
             Path to the input file containing the documents.
-        output_file (str): 
+        output_file (str):
             Path to the output file to save the windowized data.
-        window_size (int, optional): 
+        window_size (int, optional):
             Size of the window. Defaults to 32.
-        window_stride (int, optional): 
+        window_stride (int, optional):
             Stride of the window. Defaults to 16.
-        title_mapping (str, optional): 
+        title_mapping (str, optional):
             Path to a JSON file containing a mapping of labels. Defaults to None.
-        language (str, optional): 
+        language (str, optional):
             Language of the documents. Defaults to "en".
-        tokenizer_device (str, optional): 
+        tokenizer_device (str, optional):
             Device to use for tokenization. Defaults to "cpu".
-        is_split_into_words (bool, optional): 
+        is_split_into_words (bool, optional):
             Whether the documents are already split into words. Defaults to False.
-        write_batch_size (int, optional): 
+        write_batch_size (int, optional):
             Number of windows to process and write at a time. Defaults to 10_000.
 
     Returns:
@@ -175,7 +201,9 @@ def create_windows(
         for window in windowized_data:
             try:
                 # we need to add the labels
-                doc_level_labels = doc_id_to_doc[window._d["doc_id"]]["doc_span_annotations"]
+                doc_level_labels = doc_id_to_doc[window._d["doc_id"]][
+                    "doc_span_annotations"
+                ]
                 # if we have a title mapping, we need to map the labels to the
                 # new titles
                 if title_mapping is not None:

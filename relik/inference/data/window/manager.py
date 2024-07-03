@@ -74,27 +74,26 @@ class WindowManager:
             documents, is_split_into_words=is_split_into_words
         )
 
-        if task_type == TaskType.SPAN and annotation_type == AnnotationType.WORD:
+        if task_type == TaskType.SPAN and annotation_type == AnnotationType.WORD and mentions is not None:
             # we need to move the mentions to the char level
             mentions = [
                 [
                     [
                         documents_tokens[i][m[0]].idx,
-                        documents_tokens[i][m[1] - 1].idx + len(documents_tokens[i][m[1] - 1].text),
+                        documents_tokens[i][m[1] - 1].idx
+                        + len(documents_tokens[i][m[1] - 1].text),
                     ]
                     for m in doc_mentions
                 ]
                 for i, doc_mentions in enumerate(mentions)
             ]
-        elif task_type == TaskType.TRIPLET and annotation_type == AnnotationType.CHAR:
+        elif task_type == TaskType.TRIPLET and annotation_type == AnnotationType.CHAR and mentions is not None:
             # we need to move the mentions to the word level, i.e. find the start of the word with character m[0] and the end of the word with character m[1]
             mentions = [
                 [
                     [
                         next(
-                            i
-                            for i, token in enumerate(doc_tokens)
-                            if token.idx >= m[0]
+                            i for i, token in enumerate(doc_tokens) if token.idx >= m[0]
                         ),
                         next(
                             i
@@ -205,7 +204,6 @@ class WindowManager:
     def merge_windows(
         self, windows: List[RelikReaderSample]
     ) -> List[RelikReaderSample]:
-
         windows_by_doc_id = collections.defaultdict(list)
         for window in windows:
             windows_by_doc_id[window.doc_id].append(window)

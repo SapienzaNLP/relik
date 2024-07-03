@@ -5,6 +5,7 @@ import torch
 from torch.optim import AdamW
 import transformers
 
+
 class LayerWiseLRDecayOptimizer:
     def __init__(
         self,
@@ -63,10 +64,20 @@ class LayerWiseLRDecayOptimizer:
         for inverse_depth, layer in self.group_layers(module).items():
             layer_lr = self.lr * (self.lr_decay**inverse_depth)
             for ln, lp in layer:
-                lr = self.lr2 if any(nd in ln for nd in self.other_lr_params) else layer_lr
-                weight_decay = 0.0 if any(nd in ln for nd in self.no_decay_params) else self.weight_decay
+                lr = (
+                    self.lr2
+                    if any(nd in ln for nd in self.other_lr_params)
+                    else layer_lr
+                )
+                weight_decay = (
+                    0.0
+                    if any(nd in ln for nd in self.no_decay_params)
+                    else self.weight_decay
+                )
 
-                optimizer_grouped_params.append({"params": [lp], "lr": lr, "weight_decay": weight_decay})
+                optimizer_grouped_params.append(
+                    {"params": [lp], "lr": lr, "weight_decay": weight_decay}
+                )
 
         return optimizer_grouped_params
 
@@ -87,6 +98,7 @@ class LayerWiseLRDecayOptimizer:
                 "frequency": 1,
             },
         }
+
 
 # import collections
 # from typing import List

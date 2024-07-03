@@ -6,17 +6,25 @@ from typing import Any, Dict, List
 import torch
 import transformers as tr
 from torch.utils.data import IterableDataset
-from transformers import AutoConfig
+from transformers import AutoConfig, AutoModel
 
 from relik.common.log import get_logger
 
 # from relik.common.torch_utils import load_ort_optimized_hf_model
 from relik.common.utils import get_callable_from_string
 from relik.inference.data.objects import AnnotationType
+
+# from relik.reader.pytorch_modules import RELIK_READER_CLASS_MAP
+from relik.reader.pytorch_modules import RELIK_READER_CLASS_MAP
 from relik.reader.pytorch_modules.hf.modeling_relik import (
     RelikReaderConfig,
+    # RelikReaderREModel,
     RelikReaderSample,
+    # RelikReaderSpanModel,
 )
+
+# from relik.reader.pytorch_modules.span import RelikReaderForSpanExtraction
+# from relik.reader.pytorch_modules.triplet import RelikReaderForTripletExtraction
 from relik.retriever.pytorch_modules import PRECISION_MAP
 
 logger = get_logger(__name__, level=logging.INFO)
@@ -61,7 +69,11 @@ class RelikReaderBase(torch.nn.Module):
             )
             if "relik-reader" in config.model_type:
                 transformer_model = self.default_reader_class.from_pretrained(
-                    transformer_model, config=config, ignore_mismatched_sizes=True, trust_remote_code=True, **kwargs, 
+                    transformer_model,
+                    config=config,
+                    ignore_mismatched_sizes=True,
+                    trust_remote_code=True,
+                    **kwargs,
                 )
             else:
                 reader_config = RelikReaderConfig(
@@ -226,9 +238,30 @@ class RelikReaderBase(torch.nn.Module):
             return self._tokenizer
 
         self._tokenizer = tr.AutoTokenizer.from_pretrained(
-            self.relik_reader_model.config.name_or_path if self.relik_reader_model.config.name_or_path else self.relik_reader_model.config.transformer_model
+            self.relik_reader_model.config.name_or_path
+            if self.relik_reader_model.config.name_or_path
+            else self.relik_reader_model.config.transformer_model
         )
         return self._tokenizer
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        model_name_or_dir: str | os.PathLike,
+        **kwargs,
+    ):
+        config = AutoConfig.from_pretrained(
+            model_name_or_dir, trust_remote_code=True, **kwargs
+        )
+        transformer_model = AutoModel.from_pretrained(
+            model_name_or_dir, config=config, trust_remote_code=True, **kwargs
+        )
+        if transformer_model.__class__.__name__ not in RELIK_READER_CLASS_MAP:
+            raise ValueError(f"Model type {type(transformer_model)} not recognized.")
+
+        reader_class = RELIK_READER_CLASS_MAP[transformer_model.__class__.__name__]
+        reader_class = get_callable_from_string(reader_class)
+        return reader_class(transformer_model=transformer_model, **kwargs)
 
     def save_pretrained(
         self,

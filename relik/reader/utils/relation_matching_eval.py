@@ -72,11 +72,15 @@ class StrongMatching:
                             triplet["object"][1],
                             triplet["object"][2],
                         )
-                        for triplet in sample.window_triplet_labels_tokens 
+                        for triplet in sample.window_triplet_labels_tokens
                     ]
                 )
-                predicted_spans_strict = set((ss, se, st) for (ss, se, st) in sample.predicted_entities)
-                gold_spans_strict = set((ss, se, st) for (ss, se, st) in sample.window_labels_tokens)
+                predicted_spans_strict = set(
+                    (ss, se, st) for (ss, se, st) in sample.predicted_entities
+                )
+                gold_spans_strict = set(
+                    (ss, se, st) for (ss, se, st) in sample.window_labels_tokens
+                )
                 predicted_spans_in_triplets = set(
                     [
                         (
@@ -102,7 +106,7 @@ class StrongMatching:
                             triplet["subject"][1],
                             triplet["subject"][2],
                         )
-                        for triplet in sample.window_triplet_labels_tokens 
+                        for triplet in sample.window_triplet_labels_tokens
                     ]
                     + [
                         (
@@ -110,7 +114,7 @@ class StrongMatching:
                             triplet["object"][1],
                             triplet["object"][2],
                         )
-                        for triplet in sample.window_triplet_labels_tokens 
+                        for triplet in sample.window_triplet_labels_tokens
                     ]
                 )
                 # strict
@@ -155,7 +159,7 @@ class StrongMatching:
                         triplet["object"][1],
                         -1,
                     )
-                    for triplet in sample.window_triplet_labels_tokens 
+                    for triplet in sample.window_triplet_labels_tokens
                 ]
             )
             predicted_spans = set(
@@ -225,6 +229,7 @@ class StrongMatching:
                 "f1": f1,
             }
 
+
 class StrongMatchingPerRelation:
     def __call__(self, predicted_samples: List[RelikReaderSample]) -> Dict:
         correct_predictions, total_predictions, total_gold = (
@@ -253,7 +258,7 @@ class StrongMatchingPerRelation:
                             triplet["object"][1],
                             triplet["object"][2],
                         )
-                        for triplet in sample.window_triplet_labels_tokens 
+                        for triplet in sample.window_triplet_labels_tokens
                     ]
                 )
                 # compute correct preds per triplet["relation"]
@@ -281,7 +286,7 @@ class StrongMatchingPerRelation:
                         triplet["object"][1],
                         -1,
                     )
-                    for triplet in sample.window_triplet_labels_tokens 
+                    for triplet in sample.window_triplet_labels_tokens
                 ]
             )
             for triplet in sample.predicted_relations:
@@ -297,7 +302,7 @@ class StrongMatchingPerRelation:
                 if predicted_annotations in gold_annotations:
                     correct_predictions[triplet["relation"]] += 1
                 total_predictions[triplet["relation"]] += 1
-            for triplet in sample.window_triplet_labels_tokens :
+            for triplet in sample.window_triplet_labels_tokens:
                 total_gold[triplet["relation"]] += 1
         metrics = {}
         metrics_non_zero = 0
@@ -327,8 +332,11 @@ class StrongMatchingPerRelation:
         print(f"metrics_non_zero: {metrics_non_zero}")
         return metrics
 
+
 class REStrongMatchingCallback(Callback):
-    def __init__(self, dataset_path: str, dataset_conf, log_metric: str = "val_") -> None:
+    def __init__(
+        self, dataset_path: str, dataset_conf, log_metric: str = "val_"
+    ) -> None:
         super().__init__()
         self.dataset_path = dataset_path
         self.dataset_conf = dataset_conf
