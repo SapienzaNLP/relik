@@ -161,6 +161,8 @@ Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sa
 Retrievers and Readers can be used separately.
 In the case of retriever-only ReLiK, the output will contain the candidates for the input text.
 
+Reader-only example:
+
 ```python
 from relik import Relik
 from relik.inference.data.objects import RelikOutput
@@ -190,6 +192,8 @@ relik_out: RelikOutput = retriever("Michael Jordan was one of the best players i
           triplet=[],
       ),
     )
+
+Retriever-only example:
 
 ```python
 from relik import Relik
