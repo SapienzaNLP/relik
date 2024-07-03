@@ -168,7 +168,6 @@ from relik.inference.data.objects import RelikOutput
 # If you want to use only the retriever
 retriever = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large", reader=None)
 relik_out: RelikOutput = retriever("Michael Jordan was one of the best players in the NBA.")
-
 ```
 
     RelikOutput(
