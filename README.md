@@ -1,4 +1,7 @@
 ![](https://drive.google.com/uc?export=view&id=1uBKUIGaCO7RiIFOhgpc390rgN39jS7sF)
+<div align="center">
+  <img src="https://drive.google.com/uc?export=view&id=1jMitie7Gb9t_a7NEfS8ZctfzUijMf2kx" height="80">
+</div>
 
 <div align="center">
 
