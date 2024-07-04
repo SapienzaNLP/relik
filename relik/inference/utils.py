@@ -325,6 +325,27 @@ def load_reader(
     Returns:
         RelikReaderBase: The loaded reader model.
     """
+
+    if not isinstance(reader, (RelikReaderBase, DictConfig, Dict, str)):
+        raise ValueError(
+            f"`reader` must be a `RelikReaderBase`, a `DictConfig`, "
+            f"a `Dict`, or a `str`, got `{type(reader)}`."
+        )
+
+    if isinstance(reader, str):
+        reader = {
+            "_target_": "relik.reader.pytorch_modules.base.RelikReaderBase.from_pretrained",
+            "model_name_or_dir": reader,
+        }
+    
+    if not isinstance(reader, DictConfig):
+        # then it is probably a primitive Dict
+        # if "_target_" not in reader:
+        #     reader = OmegaConf.to_container(reader, resolve=True)
+        # reader = OmegaConf.to_container(reader, resolve=True)
+        # if not isinstance(reader, DictConfig):
+        reader = OmegaConf.create(reader)
+    
     reader = (
         hydra.utils.instantiate(
             reader,

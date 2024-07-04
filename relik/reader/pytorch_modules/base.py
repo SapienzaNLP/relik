@@ -250,11 +250,8 @@ class RelikReaderBase(torch.nn.Module):
         model_name_or_dir: str | os.PathLike,
         **kwargs,
     ):
-        config = AutoConfig.from_pretrained(
-            model_name_or_dir, trust_remote_code=True, **kwargs
-        )
         transformer_model = AutoModel.from_pretrained(
-            model_name_or_dir, config=config, trust_remote_code=True, **kwargs
+            model_name_or_dir, trust_remote_code=True, **kwargs
         )
         if transformer_model.__class__.__name__ not in RELIK_READER_CLASS_MAP:
             raise ValueError(f"Model type {type(transformer_model)} not recognized.")
@@ -293,6 +290,7 @@ class RelikReaderBase(torch.nn.Module):
         logger.info(f"Saving reader to {output_dir / model_name}")
 
         # save the model
+        self.relik_reader_model.config.register_for_auto_class()
         self.relik_reader_model.register_for_auto_class()
         self.relik_reader_model.save_pretrained(
             str(output_dir / model_name), push_to_hub=push_to_hub, **kwargs

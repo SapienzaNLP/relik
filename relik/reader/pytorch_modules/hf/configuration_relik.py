@@ -39,6 +39,3 @@ class RelikReaderConfig(PretrainedConfig):
         self.training = training
         self.default_reader_class = default_reader_class
         super().__init__(**kwargs)
-
-
-AutoConfig.register("relik-reader", RelikReaderConfig)
