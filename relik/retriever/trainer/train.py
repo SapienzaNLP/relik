@@ -771,7 +771,7 @@ def train(conf: omegaconf.DictConfig) -> None:
 
     logger.info("Instantiating the Retriever")
     retriever: GoldenRetriever = hydra.utils.instantiate(
-        conf.retriever, _recursive_=False
+        conf.model, _recursive_=False
     )
 
     logger.info("Instantiating datasets")
@@ -792,7 +792,7 @@ def train(conf: omegaconf.DictConfig) -> None:
     retriever.document_index = document_index
 
     logger.info("Instantiating the Trainer")
-    trainer: Trainer = hydra.utils.instantiate(
+    trainer: RetrieverTrainer = hydra.utils.instantiate(
         conf.train,
         retriever=retriever,
         train_dataset=train_dataset,

@@ -42,6 +42,8 @@ class GoldenRetrieverDataset:
         max_hard_negatives: int = 0,
         max_question_length: int = 256,
         max_passage_length: int = 64,
+        metadata_fields: Optional[Sequence[str]] = None,
+        metadata_separator: str = "\t",
         shuffle: bool = False,
         subsample_strategy: Optional[str] = SubsampleStrategyEnum.NONE,
         subsample_portion: float = 0.1,
@@ -75,6 +77,8 @@ class GoldenRetrieverDataset:
         self.max_hard_negatives = max_hard_negatives
         self.max_question_length = max_question_length
         self.max_passage_length = max_passage_length
+        self.metadata_fields = metadata_fields
+        self.metadata_separator = metadata_separator
         self.shuffle = shuffle
         self.num_proc = num_proc
         self.load_from_cache_file = load_from_cache_file

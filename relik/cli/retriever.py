@@ -17,7 +17,7 @@ from relik.retriever import GoldenRetriever
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.indexers.document import DocumentStore
-from relik.retriever.trainer import train as retriever_train
+from relik.retriever.trainer.train import train_hydra as retriever_train
 
 logger = get_logger(__name__)
 

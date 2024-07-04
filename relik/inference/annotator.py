@@ -119,8 +119,8 @@ class Relik:
                 )
         self.task = task
 
-        self._retriever = retriever
-        self._index = index
+        self._retriever = retriever or {}
+        self._index = index or {}
         self.reader = reader
 
         # windowization stuff

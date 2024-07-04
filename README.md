@@ -314,7 +314,7 @@ The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebook
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
 Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
 
-```console
+```bash
 # Train
 python scripts/data/blink/preprocess_genre_blink.py \
   data/blink/blink-train-kilt.jsonl \
@@ -362,8 +362,8 @@ All your data should have the following starting structure:
 
 For Relation Extraction, we provide an example on how to preprocess the NYT datase from [raw_nyt](https://drive.google.com/file/d/1kAVwR051gjfKn3p6oKc7CzNT9g2Cjy6N/view) taken from the [CopyRE](https://github.com/xiangrongzeng/copy_re?tab=readme-ov-file). Download the dataset to data/raw_nyt and then run:
 
-```console
-scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
+```bash
+python scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
 ```
 
 Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surface forms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
@@ -425,7 +425,7 @@ id \t text \t any other column
 
 Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
-```console
+```bash
 # train
 python scripts/data/create_windows.py \
   data/blink/processed/blink-train-kilt-relik.jsonl \
@@ -439,7 +439,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```console
+```bash
 # train
 python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
@@ -456,25 +456,27 @@ python scripts/data/blink/convert_to_dpr.py \
 Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
 Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
 
-```console
-python scripts/data/create_windows.py \
-  data/data/processed/aida-train-relik.jsonl \
-  data/data/processed/aida-train-relik-windowed.jsonl
+```bash
+relik data create-windows \
+  data/aida/processed/aida-train-relik.jsonl \
+  data/aida/processed/aida-train-relik-windowed.jsonl
 ```
 
 and then convert it to the DPR format:
 
-```console
-python scripts/data/convert_to_dpr.py \
-  data/data/processed/aida-train-relik-windowed.jsonl \
-  data/data/processed/aida-train-relik-windowed-dpr.jsonl
+```bash
+relik data convert-to-dpr \
+  data/aida/processed/aida-train-relik-windowed.jsonl \
+  data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
+  data/kb/wikipedia/documents.jsonl \
+  --title-map data/kb/wikipedia/title_map.json
 ```
 
 #### Relation Extraction
 
 ##### NYT
 
-```console
+```bash
 python scripts/data/create_windows.py \
   data/data/processed/nyt/train.jsonl \
   data/data/processed/nyt/train-windowed.jsonl \
@@ -484,7 +486,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```console
+```bash
 python scripts/data/convert_to_dpr.py \
   data/data/processed/nyt/train-windowed.jsonl \
   data/data/processed/nyt/train-windowed-dpr.jsonl
@@ -506,12 +508,13 @@ The configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batc
 
 For instance, to train the retriever on the AIDA dataset, you can run the following command:
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
-  train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
-  val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
-  test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
+  data.train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
+  data.val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
+  data.test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl \
+  data.shared_params.documents_path=data/kb/wikipedia/documents.jsonl
 ```
 
 #### Relation Extraction
@@ -520,21 +523,20 @@ The configuration files in `relik/retriever/conf` is `finetune_nyt_iterable_in_b
 
 For instance, to train the retriever on the NYT dataset, you can run the following command:
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_nyt_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
-  train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-dpr.jsonl \
-  val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-dpr.jsonl \
-  test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-dpr.jsonl
+  data.train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-dpr.jsonl \
+  data.val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-dpr.jsonl \
+  data.test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-dpr.jsonl
 ```
-
 
 ### Inference
 
 By passing `train.only_test=True` to the `relik retriever train` command, you can skip the training and only evaluate the model.
 It needs also the path to the PyTorch Lightning checkpoint and the dataset to evaluate on.
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   train.only_test=True \
   test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
@@ -654,7 +656,7 @@ relik retriever add-candidates --help
 
 We need to add candidates to each window that will be used by the Reader, using our previously trained Retriever. Here is an example using our already trained retriever on Aida for the train split:
 
-```console
+```bash
 relik retriever add-candidates sapienzanlp/relik-retriever-e5-base-v2-aida-blink-encoder sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-index data/aida/processed/aida-train-relik-windowed.jsonl data/aida/processed/aida-train-relik-windowed-candidates.jsonl
 ```
 
@@ -662,7 +664,7 @@ relik retriever add-candidates sapienzanlp/relik-retriever-e5-base-v2-aida-blink
 
 The same thing happens for Relation Extraction. If you want to use our already trained retriever:
 
-```console
+```bash
 relik retriever add-candidates sapienzanlp/relik-retriever-small-nyt-question-encoder sapienzanlp/relik-retriever-small-nyt-document-index data/nyt/processed/nyt-train-relik-windowed.jsonl data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl
 ```
 
@@ -680,7 +682,7 @@ Examples of configuration files can be found in the `relik/reader/conf` folder.
 The configuration files in `relik/reader/conf` are `large.yaml` and `base.yaml`, which we used to train the large and base reader, respectively.
 For instance, to train the large reader on the AIDA dataset run:
 
-```console
+```bash
 relik reader train relik/reader/conf/large.yaml \
   train_dataset_path=data/aida/processed/aida-train-relik-windowed-candidates.jsonl \
   val_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl \
@@ -692,7 +694,7 @@ relik reader train relik/reader/conf/large.yaml \
 The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml` and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
 For instance, to train the large reader on the AIDA dataset run:
 
-```console
+```bash
 relik reader train relik/reader/conf/large_nyt.yaml \
   train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl \
   val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-candidates.jsonl \
@@ -762,19 +764,19 @@ To evaluate ReLiK we use the following steps:
 
 2. Start the GERBIL server:
 
-```console
+```bash
 cd gerbil && ./start.sh
 ```
 
 2. Start the following services:
 
-```console
+```bash
 cd gerbil-SpotWrapNifWS4Test && mvn clean -Dmaven.tomcat.port=1235 tomcat:run
 ```
 
 3. Start the ReLiK server for GERBIL providing the model name as an argument (e.g. `sapienzanlp/relik-entity-linking-large`):
 
-```console
+```bash
 python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-entity-linking-large
 ```
 
@@ -790,13 +792,13 @@ python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-
 
 To evalute Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our already trained Reader:
 
-```console
+```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/test.window.candidates.jsonl --is-eval
 ```
 
 Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run:
 
-```console
+```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/dev.window.candidates.jsonl --is-eval --compute-threshold
 ```
 

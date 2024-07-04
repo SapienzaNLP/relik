@@ -123,7 +123,8 @@ For more information, please refer to the [source code](https://github.com/Sapie
 relik_available_models = [
     # "sapienzanlp/relik-entity-linking-large",
     "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index",
-    "PereLluis13/relik-relation-extraction-nyt-large",
+    # "PereLluis13/relik-relation-extraction-nyt-large",
+    # "Local"
 ]
 demo_index_el = {
     "span": {
@@ -132,21 +133,28 @@ demo_index_el = {
     }
 }
 relik_models = {
-    "sapienzanlp/relik-entity-linking-large": Relik.from_pretrained(
-        "sapienzanlp/relik-entity-linking-large",
-        index_precision="bf16",
-        index=demo_index_el,
-        reader_kwargs={"dataset_kwargs": {"use_nme": True}},
-    ),
+    # "sapienzanlp/relik-entity-linking-large": Relik.from_pretrained(
+    #     "sapienzanlp/relik-entity-linking-large",
+    #     index_precision="bf16",
+    #     index=demo_index_el,
+    #     reader_kwargs={"dataset_kwargs": {"use_nme": True}},
+    # ),
     "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index": Relik.from_pretrained(
         "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index",
         index_precision="bf16",
+        reader="/media/data/relik/models/PereLluis13/relik-reader-deberta-large-wikipedia-aida-full-interleave",
         device="cuda",
         reader_kwargs={"dataset_kwargs": {"use_nme": True}},
     ),
-    "PereLluis13/relik-relation-extraction-nyt-large": Relik.from_pretrained(
-        "PereLluis13/relik-relation-extraction-nyt-large"
-    ),
+    # "PereLluis13/relik-relation-extraction-nyt-large": Relik.from_pretrained(
+    #     "PereLluis13/relik-relation-extraction-nyt-large"
+    # ),
+    # "Local": Relik.from_pretrained(
+    #     "/root/relik-sapienzanlp/pretrained_configs/relik-test",
+    #     index_precision="bf16",
+    #     device="cuda",
+    #     reader_kwargs={"dataset_kwargs": {"use_nme": True}},
+    # ),
 }
 
 
@@ -162,7 +170,6 @@ def get_span_annotations(response):
     labels = ["O"] * len(tokens)
     dict_ents = {}
     # make BIO labels
-    print(response.spans)
     for idx, span in enumerate(response.spans):
         labels[span.start] = (
             "B-" + span.label + str(idx)

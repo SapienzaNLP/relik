@@ -3,7 +3,7 @@ val_dataset_path: null
 test_dataset_path: null
 
 shared_params:
-  passages_path: null
+  documents_path: null
   max_passage_length: 64
   passage_batch_size: 64
   question_batch_size: 64
@@ -21,6 +21,8 @@ datamodule:
       passage_batch_size: ${data.shared_params.passage_batch_size}
       subsample_strategy: random
       subsample_portion: 0.1
+      metadata_fields: ['definition']
+      metadata_separator: ' <def> '
       shuffle: True
 
     val:
@@ -30,6 +32,8 @@ datamodule:
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
+        metadata_fields: ['definition']
+        metadata_separator: ' <def> '
         passage_batch_size: ${data.shared_params.passage_batch_size}
 
     test:
@@ -40,6 +44,8 @@ datamodule:
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
+        metadata_fields: ['definition']
+        metadata_separator: ' <def> '
 
   num_workers:
     train: 0
