@@ -760,7 +760,7 @@ We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://ger
 
 To evaluate ReLiK we use the following steps:
 
-1. Download the GERBIL server from [here](LINK).
+1. Download the GERBIL server from [here]([LINK](https://drive.google.com/file/d/1PvSlXke2cp_Jn-UgxIA8M9xN1G0Hv6ap/view?usp=sharing)).
 
 2. Start the GERBIL server:
 
