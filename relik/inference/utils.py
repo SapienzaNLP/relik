@@ -61,9 +61,9 @@ def _instantiate_retriever(
 
 def load_retriever(
     retriever: GoldenRetriever | DictConfig | Dict | str,
-    device: str | None,
-    precision: int | str | torch.dtype | None,
-    task: TaskType,
+    device: str | None | torch.device | int = None,
+    precision: int | str | torch.dtype | None = None,
+    task: TaskType | str | None = None,
     compile: bool = False,
     **kwargs,
 ) -> Dict[TaskType, GoldenRetriever]:

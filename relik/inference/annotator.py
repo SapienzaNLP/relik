@@ -98,9 +98,9 @@ class Relik:
 
     def __init__(
         self,
-        retriever: GoldenRetriever | DictConfig | Dict | None = None,
-        index: BaseDocumentIndex | DictConfig | Dict | None = None,
-        reader: RelikReaderBase | DictConfig | None = None,
+        retriever: GoldenRetriever | None = None,
+        index: BaseDocumentIndex | None = None,
+        reader: RelikReaderBase | None = None,
         task: TaskType | str = TaskType.SPAN,
         metadata_fields: list[str] | None = None,
         top_k: int | None = None,
@@ -119,8 +119,87 @@ class Relik:
                 )
         self.task = task
 
-        self._retriever = retriever or {}
-        self._index = index or {}
+        # retriever section
+        self._retriever: Dict[TaskType, GoldenRetriever] = {
+            TaskType.SPAN: None,
+            TaskType.TRIPLET: None,
+        }
+        if isinstance(retriever, GoldenRetriever):
+            if self.task in [TaskType.SPAN, TaskType.BOTH]:
+                self._retriever[TaskType.SPAN] = retriever
+            if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
+                self._retriever[TaskType.TRIPLET] = retriever
+            # check if both retrievers are the same
+            if self._retriever[TaskType.SPAN] == self._retriever[TaskType.TRIPLET]:
+                logger.warning("The retriever is the same for both tasks.")
+        elif isinstance(retriever, (Dict, DictConfig)):
+            for task_type, r in retriever.items():
+                # convert task_type to TaskType
+                if isinstance(task_type, str):
+                    try:
+                        task_type = TaskType(task_type.lower())
+                    except ValueError:
+                        raise ValueError(
+                            f"Task `{task_type}` not recognized. "
+                            f"Please choose one of {list(TaskType)}."
+                        )
+                self._retriever[task_type] = r
+        else:
+            raise ValueError(
+                f"Invalid retriever type {type(retriever)}. "
+                f"Please provide a `GoldenRetriever` or a dictionary of retrievers."
+            )
+        self._retriever = {task_type: r for task_type, r in self._retriever.items() if r is not None}
+
+        self._index: Dict[TaskType, GoldenRetriever] = {
+            TaskType.SPAN: None,
+            TaskType.TRIPLET: None,
+        }
+
+        if index is None:
+            # check if the retriever has an index
+            for task_type, r in self._retriever.items():
+                if r is not None:
+                    if r.document_index is None:
+                        raise ValueError(
+                            f"No index found for task `{task_type}` in the retriever."
+                        )
+                    self._index[task_type] = r.document_index
+        elif isinstance(index, BaseDocumentIndex):
+            if self.task in [TaskType.SPAN, TaskType.BOTH]:
+                self._index[TaskType.SPAN] = index
+            if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
+                self._index[TaskType.TRIPLET] = index
+
+            # check if both retrievers are the same
+            if self._index[TaskType.SPAN] == self._index[TaskType.TRIPLET]:
+                logger.warning("The index is the same for both tasks.")
+
+        elif isinstance(index, (Dict, DictConfig)):
+            for task_type, i in index.items():
+                # convert task_type to TaskType
+                if isinstance(task_type, str):
+                    try:
+                        task_type = TaskType(task_type.lower())
+                    except ValueError:
+                        raise ValueError(
+                            f"Task `{task_type}` not recognized. "
+                            f"Please choose one of {list(TaskType)}."
+                        )
+                self._index[task_type] = i
+        else:
+            raise ValueError(
+                f"Invalid index type {type(index)}. "
+                f"Please provide a `BaseDocumentIndex` or a dictionary of indexes."
+            )
+        self._index = {task_type: i for task_type, i in self._index.items() if i is not None}
+
+        # if isinstance(index, BaseDocumentIndex):
+        #     index = {self.task: index}
+
+        # self._retriever = load_retriever(retriever)
+        # self._index = load_index(index)
+        # self._index = index or {}
         self.reader = reader
 
         # windowization stuff
