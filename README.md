@@ -370,7 +370,7 @@ Please be aware that for fair comparison we reproduce the preprocessing from pre
 
 ## 🦮 Retriever
 
-We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
+We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset, and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
 
 ### Data Preparation
 
@@ -394,11 +394,11 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 }
 ```
 
-The retriever also needs an index to search for the documents. The documents to index can be either a jsonl file or a tsv file similar to
+The retriever also needs an index to search for the documents. The documents to index can be either a JSONL file or a TSV file similar to
 [DPR](https://github.com/facebookresearch/DPR):
 
-- `jsonl`: each line is a json object with the following keys: `id`, `text`, `metadata`
-- `tsv`: each line is a tab-separated string with the `id` and `text` column,
+- `jsonl`: each line is a JSON object with the following keys: `id`, `text`, `metadata`
+- `tsv`: each line is a tab-separated string with the `id` and `text` columns,
   followed by any other column that will be stored in the `metadata` field
 
 `jsonl` example:
@@ -519,7 +519,7 @@ relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
 
 #### Relation Extraction
 
-The configuration files in `relik/retriever/conf` is `finetune_nyt_iterable_in_batch.yaml`, which we used to fine-tune the retriever for the NYT dataset. For cIE we repurpose the one pretrained from BLINK in the previous step.
+The configuration file in `relik/retriever/conf` is `finetune_nyt_iterable_in_batch.yaml`, which we used to fine-tune the retriever for the NYT dataset. For cIE we repurpose the one pretrained from BLINK in the previous step.
 
 For instance, to train the retriever on the NYT dataset, you can run the following command:
 
@@ -618,11 +618,11 @@ retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top
 
 The reader is responsible for extracting entities and relations from documents from a set of candidates (e.g., possible entities or relations).
 The reader can be trained for span extraction or triplet extraction.
-The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Linking , while the `RelikReaderForTripletExtraction` is used for triplet extraction, i.e. Relation Extraction.
+The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Linking, while the `RelikReaderForTripletExtraction` is used for triplet extraction, i.e. Relation Extraction.
 
 ### Data Preparation
 
-The reader requires the windowized dataset we created in section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
+The reader requires the windowized dataset we created in Section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
 The candidate can be added to the dataset using the `relik retriever add-candidates` command.
 
 ```bash
@@ -662,7 +662,7 @@ relik retriever add-candidates sapienzanlp/relik-retriever-e5-base-v2-aida-blink
 
 #### Relation Extraction
 
-The same thing happens for Relation Extraction. If you want to use our already trained retriever:
+The same thing happens for Relation Extraction. If you want to use our trained retriever:
 
 ```bash
 relik retriever add-candidates sapienzanlp/relik-retriever-small-nyt-question-encoder sapienzanlp/relik-retriever-small-nyt-document-index data/nyt/processed/nyt-train-relik-windowed.jsonl data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl
@@ -691,7 +691,7 @@ relik reader train relik/reader/conf/large.yaml \
 
 #### Relation Extraction
 
-The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml` and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
+The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml`, and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
 For instance, to train the large reader on the AIDA dataset run:
 
 ```bash
@@ -722,7 +722,7 @@ pl_model = RelikReaderPLModule.load_from_checkpoint(
 pl_model.relik_reader_core_model.save_pretrained(experiment_path, push_to_hub=push_to_hub, repo_id=repo_id)
 ```
 
-with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
+with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be uploaded.
 
 The reader can be loaded from a repo id or a local path:
 
@@ -760,7 +760,7 @@ We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://ger
 
 To evaluate ReLiK we use the following steps:
 
-1. Download the GERBIL server from [here]([LINK](https://drive.google.com/file/d/1PvSlXke2cp_Jn-UgxIA8M9xN1G0Hv6ap/view?usp=sharing)).
+1. Download the GERBIL server from [here](https://drive.google.com/file/d/1PvSlXke2cp_Jn-UgxIA8M9xN1G0Hv6ap/view?usp=sharing).
 
 2. Start the GERBIL server:
 
@@ -780,23 +780,23 @@ cd gerbil-SpotWrapNifWS4Test && mvn clean -Dmaven.tomcat.port=1235 tomcat:run
 python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-entity-linking-large
 ```
 
-4. Open the url [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:
+4. Open the URL [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:
    - Select A2KB as experiment type
    - Select "Ma - strong annotation match"
-   - In Name filed write the name you want to give to the experiment
-   - In URI field write: [http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm](http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm)
+   - In the Name field write the name you want to give to the experiment
+   - In the URI field write: [http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm](http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm)
    - Select the datasets (We use AIDA-B, MSNBC, Der, K50, R128, R500, OKE15, OKE16)
    - Finally, run experiment
 
 ### Relation Extraction
 
-To evalute Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our already trained Reader:
+To evaluate Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our trained Reader:
 
 ```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/test.window.candidates.jsonl --is-eval
 ```
 
-Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run:
+Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run the following:
 
 ```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/dev.window.candidates.jsonl --is-eval --compute-threshold
