@@ -22,6 +22,7 @@ from transformers import AutoTokenizer, PreTrainedTokenizer
 from relik.reader.data.relik_reader_data_utils import (
     add_noise_to_value,
     batchify,
+    batchify_matrices,
     chunks,
     flatten,
 )
@@ -146,7 +147,7 @@ class RelikDataset(IterableDataset):
         use_nme: bool = True,
         max_subwords_per_candidate: bool = 22,
         mask_by_instances: bool = False,
-        min_length: int = 5,
+        min_length: int = -1,
         max_length: int = 2048,
         model_max_length: int = 1000,
         split_on_cand_overload: bool = True,
@@ -231,7 +232,7 @@ class RelikDataset(IterableDataset):
             "sample": None,
             "special_symbols_mask": lambda x: batchify(x, padding_value=False),
             "start_labels": lambda x: batchify(x, padding_value=-100),
-            "end_labels": lambda x: batchify(x, padding_value=-100),
+            "end_labels": lambda x: batchify_matrices(x, padding_value=-100),
             "predictable_candidates_symbols": None,
             "predictable_candidates": None,
             "patch_offset": None,
@@ -337,10 +338,14 @@ class RelikDataset(IterableDataset):
         predictable_candidates: List[str],
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         start_labels = [0] * len(tokenization_output.input_ids)
-        end_labels = [0] * len(tokenization_output.input_ids)
+        end_labels = []
+        end_labels_tensor = [0] * len(tokenization_output.input_ids)
 
         char_start2token = {v: int(k) for k, v in sample.token2char_start.items()}
         char_end2token = {v: int(k) for k, v in sample.token2char_end.items()}
+        sample.window_labels.sort(key=lambda x: (x[0], x[1]))
+        prev_start_bpe = -1
+        offset = 0
         for cs, ce, gold_candidate_title in sample.window_labels:
             if gold_candidate_title not in predictable_candidates:
                 if self.use_nme:
@@ -364,33 +369,31 @@ class RelikDataset(IterableDataset):
                 end_bpe = char_end2token[ce] + 1
 
             class_index = predictable_candidates.index(gold_candidate_title)
-            if (
-                start_labels[start_bpe] == 0 and end_labels[end_bpe] == 0
-            ):  # prevent from having entities that ends with the same label
-                start_labels[start_bpe] = class_index + 1  # +1 for the NONE class
-                end_labels[end_bpe] = class_index + 1  # +1 for the NONE class
-            else:
-                print(
-                    "Found entity with the same last subword, it will not be included."
-                )
-                print(
-                    cs,
-                    ce,
-                    gold_candidate_title,
-                    start_labels,
-                    end_labels,
-                    sample.doc_id,
-                )
+
+            start_labels[start_bpe] = class_index + 1  # +1 for the NONE class
+            if start_bpe != prev_start_bpe:
+                end_labels.append(end_labels_tensor.copy())
+                # end_labels[-1][:start_bpe] = [-100] * start_bpe
+            elif end_labels[-1][end_bpe] != 0:
+                offset += 1
+                prev_start_bpe = start_bpe
+                continue
+            end_labels[-1][end_bpe] = class_index + 1  # +1 for the NONE class
+            prev_start_bpe = start_bpe
 
         ignored_labels_indices = tokenization_output.prediction_mask == 1
 
         start_labels = torch.tensor(start_labels, dtype=torch.long)
         start_labels[ignored_labels_indices] = -100
+        if len(end_labels) == 0:
+            end_labels_tensor = torch.tensor([[-100] * len(start_labels)]).repeat(
+                len(start_labels), 1
+            )
+        else:
+            end_labels_tensor = torch.stack([torch.tensor(label) for label in end_labels])
+            end_labels_tensor[ignored_labels_indices.repeat(len(end_labels), 1)] = -100
 
-        end_labels = torch.tensor(end_labels, dtype=torch.long)
-        end_labels[ignored_labels_indices] = -100
-
-        return start_labels, end_labels
+        return start_labels, end_labels_tensor
 
     def produce_sample_bag(
         self, sample, predictable_candidates: List[str], candidates_starting_offset: int

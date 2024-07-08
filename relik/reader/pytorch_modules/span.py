@@ -172,7 +172,9 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                         assert sample._mixin_prediction_position is None
                         sample._mixin_prediction_position = i
                         if sample.spans is not None and len(sample.spans) > 0:
-                            sample.window_labels = [[s[0], s[1], ""] for s in sample.spans]
+                            sample.window_labels = [
+                                [s[0], s[1], ""] for s in sample.spans
+                            ]
                         yield sample
 
                 next_prediction_position = 0
@@ -293,7 +295,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
         )
 
         ned_start_predictions = forward_output["ned_start_predictions"].cpu().numpy()
-        ned_end_predictions = forward_output["ned_end_predictions"].cpu().numpy()
+        ned_end_predictions = forward_output["ned_end_predictions"] #.cpu().numpy()
         ed_predictions = forward_output["ed_predictions"].cpu().numpy()
         ed_probabilities = forward_output["ed_probabilities"].cpu().numpy()
 
@@ -308,47 +310,50 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
             batch_predictable_candidates,
             patch_offset,
         ):
+            ent_count = 0
+            ne_ep = ne_ep.cpu().numpy()
             ne_start_indices = [ti for ti, c in enumerate(ne_sp[1:]) if c > 0]
-            ne_end_indices = [ti for ti, c in enumerate(ne_ep[1:]) if c > 0]
-
+            # ne_end_indices = [ti for ti, c in enumerate(ne_ep[1:]) if c > 0]
             final_class2predicted_spans = collections.defaultdict(list)
             spans2predicted_probabilities = dict()
             for start_token_index, end_token_index in zip(
-                ne_start_indices, ne_end_indices
+                ne_start_indices, ne_ep
             ):
-                # predicted candidate
-                token_class = edp[start_token_index + 1] - 1
-                predicted_candidate_title = pred_cands[token_class]
-                final_class2predicted_spans[predicted_candidate_title].append(
-                    [start_token_index, end_token_index]
-                )
+                for end_token_index in [ti for ti, c in enumerate(end_token_index[1:]) if c > 0]:
+                    # predicted candidate
+                    token_class = edp[ent_count] - 1
+                    predicted_candidate_title = pred_cands[token_class]
+                    final_class2predicted_spans[predicted_candidate_title].append(
+                        [start_token_index, end_token_index]
+                    )
 
-                # candidates probabilities
-                classes_probabilities = edpr[start_token_index + 1]
-                classes_probabilities_best_indices = classes_probabilities.argsort()[
-                    ::-1
-                ]
-                titles_2_probs = []
-                top_k = (
-                    min(
-                        top_k,
-                        len(classes_probabilities_best_indices),
-                    )
-                    if top_k != -1
-                    else len(classes_probabilities_best_indices)
-                )
-                for i in range(top_k):
-                    titles_2_probs.append(
-                        (
-                            pred_cands[classes_probabilities_best_indices[i] - 1],
-                            classes_probabilities[
-                                classes_probabilities_best_indices[i]
-                            ].item(),
+                    # candidates probabilities
+                    classes_probabilities = edpr[ent_count]
+                    classes_probabilities_best_indices = classes_probabilities.argsort()[
+                        ::-1
+                    ]
+                    titles_2_probs = []
+                    top_k = (
+                        min(
+                            top_k,
+                            len(classes_probabilities_best_indices),
                         )
+                        if top_k != -1
+                        else len(classes_probabilities_best_indices)
                     )
-                spans2predicted_probabilities[
-                    (start_token_index, end_token_index)
-                ] = titles_2_probs
+                    for i in range(top_k):
+                        titles_2_probs.append(
+                            (
+                                pred_cands[classes_probabilities_best_indices[i] - 1],
+                                classes_probabilities[
+                                    classes_probabilities_best_indices[i]
+                                ].item(),
+                            )
+                        )
+                    spans2predicted_probabilities[
+                        (start_token_index, end_token_index)
+                    ] = titles_2_probs
+                    ent_count += 1
 
             if "patches" not in ts._d:
                 ts._d["patches"] = dict()

@@ -90,7 +90,7 @@ def train(cfg: DictConfig) -> None:
         LearningRateMonitor(),
     ]
 
-    if cfg.data.section_size == None: # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
+    if cfg.data.train_dataset.section_size == None: # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
         callbacks.append(ShuffleTrainCallback())
 
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)

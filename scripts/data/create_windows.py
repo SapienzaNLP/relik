@@ -151,7 +151,7 @@ def _process_batch(
     )
 
     for window in windowized_data:
-        # try:
+        try:
             # we need to add the labels
             doc_level_labels= doc_id_to_doc[window._d["doc_id"]]["doc_span_annotations"]
             # if we have a title mapping, we need to map the labels to the
@@ -330,10 +330,10 @@ def _process_batch(
                         )
                     window._d["window_triplet_labels"] = window_level_triplet_labels
 
-        # except Exception as e:
-        #     logger.error(
-        #         f"Error processing document {window._d['doc_id']} window {window._d['window_id']}: {e}"
-        #     )
+        except Exception as e:
+            logger.error(
+                f"Error processing document {window._d['doc_id']} window {window._d['window_id']}: {e}"
+            )
 
     return windowized_data
 

@@ -18,6 +18,7 @@ class RelikReaderConfig(PretrainedConfig):
         use_last_k_layers: int = 1,
         entity_type_loss: bool = False,
         add_entity_embedding: bool = None,
+        binary_end_logits: bool = True,
         training: bool = False,
         default_reader_class: Optional[str] = None,
         **kwargs
@@ -36,6 +37,7 @@ class RelikReaderConfig(PretrainedConfig):
             if add_entity_embedding is None and entity_type_loss
             else add_entity_embedding
         )
+        self.binary_end_logits = binary_end_logits
         self.training = training
         self.default_reader_class = default_reader_class
         super().__init__(**kwargs)

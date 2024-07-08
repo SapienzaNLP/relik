@@ -92,7 +92,10 @@ class RelikReaderSpanModel(PreTrainedModel):
         self.ned_start_classifier = self._get_projection_layer(
             self.activation, last_hidden=2, layer_norm=False
         )
-        self.ned_end_classifier = PoolerEndLogits(self.transformer_model.config)
+        if self.config.binary_end_logits:
+            self.ned_end_classifier = PoolerEndLogitsBi(self.transformer_model.config)
+        else:
+            self.ned_end_classifier = PoolerEndLogits(self.transformer_model.config)
 
         # END entity disambiguation layer
         self.ed_start_projector = self._get_projection_layer(self.activation)
@@ -209,29 +212,20 @@ class RelikReaderSpanModel(PreTrainedModel):
 
     def compute_classification_logits(
         self,
-        model_features,
-        special_symbols_mask,
-        prediction_mask,
-        batch_size,
-        start_positions=None,
-        end_positions=None,
+        model_features_start,
+        model_features_end,
+        special_symbols_features,
     ) -> torch.Tensor:
-        if start_positions is None or end_positions is None:
-            start_positions = torch.zeros_like(prediction_mask)
-            end_positions = torch.zeros_like(prediction_mask)
-
-        model_start_features = self.ed_start_projector(model_features)
-        model_end_features = self.ed_end_projector(model_features)
-        model_end_features[start_positions > 0] = model_end_features[end_positions > 0]
+        model_start_features = self.ed_start_projector(model_features_start)
+        model_end_features = self.ed_end_projector(model_features_end)
+        model_start_features_symbols = self.ed_start_projector(special_symbols_features)
+        model_end_features_symbols = self.ed_end_projector(special_symbols_features)
 
         model_ed_features = torch.cat(
             [model_start_features, model_end_features], dim=-1
         )
-
-        # computing ed features
-        classes_representations = torch.sum(special_symbols_mask, dim=1)[0].item()
-        special_symbols_representation = model_ed_features[special_symbols_mask].view(
-            batch_size, classes_representations, -1
+        special_symbols_representation = torch.cat(
+            [model_start_features_symbols, model_end_features_symbols], dim=-1
         )
 
         logits = torch.bmm(
@@ -239,8 +233,9 @@ class RelikReaderSpanModel(PreTrainedModel):
             torch.permute(special_symbols_representation, (0, 2, 1)),
         )
 
-        logits = self._mask_logits(logits, prediction_mask)
-
+        logits = self._mask_logits(
+            logits, (model_features_start == -100).all(2).long()
+        )
         return logits
 
     def forward(
@@ -284,9 +279,9 @@ class RelikReaderSpanModel(PreTrainedModel):
                     else torch.zeros_like(input_ids)
                 ),
             )
-
             ned_start_predictions[ned_start_predictions > 0] = 1
-            ned_end_predictions[ned_end_predictions > 0] = 1
+            ned_end_predictions[end_labels > 0] = 1 
+            ned_end_predictions = ned_end_predictions[~(end_labels == -100).all(2)]
 
         else:  # compute spans
             # start boundary prediction
@@ -314,63 +309,80 @@ class RelikReaderSpanModel(PreTrainedModel):
 
             if ned_end_logits is not None:
                 ned_end_probabilities = torch.softmax(ned_end_logits, dim=-1)
-                ned_end_predictions = torch.argmax(ned_end_probabilities, dim=-1)
+                if not self.config.binary_end_logits:
+                    ned_end_predictions = torch.argmax(ned_end_probabilities, dim=-1, keepdim=True)
+                    ned_end_predictions = torch.zeros_like(ned_end_probabilities).scatter_(1, ned_end_predictions, 1)
+                else:
+                    ned_end_predictions = torch.argmax(ned_end_probabilities, dim=-1)
             else:
                 ned_end_logits, ned_end_probabilities = None, None
-                ned_end_predictions = ned_start_predictions.new_zeros(batch_size)
+                ned_end_predictions = ned_start_predictions.new_zeros(batch_size, seq_len)
+                
+            if not self.training:
+                # if len(ned_end_predictions.shape) < 2:
+                #     print(ned_end_predictions)
+                end_preds_count = ned_end_predictions.sum(1)
+                # If there are no end predictions for a start prediction, remove the start prediction
+                if (end_preds_count == 0).any() and (ned_start_predictions > 0).any():
+                    ned_start_predictions[ned_start_predictions == 1] = (
+                        end_preds_count != 0
+                    ).long()
+                    ned_end_predictions = ned_end_predictions[end_preds_count != 0]
 
-            # flattening end predictions
-            #   (flattening can happen only if the
-            #   end boundaries were not predicted using the gold labels)
-            if not self.training and ned_end_logits is not None:
-                flattened_end_predictions = torch.zeros_like(ned_start_predictions)
-
-                row_indices, start_positions = torch.where(ned_start_predictions > 0)
-                ned_end_predictions[ned_end_predictions<start_positions] = start_positions[ned_end_predictions<start_positions]
-
-                end_spans_repeated = (row_indices + 1)* seq_len + ned_end_predictions
-                cummax_values, _ = end_spans_repeated.cummax(dim=0)
-
-                end_spans_repeated = (end_spans_repeated > torch.cat((end_spans_repeated[:1], cummax_values[:-1])))
-                end_spans_repeated[0] = True
-
-                ned_start_predictions[row_indices[~end_spans_repeated], start_positions[~end_spans_repeated]] = 0
-
-                row_indices, start_positions, ned_end_predictions = row_indices[end_spans_repeated], start_positions[end_spans_repeated], ned_end_predictions[end_spans_repeated]
-
-                flattened_end_predictions[row_indices, ned_end_predictions] = 1
-
-                total_start_predictions, total_end_predictions = ned_start_predictions.sum(), flattened_end_predictions.sum()
-
-                assert (
-                    total_start_predictions == 0
-                    or total_start_predictions == total_end_predictions
-                ), (
-                    f"Total number of start predictions = {total_start_predictions}. "
-                    f"Total number of end predictions = {total_end_predictions}"
-                )
-                ned_end_predictions = flattened_end_predictions
-            else:
-                ned_end_predictions = torch.zeros_like(ned_start_predictions)
+        if end_labels is not None:
+            end_labels = end_labels[~(end_labels == -100).all(2)]
 
         start_position, end_position = (
             (start_labels, end_labels)
             if self.training
             else (ned_start_predictions, ned_end_predictions)
         )
-
+        start_counts = (start_position > 0).sum(1)
+        if (start_counts > 0).any():
+            ned_end_predictions = ned_end_predictions.split(start_counts.tolist())
         # Entity disambiguation
-        ed_logits = self.compute_classification_logits(
-            model_features,
-            special_symbols_mask,
-            prediction_mask,
-            batch_size,
-            start_position,
-            end_position,
-        )
-        ed_probabilities = torch.softmax(ed_logits, dim=-1)
-        ed_predictions = torch.argmax(ed_probabilities, dim=-1)
+        if (end_position > 0).sum() > 0:
+            ends_count = (end_position > 0).sum(1)
+            model_entity_start = torch.repeat_interleave(
+                        model_features[start_position > 0], ends_count, dim=0
+                    )
+            model_entity_end = torch.repeat_interleave(
+                        model_features, start_counts, dim=0)[
+                        end_position > 0
+                    ]
+            ents_count = torch.nn.utils.rnn.pad_sequence(
+                torch.split(ends_count, start_counts.tolist()),
+                batch_first=True,
+                padding_value=0,
+            ).sum(1)
 
+            model_entity_start = torch.nn.utils.rnn.pad_sequence(
+                torch.split(model_entity_start, ents_count.tolist()),
+                batch_first=True,
+                padding_value=-100,
+            )
+
+            model_entity_end = torch.nn.utils.rnn.pad_sequence(
+                torch.split(model_entity_end, ents_count.tolist()),
+                batch_first=True,
+                padding_value=-100,
+            )
+
+            ed_logits = self.compute_classification_logits(
+                model_entity_start,
+                model_entity_end,
+                model_features[special_symbols_mask].view(
+                    batch_size, -1, model_features.shape[-1]
+                ),
+            )
+            ed_probabilities = torch.softmax(ed_logits, dim=-1)
+            ed_predictions = torch.argmax(ed_probabilities, dim=-1)
+        else:
+            ed_logits, ed_probabilities, ed_predictions = (
+                None, 
+                ned_start_predictions.new_zeros(batch_size, seq_len),
+                ned_start_predictions.new_zeros(batch_size),
+            )
         # output build
         output_dict = dict(
             batch_size=batch_size,
@@ -399,32 +411,31 @@ class RelikReaderSpanModel(PreTrainedModel):
                 ned_start_loss = 0
 
             # end
+            # use ents_count to assign the labels to the correct positions i.e. using end_labels -> [[0,0,4,0], [0,0,0,2]] -> [4,2] (this is just an element, for batch we need to mask it with ents_count), ie -> [[4,2,-100,-100], [3,1,2,-100], [1,3,2,5]]
+            ed_labels = end_labels.clone()
+            ed_labels = torch.nn.utils.rnn.pad_sequence(
+                torch.split(ed_labels[ed_labels > 0], ents_count.tolist()),
+                batch_first=True,
+                padding_value=-100,
+            )
             if ned_end_logits is not None:
-                ned_end_labels = torch.zeros_like(end_labels)
-                ned_end_labels[end_labels == -100] = -100
-                ned_end_labels[end_labels > 0] = 1
-
-                ned_end_loss = self.criterion(
-                    ned_end_logits,
-                    (
-                        torch.arange(
-                            ned_end_labels.size(1), device=ned_end_labels.device
-                        )
-                        .unsqueeze(0)
-                        .expand(batch_size, -1)[ned_end_labels > 0]
-                    ).to(ned_end_labels.device),
-                )
-
+                end_labels[end_labels > 0] = 1
+                if not self.config.binary_end_logits:
+                    # transform label to position in the sequence
+                    end_labels = end_labels.argmax(dim=-1)
+                    ned_end_loss = self.criterion(
+                        ned_end_logits.view(-1, ned_end_logits.shape[-1]),
+                        end_labels.view(-1),
+                    )
+                else:
+                    ned_end_loss = self.criterion(ned_end_logits.reshape(-1, ned_end_logits.shape[-1]), end_labels.reshape(-1).long())
             else:
                 ned_end_loss = 0
 
             # entity disambiguation loss
-            start_labels[ned_start_labels != 1] = -100
-            ed_labels = torch.clone(start_labels)
-            ed_labels[end_labels > 0] = end_labels[end_labels > 0]
             ed_loss = self.criterion(
                 ed_logits.view(-1, ed_logits.shape[-1]),
-                ed_labels.view(-1),
+                ed_labels.view(-1).long(),
             )
 
             output_dict["ned_start_loss"] = ned_start_loss
@@ -901,7 +912,6 @@ class RelikReaderREModel(PreTrainedModel):
             # we set a thresshold instead of argmax in cause it needs to be tweaked
             re_predictions = re_probabilities[:, :, :, :, 1] > relation_threshold
             re_probabilities = re_probabilities[:, :, :, :, 1]
-
         else:
             (
                 ned_type_logits,
