@@ -17,7 +17,7 @@ from relik.retriever import GoldenRetriever
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
 from relik.retriever.indexers.document import DocumentStore
-from relik.retriever.trainer import train as retriever_train
+from relik.retriever.trainer.train import train_hydra as retriever_train
 
 logger = get_logger(__name__)
 
@@ -56,9 +56,10 @@ def train():
 
     _retriever_train()
 
+
 @torch.no_grad()
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
-def build_index(
+def create_index(
     question_encoder_name_or_path: str,
     document_path: str,
     output_folder: str,
@@ -78,33 +79,33 @@ def build_index(
     Builds an index for document retrieval.
 
     Args:
-        question_encoder_name_or_path (str): 
+        question_encoder_name_or_path (str):
             The name or path of the question encoder model.
-        document_path (str): 
+        document_path (str):
             The path to the document file.
-        output_folder (str): 
+        output_folder (str):
             The folder where the index will be saved.
-        document_file_type (str, optional): 
+        document_file_type (str, optional):
             The type of the document file. Defaults to "jsonl".
-        passage_encoder_name_or_path (str, optional): 
+        passage_encoder_name_or_path (str, optional):
             The name or path of the passage encoder model. Defaults to None.
-        indexer_class (str, optional): 
+        indexer_class (str, optional):
             The class of the document indexer. Defaults to "relik.retriever.indexers.inmemory.InMemoryDocumentIndex".
-        batch_size (int, optional): 
+        batch_size (int, optional):
             The batch size for indexing. Defaults to 512.
-        num_workers (int, optional): 
+        num_workers (int, optional):
             The number of workers for indexing. Defaults to 4.
-        passage_max_length (int, optional): 
+        passage_max_length (int, optional):
             The maximum length of a passage. Defaults to 64.
-        device (str, optional): 
+        device (str, optional):
             The device to use for indexing. Defaults to "cuda".
-        index_device (str, optional): 
+        index_device (str, optional):
             The device to use for indexing the document index. Defaults to "cpu".
-        precision (str, optional): 
+        precision (str, optional):
             The precision for indexing. Defaults to "fp32".
         push_to_hub (bool, optional):
              Whether to push the index to the Hugging Face Model Hub. Defaults to False.
-        repo_id (str, optional): 
+        repo_id (str, optional):
             The ID of the repository in the Hugging Face Model Hub. Required if push_to_hub is True.
 
     Raises:
@@ -113,7 +114,7 @@ def build_index(
     Returns:
         None
     """
-    
+
     if push_to_hub:
         if not repo_id:
             raise ValueError("`repo_id` must be provided when `push_to_hub=True`")
@@ -180,36 +181,36 @@ def add_candidates(
     index_device: str = "cpu",
     precision: str = "fp32",
     use_doc_topics: bool = False,
-): 
+):
     """
     Adds candidates to the input samples based on retrieval from a document index.
 
     Args:
-        question_encoder_name_or_path (str): 
+        question_encoder_name_or_path (str):
             The name or path of the question encoder model.
-        document_name_or_path (str): 
+        document_name_or_path (str):
             The name or path of the document index.
-        input_path (str): 
+        input_path (str):
             The path to the input file containing samples.
-        output_path (str): 
+        output_path (str):
             The path to the output file where the samples with candidates will be saved.
-        passage_encoder_name_or_path (Optional[str]): 
+        passage_encoder_name_or_path (Optional[str]):
             The name or path of the passage encoder model. Defaults to None.
         relations (bool):
             Whether to add the candidates as relations. Defaults to False.
-        top_k (int): 
+        top_k (int):
             The number of candidates to retrieve for each sample. Defaults to 100.
-        batch_size (int): 
+        batch_size (int):
             The batch size for retrieval. Defaults to 128.
-        num_workers (int): 
+        num_workers (int):
             The number of worker processes for data loading. Defaults to 4.
-        device (str): 
+        device (str):
             The device to use for retrieval. Defaults to "cuda".
-        index_device (str): 
+        index_device (str):
             The device to use for the document index. Defaults to "cpu".
-        precision (str): 
+        precision (str):
             The precision to use for retrieval. Defaults to "fp32".
-        use_doc_topics (bool): 
+        use_doc_topics (bool):
             Whether to use document topics for retrieval. Defaults to False.
 
     Raises:
@@ -258,7 +259,9 @@ def add_candidates(
                 )
             )
 
-        logger.info(f"Creating dataloader with batch size {batch_size} and {num_workers} workers")
+        logger.info(
+            f"Creating dataloader with batch size {batch_size} and {num_workers} workers"
+        )
         dataloader = torch.utils.data.DataLoader(
             BaseDataset(name="passage", data=samples),
             batch_size=batch_size,
@@ -332,7 +335,8 @@ def add_candidates(
                     retrieved_accumulator,
                 ):
                     candidate_titles = [
-                        c.document.text for c in retrieved # TODO: add metadata if needed
+                        c.document.text
+                        for c in retrieved  # TODO: add metadata if needed
                     ]
                     # TODO: compatibility shit
                     if relations:

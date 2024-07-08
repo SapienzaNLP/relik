@@ -38,11 +38,21 @@ class AdamWWithWarmupOptimizer:
         # Group parameters
         optimizer_grouped_parameters = []
         if decay_params:
-            optimizer_grouped_parameters.append({"params": list(decay_params), "weight_decay": self.weight_decay})
+            optimizer_grouped_parameters.append(
+                {"params": list(decay_params), "weight_decay": self.weight_decay}
+            )
         if no_decay_params:
-            optimizer_grouped_parameters.append({"params": list(no_decay_params), "weight_decay": 0.0})
+            optimizer_grouped_parameters.append(
+                {"params": list(no_decay_params), "weight_decay": 0.0}
+            )
         if other_lr_params:
-            optimizer_grouped_parameters.append({"params": list(other_lr_params), "lr": self.lr2, "weight_decay": self.weight_decay})
+            optimizer_grouped_parameters.append(
+                {
+                    "params": list(other_lr_params),
+                    "lr": self.lr2,
+                    "weight_decay": self.weight_decay,
+                }
+            )
 
         return optimizer_grouped_parameters
 

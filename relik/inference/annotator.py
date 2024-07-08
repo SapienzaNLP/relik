@@ -27,6 +27,7 @@ from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentence
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from relik.inference.data.window.manager import WindowManager
+from relik.inference.utils import load_index, load_reader, load_retriever
 from relik.reader.data.relik_reader_sample import RelikReaderSample
 from relik.reader.pytorch_modules.base import RelikReaderBase
 from relik.reader.pytorch_modules.span import RelikReaderForSpanExtraction
@@ -97,39 +98,16 @@ class Relik:
 
     def __init__(
         self,
-        retriever: GoldenRetriever | DictConfig | Dict | None = None,
-        index: BaseDocumentIndex | DictConfig | Dict | None = None,
-        reader: RelikReaderBase | DictConfig | None = None,
-        device: str | None = None,
-        retriever_device: str | None = None,
-        index_device: str | None = None,
-        reader_device: str | None = None,
-        precision: int | str | torch.dtype | None = None,
-        retriever_precision: int | str | torch.dtype | None = None,
-        index_precision: int | str | torch.dtype | None = None,
-        reader_precision: int | str | torch.dtype | None = None,
+        retriever: GoldenRetriever | None = None,
+        index: BaseDocumentIndex | None = None,
+        reader: RelikReaderBase | None = None,
         task: TaskType | str = TaskType.SPAN,
         metadata_fields: list[str] | None = None,
         top_k: int | None = None,
         window_size: int | str | None = None,
         window_stride: int | None = None,
-        retriever_kwargs: Dict[str, Any] | None = None,
-        index_kwargs: Dict[str, Any] | None = None,
-        reader_kwargs: Dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
-
-        if retriever_kwargs is None:
-            retriever_kwargs = {}
-        if index_kwargs is None:
-            index_kwargs = {}
-        if reader_kwargs is None:
-            reader_kwargs = {}
-
-        # selected parameters that are popped from kwargs
-        index_kwargs["use_faiss"] = kwargs.pop("use_faiss", False)
-        reader_kwargs["use_nme"] = kwargs.pop("use_nme", False)
-
         # parse task into a TaskType
         if isinstance(task, str):
             try:
@@ -141,172 +119,88 @@ class Relik:
                 )
         self.task = task
 
-        # organize devices
-        if device is not None:
-            if retriever_device is None:
-                retriever_device = device
-            if index_device is None:
-                index_device = device
-            if reader_device is None:
-                reader_device = device
-
-        # organize precision
-        if precision is not None:
-            if retriever_precision is None:
-                retriever_precision = precision
-            if index_precision is None:
-                index_precision = precision
-            if reader_precision is None:
-                reader_precision = precision
-
-        # retriever
+        # retriever section
         self._retriever: Dict[TaskType, GoldenRetriever] = {
             TaskType.SPAN: None,
             TaskType.TRIPLET: None,
         }
-
-        if retriever:
-            # check retriever type, it can be a GoldenRetriever, a DictConfig or a Dict
-            if not isinstance(retriever, (GoldenRetriever, DictConfig, Dict)):
-                raise ValueError(
-                    f"`retriever` must be a `GoldenRetriever`, a `DictConfig` or "
-                    f"a `Dict`, got `{type(retriever)}`."
-                )
-
-            # we need to check weather the DictConfig is a DictConfig for an instance of GoldenRetriever
-            # or a primitive Dict
-            if isinstance(retriever, DictConfig):
-                # then it is probably a primitive Dict
-                if "_target_" not in retriever:
-                    retriever = OmegaConf.to_container(retriever, resolve=True)
-                    # convert the key to TaskType
-                    try:
-                        retriever = {
-                            TaskType(k.lower()): v for k, v in retriever.items()
-                        }
-                    except ValueError as e:
-                        raise ValueError(
-                            f"Please choose a valid task type (one of {list(TaskType)}) for each retriever."
-                        ) from e
-
-            if isinstance(retriever, Dict):
-                # convert the key to TaskType
-                retriever = {TaskType(k): v for k, v in retriever.items()}
-            else:
-                retriever = {task: retriever}
-
-            # instantiate each retriever
+        if isinstance(retriever, GoldenRetriever):
             if self.task in [TaskType.SPAN, TaskType.BOTH]:
-                self._retriever[TaskType.SPAN] = self._instantiate_retriever(
-                    retriever[TaskType.SPAN],
-                    retriever_device,
-                    retriever_precision,
-                    retriever_kwargs,
-                )
+                self._retriever[TaskType.SPAN] = retriever
             if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
-                self._retriever[TaskType.TRIPLET] = self._instantiate_retriever(
-                    retriever[TaskType.TRIPLET],
-                    retriever_device,
-                    retriever_precision,
-                    retriever_kwargs,
-                )
+                self._retriever[TaskType.TRIPLET] = retriever
+            # check if both retrievers are the same
+            if self._retriever[TaskType.SPAN] == self._retriever[TaskType.TRIPLET]:
+                logger.warning("The retriever is the same for both tasks.")
+        elif isinstance(retriever, (Dict, DictConfig)):
+            for task_type, r in retriever.items():
+                # convert task_type to TaskType
+                if isinstance(task_type, str):
+                    try:
+                        task_type = TaskType(task_type.lower())
+                    except ValueError:
+                        raise ValueError(
+                            f"Task `{task_type}` not recognized. "
+                            f"Please choose one of {list(TaskType)}."
+                        )
+                self._retriever[task_type] = r
+        else:
+            raise ValueError(
+                f"Invalid retriever type {type(retriever)}. "
+                f"Please provide a `GoldenRetriever` or a dictionary of retrievers."
+            )
+        self._retriever = {task_type: r for task_type, r in self._retriever.items() if r is not None}
 
-            # clean up None retrievers from the dictionary
-            self._retriever = {
-                task_type: r
-                for task_type, r in self._retriever.items()
-                if r is not None
-            }
-            # torch compile
-            # self._retriever = {task_type: torch.compile(r, backend="onnxrt") for task_type, r in self._retriever.items()}
-
-        # index
-        self._index: Dict[TaskType, BaseDocumentIndex] = {
+        self._index: Dict[TaskType, GoldenRetriever] = {
             TaskType.SPAN: None,
             TaskType.TRIPLET: None,
         }
 
-        if index:
-            # check retriever type, it can be a BaseDocumentIndex, a DictConfig or a Dict
-            if not isinstance(index, (BaseDocumentIndex, DictConfig, Dict)):
-                raise ValueError(
-                    f"`index` must be a `BaseDocumentIndex`, a `DictConfig` or "
-                    f"a `Dict`, got `{type(index)}`."
-                )
-            # we need to check weather the DictConfig is a DictConfig for an instance of BaseDocumentIndex
-            # or a primitive Dict
-            if isinstance(index, DictConfig):
-                # then it is probably a primitive Dict
-                if "_target_" not in index:
-                    index = OmegaConf.to_container(index, resolve=True)
-                    # convert the key to TaskType
-                    try:
-                        index = {TaskType(k.lower()): v for k, v in index.items()}
-                    except ValueError as e:
+        if index is None:
+            # check if the retriever has an index
+            for task_type, r in self._retriever.items():
+                if r is not None:
+                    if r.document_index is None:
                         raise ValueError(
-                            f"Please choose a valid task type (one of {list(TaskType)}) for each index."
-                        ) from e
-
-            if isinstance(index, Dict):
-                # convert the key to TaskType
-                index = {TaskType(k): v for k, v in index.items()}
-            else:
-                index = {task: index}
-
-            # instantiate each retriever
+                            f"No index found for task `{task_type}` in the retriever."
+                        )
+                    self._index[task_type] = r.document_index
+        elif isinstance(index, BaseDocumentIndex):
             if self.task in [TaskType.SPAN, TaskType.BOTH]:
-                self._index[TaskType.SPAN] = self._instantiate_index(
-                    index[TaskType.SPAN],
-                    index_device,
-                    index_precision,
-                    index_kwargs,
-                )
+                self._index[TaskType.SPAN] = index
             if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
-                self._index[TaskType.TRIPLET] = self._instantiate_index(
-                    index[TaskType.TRIPLET],
-                    index_device,
-                    index_precision,
-                    index_kwargs,
-                )
+                self._index[TaskType.TRIPLET] = index
 
-            # clean up None retrievers from the dictionary
-            self._index = {
-                task_type: i for task_type, i in self._index.items() if i is not None
-            }
+            # check if both retrievers are the same
+            if self._index[TaskType.SPAN] == self._index[TaskType.TRIPLET]:
+                logger.warning("The index is the same for both tasks.")
 
-            # link each index to the retriever
-            for task_type, retriever in self._retriever.items():
-                if task_type in self._index:
-                    retriever.document_index = self._index[task_type]
-
-        # reader
-        self.reader: RelikReaderBase | None = None
-        if reader:
-            reader = (
-                hydra.utils.instantiate(
-                    reader,
-                    device=reader_device,
-                    precision=reader_precision,
-                    **reader_kwargs,
-                )
-                if isinstance(reader, DictConfig)
-                else reader
+        elif isinstance(index, (Dict, DictConfig)):
+            for task_type, i in index.items():
+                # convert task_type to TaskType
+                if isinstance(task_type, str):
+                    try:
+                        task_type = TaskType(task_type.lower())
+                    except ValueError:
+                        raise ValueError(
+                            f"Task `{task_type}` not recognized. "
+                            f"Please choose one of {list(TaskType)}."
+                        )
+                self._index[task_type] = i
+        else:
+            raise ValueError(
+                f"Invalid index type {type(index)}. "
+                f"Please provide a `BaseDocumentIndex` or a dictionary of indexes."
             )
-            reader.training = False
-            reader.eval()
-            if reader_device is not None:
-                logger.info(f"Moving reader to `{reader_device}`.")
-                reader.to(reader_device)
-            if (
-                reader_precision is not None
-                and reader.precision != PRECISION_MAP[reader_precision]
-            ):
-                logger.info(
-                    f"Setting precision of reader to `{PRECISION_MAP[reader_precision]}`."
-                )
-                reader.to(PRECISION_MAP[reader_precision])
-            self.reader = reader
-            # self.reader = torch.compile(self.reader, backend="tvm")
+        self._index = {task_type: i for task_type, i in self._index.items() if i is not None}
+
+        # if isinstance(index, BaseDocumentIndex):
+        #     index = {self.task: index}
+
+        # self._retriever = load_retriever(retriever)
+        # self._index = load_index(index)
+        # self._index = index or {}
+        self.reader = reader
 
         # windowization stuff
         self.tokenizer = SpacyTokenizer(language="en")  # TODO: parametrize?
@@ -321,125 +215,6 @@ class Relik:
         self.top_k = top_k
         self.window_size = window_size
         self.window_stride = window_stride
-
-    @staticmethod
-    def _instantiate_index(
-        index: BaseDocumentIndex | DictConfig | Dict,
-        index_device: str | None | torch.device | int = None,
-        index_precision: int | str | torch.dtype | None = None,
-        index_kwargs: Dict[str, Any] | None = None,
-    ) -> BaseDocumentIndex:
-        """
-        Instantiate a document index.
-
-        Args:
-            index (`BaseDocumentIndex`, `DictConfig` or `Dict`):
-                The document index to instantiate.
-            index_device (`str`, `optional`):
-                The device to use for the document index.
-            index_precision (`int`, `str` or `torch.dtype`, `optional`):
-                The precision to use for the document index.
-            index_kwargs (`Dict[str, Any]`, `optional`):
-                Additional keyword arguments to pass to the document index.
-
-        Returns:
-            `BaseDocumentIndex`:
-                The instantiated document index.
-        """
-        if not isinstance(index, BaseDocumentIndex):
-            index = OmegaConf.create(index)
-            use_faiss = index_kwargs.get("use_faiss", False)
-            if use_faiss:
-                index = OmegaConf.merge(
-                    index,
-                    {
-                        "_target_": "relik.retriever.indexers.faissindex.FaissDocumentIndex.from_pretrained",
-                    },
-                )
-            if index_device is not None:
-                index_kwargs["device"] = index_device
-            if index_precision is not None:
-                index_kwargs["precision"] = index_precision
-
-            # merge the kwargs
-            index = OmegaConf.merge(index, OmegaConf.create(index_kwargs))
-            index: BaseDocumentIndex = hydra.utils.instantiate(index)
-        else:
-            index = index
-            if index_device is not None:
-                logger.info(f"Moving index to `{index_device}`.")
-                index.to(index_device)
-            if index_device is not None:
-                logger.info(
-                    f"Setting precision of index to `{PRECISION_MAP[index_device]}`."
-                )
-                index.to(PRECISION_MAP[index_device])
-        return index
-
-    @staticmethod
-    def _instantiate_retriever(
-        retriever: GoldenRetriever | DictConfig | Dict,
-        retriever_device: str | None,
-        retriever_precision: int | str | torch.dtype | None,
-        retriever_kwargs: Dict[str, Any] | None,
-    ) -> GoldenRetriever:
-        """
-        Instantiate a retriever.
-
-        Args:
-            retriever (`GoldenRetriever`, `DictConfig` or `Dict`):
-                The retriever to instantiate.
-            retriever_device (`str`, `optional`):
-                The device to use for the retriever.
-            retriever_precision (`int`, `str` or `torch.dtype`, `optional`):
-                The precision to use for the retriever.
-            retriever_kwargs (`Dict[str, Any]`, `optional`):
-                Additional keyword arguments to pass to the retriever.
-
-        Returns:
-            `GoldenRetriever`:
-                The instantiated retriever.
-        """
-        if not isinstance(retriever, GoldenRetriever):
-            # convert to DictConfig
-            retriever = hydra.utils.instantiate(
-                OmegaConf.create(retriever),
-                device=retriever_device,
-                precision=retriever_precision,
-                # index_device=document_index_device,
-                # index_precision=document_index_precision,
-                **retriever_kwargs,
-            )
-        else:
-            if retriever_device is not None:
-                logger.info(f"Moving retriever to `{retriever_device}`.")
-                retriever.to(retriever_device)
-            if retriever_precision is not None:
-                logger.info(
-                    f"Setting precision of retriever to `{PRECISION_MAP[retriever_precision]}`."
-                )
-                retriever.to(PRECISION_MAP[retriever_precision])
-        retriever.training = False
-        retriever.eval()
-        # if document_index is not None:
-        #     if retriever.document_index is not None:
-        #         logger.info(
-        #             "The Retriever already has a document index, replacing it with the provided one."
-        #             "If you want to keep using the old one, please do not provide a document index."
-        #         )
-        #         retriever.document_index = document_index
-        # # we override the device and the precision of the document index if provided
-        # if document_index_device is not None:
-        #     logger.info(f"Moving document index to `{document_index_device}`.")
-        #     retriever.document_index.to(document_index_device)
-        # if document_index_precision is not None:
-        #     logger.info(
-        #         f"Setting precision of document index to `{PRECISION_MAP[document_index_precision]}`."
-        #     )
-        #     retriever.document_index.to(PRECISION_MAP[document_index_precision])
-        # retriever.document_index = document_index
-        # now we can move the retriever to the right device and set the precision
-        return retriever
 
     @property
     def retriever(self) -> GoldenRetriever | Dict[TaskType, GoldenRetriever]:
@@ -585,7 +360,11 @@ class Relik:
         if windows is None:
             # TODO: make it more consistent (no tuples or single elements in output)
             # windows were provided, use them
-            windows, blank_windows, documents_tokens = self.window_manager.create_windows(
+            (
+                windows,
+                blank_windows,
+                documents_tokens,
+            ) = self.window_manager.create_windows(
                 text,
                 window_size,
                 window_stride,
@@ -632,7 +411,7 @@ class Relik:
                         for w in windows
                     ]
                 windows_candidates[task_type] = _candidates
-        
+
         else:
             # retrieve candidates first
             if self._retriever is None:
@@ -732,7 +511,12 @@ class Relik:
                         (
                             Span(start=ss, end=se, label=sl, text=text[w.doc_id][ss:se])
                             if annotation_type == AnnotationType.CHAR
-                            else Span(start=ss, end=se, label=sl, text=documents_tokens[w.doc_id][ss:se])
+                            else Span(
+                                start=ss,
+                                end=se,
+                                label=sl,
+                                text=documents_tokens[w.doc_id][ss:se],
+                            )
                         )
                         for ss, se, sl in w.predicted_spans
                     ],
@@ -787,7 +571,6 @@ class Relik:
         cls,
         model_name_or_dir: Union[str, os.PathLike],
         config_file_name: str = CONFIG_NAME,
-        *args,
         **kwargs,
     ) -> "Relik":
         """
@@ -814,9 +597,23 @@ class Relik:
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
 
-        if "retriever" in kwargs and kwargs["retriever"] is None:
-            # if retriever is None, we don't want to load the index
-            kwargs["index"] = None
+        device = kwargs.pop("device", None)
+        retriever_device = kwargs.pop("retriever_device", device)
+        index_device = kwargs.pop("index_device", device)
+        reader_device = kwargs.pop("reader_device", device)
+
+        precision = kwargs.pop("precision", None)
+        retriever_precision = kwargs.pop("retriever_precision", precision)
+        index_precision = kwargs.pop("index_precision", precision)
+        reader_precision = kwargs.pop("reader_precision", precision)
+
+        retriever_kwargs = kwargs.pop("retriever_kwargs", {})
+        index_kwargs = kwargs.pop("index_kwargs", {})
+        reader_kwargs = kwargs.pop("reader_kwargs", {})
+
+        # notable parameters
+        index_kwargs["use_faiss"] = kwargs.pop("use_faiss", False)
+        reader_kwargs["use_nme"] = kwargs.pop("use_nme", False)
 
         model_dir = from_cache(
             model_name_or_dir,
@@ -831,15 +628,86 @@ class Relik:
                 f"Model configuration file not found at {config_path}."
             )
 
-        # overwrite config with config_kwargs
         config = OmegaConf.load(config_path)
-        config = OmegaConf.merge(config, OmegaConf.create(kwargs))
         # do we want to print the config? I like it
         logger.info(f"Loading Relik from {model_name_or_dir}")
         logger.info(pformat(OmegaConf.to_container(config)))
 
+        task = config.task
+        # parse task into a TaskType
+        if isinstance(task, str):
+            try:
+                task = TaskType(task.lower())
+            except ValueError:
+                raise ValueError(
+                    f"Task `{task}` not recognized. "
+                    f"Please choose one of {list(TaskType)}."
+                )
+        task = task
+
+        # retriever section
+        if "retriever" in kwargs:
+            retriever = kwargs.pop("retriever")
+        elif hasattr(config, "retriever"):
+            retriever = config.pop("retriever")
+        else:
+            retriever = None
+
+        if retriever:
+            retriever = load_retriever(
+                retriever,
+                retriever_device,
+                retriever_precision,
+                task,
+                **retriever_kwargs,
+            )
+
+        # index section
+        if retriever is None:
+            logger.warning("No retriever was provided, ignoring the index.")
+            index = None
+        else:
+            if "index" in kwargs:
+                index = kwargs.pop("index")
+            elif hasattr(config, "index"):
+                index = config.pop("index")
+            else:
+                index = None
+
+        if index:
+            index = load_index(
+                index, index_device, index_precision, task, **index_kwargs
+            )
+
+        # link each index to the retriever
+        if retriever and index:
+            for task_type, r in retriever.items():
+                if task_type in index:
+                    r.document_index = index[task_type]
+
+        # reader section
+        if "reader" in kwargs:
+            reader = kwargs.pop("reader")
+        elif hasattr(config, "reader"):
+            reader = config.pop("reader")
+        else:
+            reader = None
+
+        if reader:
+            reader = load_reader(
+                reader, reader_device, reader_precision, **reader_kwargs
+            )
+
+        # overwrite config with config_kwargs
+        config = OmegaConf.merge(config, OmegaConf.create(kwargs))
+        # do we want to print the config? I like it
+        # logger.info(f"Loading Relik from {model_name_or_dir}")
+        # logger.info(pformat(OmegaConf.to_container(config)))
+
         # load relik from config
-        relik = hydra.utils.instantiate(config, _recursive_=False, *args)
+        relik = hydra.utils.instantiate(
+            config, _recursive_=False, retriever=retriever, index=index, reader=reader
+        )
 
         return relik
 
@@ -908,7 +776,6 @@ class Relik:
         }
 
         if save_weights:
-            # save weights
             # retriever
             model_id = model_id or output_dir.name
             retriever_model_id = retriever_model_id or f"retriever-{model_id}"
@@ -930,11 +797,11 @@ class Relik:
                     **kwargs,
                 )
                 retrievers_names[task_type] = {
-                    # "reader_model_id": task_retriever_model_id,
                     "question_encoder_name": question_encoder_name,
                     "passage_encoder_name": passage_encoder_name,
                 }
 
+            # index
             for task_type, index in self._index.items():
                 index_name = f"{retriever_model_id}-{task_type.value}-index"
                 logger.info(f"Saving index to {output_dir / index_name}")
@@ -967,15 +834,9 @@ class Relik:
                     retriever_names["passage_encoder_name"] = (
                         f"{user}/{retriever_names['passage_encoder_name']}"
                     )
-                    # retriever_names["document_index_name"] = (
-                    #     f"{user}/{retriever_names['document_index_name']}"
-                    # )
                 for task_type, index_name in index_names.items():
                     if index_name is not None:
                         index_names[task_type] = f"{user}/{index_name}"
-                # question_encoder_name = f"{user}/{question_encoder_name}"
-                # passage_encoder_name = f"{user}/{passage_encoder_name}"
-                # document_index_name = f"{user}/{document_index_name}"
                 reader_model_id = f"{user}/{reader_model_id}"
             else:
                 for task_type, retriever_names in retrievers_names.items():
@@ -985,9 +846,6 @@ class Relik:
                     retriever_names["passage_encoder_name"] = (
                         output_dir / retriever_names["passage_encoder_name"]
                     )
-                    # retriever_names["document_index_name"] = (
-                    #     output_dir / retriever_names["document_index_name"]
-                    # )
                 reader_model_id = output_dir / reader_model_id
         else:
             # save config only
@@ -1001,9 +859,6 @@ class Relik:
                 retriever_names["passage_encoder_name"] = (
                     retriever.passage_encoder.name_or_path
                 )
-                # retriever_names["document_index_name"] = (
-                #     retriever.document_index.name_or_path
-                # )
 
             for task_type, index in self._index.items():
                 index_names[task_type] = index.name_or_path
@@ -1034,10 +889,6 @@ class Relik:
                         config["retriever"][task_type.value]["passage_encoder"] = (
                             retrievers_names[task_type]["passage_encoder_name"]
                         )
-                    # if retriever.document_index is not None:
-                    #     config["retriever"][task_type.value]["document_index"] = (
-                    #         retrievers_names[task_type]["document_index_name"]
-                    #     )
             if self._index is not None:
                 config["index"] = {}
                 for task_type, index in self._index.items():

@@ -189,6 +189,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                 self.dataset.model_max_length = max_length
                 self.dataset.tokens_per_batch = token_batch_size
                 self.dataset.max_batch_size = max_batch_size
+                # self.dataset.batch_size = max_batch_size
 
                 # instantiate dataloader
                 iterator = DataLoader(

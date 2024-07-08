@@ -54,13 +54,13 @@ train:
 
   early_stopping_callback:
     # null
-    _target_: lightning.callbacks.EarlyStopping
+    _target_: lightning.pytorch.callbacks.EarlyStopping
     monitor: validate_recall@${train.top_k}
     mode: max
     patience: 3
 
   model_checkpoint_callback:
-    _target_: lightning.callbacks.ModelCheckpoint
+    _target_: lightning.pytorch.callbacks.ModelCheckpoint
     monitor: validate_recall@${train.top_k}
     mode: max
     verbose: True
@@ -71,7 +71,7 @@ train:
 
   callbacks:
     prediction_callback:
-      _target_: relik.retriever.callbacks.training_callbacks.GoldenRetrieverPredictionCallback
+      _target_: relik.retriever.callbacks.prediction_callbacks.GoldenRetrieverPredictionCallback
       k: ${train.top_k}
       batch_size: 64
       precision: 16
@@ -90,7 +90,7 @@ train:
         - _target_: relik.retriever.callbacks.utils_callbacks.SavePredictionsCallback
 
     hard_negatives_callback:
-      _target_: relik.retriever.callbacks.prediction_callbacks.NegativeAugmentationCallback
+      _target_: relik.retriever.callbacks.training_callbacks.NegativeAugmentationCallback
       k: ${train.top_k}
       batch_size: 64
       precision: 16

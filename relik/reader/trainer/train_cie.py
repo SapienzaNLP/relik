@@ -23,6 +23,7 @@ from relik.reader.utils.special_symbols import (
 )
 from relik.reader.utils.shuffle_train_callback import ShuffleTrainCallback
 
+
 @hydra.main(config_path="../conf", config_name="config_cie")
 def train(cfg: DictConfig) -> None:
     lightning.seed_everything(cfg.training.seed)
@@ -100,7 +101,9 @@ def train(cfg: DictConfig) -> None:
         LearningRateMonitor(),
     ]
 
-    if cfg.data.section_size == None: # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
+    if (
+        cfg.data.section_size == None
+    ):  # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
         callbacks.append(ShuffleTrainCallback())
 
     wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name)
@@ -128,6 +131,7 @@ def train(cfg: DictConfig) -> None:
     experiment_path = Path(wandb_logger.experiment.dir)
     model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
     model.relik_reader_re_model.save_pretrained(experiment_path / "hf_model")
+
 
 def main():
     train()

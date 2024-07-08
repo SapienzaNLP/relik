@@ -31,7 +31,7 @@ class Document:
         return f"{self.id}:{self.text}"
 
     def __repr__(self):
-        return  json.dumps(self.to_dict())
+        return json.dumps(self.to_dict())
 
     def __eq__(self, other):
         if isinstance(other, Document):

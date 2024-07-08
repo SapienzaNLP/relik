@@ -34,7 +34,6 @@ class MatrixMultiplicationModule(torch.nn.Module):
 
 
 class InMemoryDocumentIndex(BaseDocumentIndex):
-
     def __init__(
         self,
         documents: str
@@ -102,9 +101,12 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         else:
             # TODO: a bit redundant, fix this eventually
             if (
-                # here we trust the device_in_init, since we don't know yet 
+                # here we trust the device_in_init, since we don't know yet
                 # the device of the embeddings
-                (self.device_in_init == "cpu" or self.device_in_init == torch.device("cpu"))
+                (
+                    self.device_in_init == "cpu"
+                    or self.device_in_init == torch.device("cpu")
+                )
                 and self.embeddings is not None
                 and self.embeddings.dtype != torch.float32
             ):
@@ -115,7 +117,10 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
                 self.embeddings = self.embeddings.to(PRECISION_MAP[32])
 
         # move the embeddings to the desired device
-        if self.embeddings is not None and not self.embeddings.device == self.device_in_init:
+        if (
+            self.embeddings is not None
+            and not self.embeddings.device == self.device_in_init
+        ):
             self.embeddings = self.embeddings.to(self.device_in_init)
 
         # TODO: check interactions with the embeddings

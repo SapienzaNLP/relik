@@ -9,6 +9,7 @@ import torch
 import numpy as np
 from sklearn.metrics import precision_recall_curve
 
+
 def find_optimal_threshold(scores, labels):
     # Calculate precision-recall pairs for various threshold values
     precision, recall, thresholds = precision_recall_curve(labels, scores)
@@ -23,20 +24,31 @@ def find_optimal_threshold(scores, labels):
     # Find the threshold and F1 score corresponding to the maximum F1 score
     optimal_threshold = thresholds[max_index]
     best_f1 = f1_scores[max_index]
-    
+
     return optimal_threshold, best_f1
 
-def eval(model_path, data_path, is_eval, output_path=None, compute_threshold=False, save_threshold=False):
+
+def eval(
+    model_path,
+    data_path,
+    is_eval,
+    output_path=None,
+    compute_threshold=False,
+    save_threshold=False,
+):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device = "mps" if torch.backends.mps.is_available() else device
     print(f"Device: {device}")
-    reader = RelikReaderForTripletExtraction(
-        model_path, training=False, device=device
-    )
+    reader = RelikReaderForTripletExtraction(model_path, training=False, device=device)
     samples = list(load_relik_reader_samples(data_path))
     optimal_threshold = None
     if compute_threshold:
-        predicted_samples = reader.read(samples=samples, progress_bar=True, annotation_type=AnnotationType.WORD, return_threshold_utils=True)
+        predicted_samples = reader.read(
+            samples=samples,
+            progress_bar=True,
+            annotation_type=AnnotationType.WORD,
+            return_threshold_utils=True,
+        )
         re_probabilities, re_labels = [], []
         for sample in predicted_samples:
             re_probabilities.extend(sample.re_probabilities.flatten())
@@ -50,7 +62,12 @@ def eval(model_path, data_path, is_eval, output_path=None, compute_threshold=Fal
             reader.relik_reader_model.config.threshold = optimal_threshold
             reader.relik_reader_model.save_pretrained(model_path)
 
-    predicted_samples = reader.read(samples=samples, progress_bar=True, annotation_type=AnnotationType.WORD, relation_threshold=optimal_threshold)
+    predicted_samples = reader.read(
+        samples=samples,
+        progress_bar=True,
+        annotation_type=AnnotationType.WORD,
+        relation_threshold=optimal_threshold,
+    )
 
     if is_eval:
         strong_matching_metric = StrongMatching()
@@ -61,6 +78,7 @@ def eval(model_path, data_path, is_eval, output_path=None, compute_threshold=Fal
         with open(output_path, "w") as f:
             for sample in predicted_samples:
                 f.write(sample.to_jsons() + "\n")
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -79,7 +97,14 @@ def main():
     parser.add_argument("--compute-threshold", action="store_true")
     parser.add_argument("--save-threshold", action="store_true")
     args = parser.parse_args()
-    eval(args.model_path, args.data_path, args.is_eval, args.output_path, args.compute_threshold, args.save_threshold)
+    eval(
+        args.model_path,
+        args.data_path,
+        args.is_eval,
+        args.output_path,
+        args.compute_threshold,
+        args.save_threshold,
+    )
 
 
 if __name__ == "__main__":

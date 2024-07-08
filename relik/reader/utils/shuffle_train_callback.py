@@ -6,6 +6,7 @@ import os
 
 logger = get_logger()
 
+
 class ShuffleTrainCallback(Callback):
     def __init__(self, shuffle_every: int = 1, data_path: str = None):
         self.shuffle_every = shuffle_every

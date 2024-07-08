@@ -487,11 +487,15 @@ class RelikReaderREModel(PreTrainedModel):
             input_hidden_ents = 2 * self.config.linears_hidden_size
 
         self.re_projector = self._get_projection_layer(
-            config.activation, input_hidden=2*self.transformer_model.config.hidden_size, hidden=input_hidden_ents, last_hidden=2*self.config.linears_hidden_size
+            config.activation,
+            input_hidden=2 * self.transformer_model.config.hidden_size,
+            hidden=input_hidden_ents,
+            last_hidden=2 * self.config.linears_hidden_size,
         )
 
         self.re_relation_projector = self._get_projection_layer(
-            config.activation, input_hidden=self.transformer_model.config.hidden_size,
+            config.activation,
+            input_hidden=self.transformer_model.config.hidden_size,
         )
 
         if self.config.entity_type_loss or self.relation_disambiguation_loss:
@@ -737,8 +741,9 @@ class RelikReaderREModel(PreTrainedModel):
         *args,
         **kwargs,
     ) -> Dict[str, Any]:
-
-        relation_threshold = self.config.threshold if relation_threshold is None else relation_threshold
+        relation_threshold = (
+            self.config.threshold if relation_threshold is None else relation_threshold
+        )
 
         batch_size = input_ids.shape[0]
 

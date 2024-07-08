@@ -1,1 +1,1 @@
-_target_: relik.retriever.pythorch_modules.losses.MultiLabelNCELoss
+_target_: relik.retriever.pytorch_modules.loss.MultiLabelNCELoss

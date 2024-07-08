@@ -511,9 +511,7 @@ class RelikDataset(IterableDataset):
         if self.section_size is not None:
             current_dataset_elements = []
             for i, dataset_elem in enumerate(dataset_iterator, start=1):
-                if (
-                    len(current_dataset_elements) == self.section_size
-                ):
+                if len(current_dataset_elements) == self.section_size:
                     for batch in self.materialize_batches(current_dataset_elements):
                         yield batch
                     current_dataset_elements = []
@@ -558,6 +556,7 @@ class RelikDataset(IterableDataset):
                 for i, x in enumerate(iterable):
                     if i % world_size == rank:
                         yield x
+
             return generator
 
         samples_per_rank = partition_data_samples(data_samples, world_size, rank)()

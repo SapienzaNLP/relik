@@ -237,7 +237,7 @@ def main():
         retriever_device=args.retriever_device,
         reader_device=args.reader_device,
         precision=args.precision,
-        reader_kwargs={"dataset_kwargs":{"use_nme": True}},
+        reader_kwargs={"dataset_kwargs": {"use_nme": True}},
     )
 
     # set global batch sizes

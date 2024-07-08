@@ -1,4 +1,7 @@
-![](https://drive.google.com/uc?export=view&id=1UwPIfBrG021siM9SBAku2JNqG4R6avs6)
+![](https://drive.google.com/uc?export=view&id=1uBKUIGaCO7RiIFOhgpc390rgN39jS7sF)
+<div align="center">
+  <img src="https://drive.google.com/uc?export=view&id=1jMitie7Gb9t_a7NEfS8ZctfzUijMf2kx" height="80">
+</div>
 
 <div align="center">
 
@@ -21,11 +24,11 @@
 
 A blazing fast and lightweight Information Extraction model for Entity Linking and Relation Extraction.
 
-## Installation
+## 🛠️ Installation
 
 Installation from PyPI
 
-```console
+```bash
 pip install relik
 ```
 
@@ -90,7 +93,7 @@ pip install -e .[all]
 
 </details>
 
-## Quick Start
+## 🚀 Quick Start
 
 [//]: # (Write a short description of the model and how to use it with the `from_pretrained` method.)
 
@@ -108,32 +111,32 @@ from relik.inference.data.objects import RelikOutput
 
 relik = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
-
-# RelikOutput(
-#     text="Michael Jordan was one of the best players in the NBA.",
-#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
-#     id=0,
-#     spans=[
-#         Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
-#         Span(start=50, end=53, label="National Basketball Association", text="NBA"),
-#     ],
-#     triples=[],
-#     candidates=Candidates(
-#         span=[
-#             [
-#                 [
-#                     {"text": "Michael Jordan", "id": 4484083},
-#                     {"text": "National Basketball Association", "id": 5209815},
-#                     {"text": "Walter Jordan", "id": 2340190},
-#                     {"text": "Jordan", "id": 3486773},
-#                     {"text": "50 Greatest Players in NBA History", "id": 1742909},
-#                     ...
-#                 ]
-#             ]
-#         ]
-#     ),
-# )
 ```
+
+    RelikOutput(
+      text="Michael Jordan was one of the best players in the NBA.",
+      tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+      id=0,
+      spans=[
+          Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
+          Span(start=50, end=53, label="National Basketball Association", text="NBA"),
+      ],
+      triples=[],
+      candidates=Candidates(
+          span=[
+              [
+                  [
+                      {"text": "Michael Jordan", "id": 4484083},
+                      {"text": "National Basketball Association", "id": 5209815},
+                      {"text": "Walter Jordan", "id": 2340190},
+                      {"text": "Jordan", "id": 3486773},
+                      {"text": "50 Greatest Players in NBA History", "id": 1742909},
+                      ...
+                  ]
+              ]
+          ]
+      ),
+    )
 
 and for Relation Extraction:
 
@@ -145,10 +148,20 @@ relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
-The full list of available models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+### Models
+
+Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+
+- **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
+- **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
+- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-large)
+
+### Usage
 
 Retrievers and Readers can be used separately.
 In the case of retriever-only ReLiK, the output will contain the candidates for the input text.
+
+Reader-only example:
 
 ```python
 from relik import Relik
@@ -157,27 +170,30 @@ from relik.inference.data.objects import RelikOutput
 # If you want to use only the retriever
 retriever = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large", reader=None)
 relik_out: RelikOutput = retriever("Michael Jordan was one of the best players in the NBA.")
-# RelikOutput(
-#     text="Michael Jordan was one of the best players in the NBA.",
-#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
-#     id=0,
-#     spans=[],
-#     triples=[],
-#     candidates=Candidates(
-#         span=[
-#                 [
-#                     {"text": "Michael Jordan", "id": 4484083},
-#                     {"text": "National Basketball Association", "id": 5209815},
-#                     {"text": "Walter Jordan", "id": 2340190},
-#                     {"text": "Jordan", "id": 3486773},
-#                     {"text": "50 Greatest Players in NBA History", "id": 1742909},
-#                     ...
-#                 ]
-#         ],
-#         triplet=[],
-#     ),
-# )
 ```
+
+    RelikOutput(
+      text="Michael Jordan was one of the best players in the NBA.",
+      tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+      id=0,
+      spans=[],
+      triples=[],
+      candidates=Candidates(
+          span=[
+                  [
+                      {"text": "Michael Jordan", "id": 4484083},
+                      {"text": "National Basketball Association", "id": 5209815},
+                      {"text": "Walter Jordan", "id": 2340190},
+                      {"text": "Jordan", "id": 3486773},
+                      {"text": "50 Greatest Players in NBA History", "id": 1742909},
+                      ...
+                  ]
+          ],
+          triplet=[],
+      ),
+    )
+
+Retriever-only example:
 
 ```python
 from relik import Relik
@@ -194,43 +210,44 @@ candidates = [
 ]
 text = "Michael Jordan was one of the best players in the NBA."
 relik_out: RelikOutput = reader(text, candidates=candidates)
-# RelikOutput(
-#     text="Michael Jordan was one of the best players in the NBA.",
-#     tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
-#     id=0,
-#     spans=[
-#         Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
-#         Span(start=50, end=53, label="National Basketball Association", text="NBA"),
-#     ],
-#     triples=[],
-#     candidates=Candidates(
-#         span=[
-#             [
-#                 [
-#                     {
-#                         "text": "Michael Jordan",
-#                         "id": -731245042436891448,
-#                     },
-#                     {
-#                         "text": "National Basketball Association",
-#                         "id": 8135443493867772328,
-#                     },
-#                     {
-#                         "text": "Walter Jordan",
-#                         "id": -5873847607270755146,
-#                         "metadata": {},
-#                     },
-#                     {"text": "Jordan", "id": 6387058293887192208, "metadata": {}},
-#                     {
-#                         "text": "50 Greatest Players in NBA History",
-#                         "id": 2173802663468652889,
-#                     },
-#                 ]
-#             ]
-#         ],
-#     ),
-# )
 ```
+
+    RelikOutput(
+      text="Michael Jordan was one of the best players in the NBA.",
+      tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
+      id=0,
+      spans=[
+          Span(start=0, end=14, label="Michael Jordan", text="Michael Jordan"),
+          Span(start=50, end=53, label="National Basketball Association", text="NBA"),
+      ],
+      triples=[],
+      candidates=Candidates(
+          span=[
+              [
+                  [
+                      {
+                          "text": "Michael Jordan",
+                          "id": -731245042436891448,
+                      },
+                      {
+                          "text": "National Basketball Association",
+                          "id": 8135443493867772328,
+                      },
+                      {
+                          "text": "Walter Jordan",
+                          "id": -5873847607270755146,
+                          "metadata": {},
+                      },
+                      {"text": "Jordan", "id": 6387058293887192208, "metadata": {}},
+                      {
+                          "text": "50 Greatest Players in NBA History",
+                          "id": 2173802663468652889,
+                      },
+                  ]
+              ]
+          ],
+      ),
+    )
 
 ### CLI
 
@@ -268,7 +285,7 @@ For example:
 relik inference sapienzanlp/relik-entity-linking-large data.txt output.jsonl
 ```
 
-## Before You Start
+## 📚 Before You Start
 
 In the following sections, we provide a step-by-step guide on how to prepare the data, train the retriever and reader, and evaluate the model.
 
@@ -297,7 +314,7 @@ The BLINK dataset can be downloaded from the [GENRE](https://github.com/facebook
 We used `blink-train-kilt.jsonl` and `blink-dev-kilt.jsonl` as training and validation datasets.
 Assuming we have downloaded the two files in the `data/blink` folder, we converted the BLINK dataset to the ReLiK format using the following script:
 
-```console
+```bash
 # Train
 python scripts/data/blink/preprocess_genre_blink.py \
   data/blink/blink-train-kilt.jsonl \
@@ -345,15 +362,15 @@ All your data should have the following starting structure:
 
 For Relation Extraction, we provide an example on how to preprocess the NYT datase from [raw_nyt](https://drive.google.com/file/d/1kAVwR051gjfKn3p6oKc7CzNT9g2Cjy6N/view) taken from the [CopyRE](https://github.com/xiangrongzeng/copy_re?tab=readme-ov-file). Download the dataset to data/raw_nyt and then run:
 
-```console
-scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
+```bash
+python scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
 ```
 
 Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surface forms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
 
-## Retriever
+## 🦮 Retriever
 
-We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
+We perform a two-step training process for the retriever. First, we "pre-train" the retriever using BLINK (Wu et al., 2019) dataset, and then we "fine-tune" it using AIDA (Hoffart et al, 2011).
 
 ### Data Preparation
 
@@ -377,11 +394,11 @@ The retriever requires a dataset in a format similar to [DPR](https://github.com
 }
 ```
 
-The retriever also needs an index to search for the documents. The documents to index can be either a jsonl file or a tsv file similar to
+The retriever also needs an index to search for the documents. The documents to index can be either a JSONL file or a TSV file similar to
 [DPR](https://github.com/facebookresearch/DPR):
 
-- `jsonl`: each line is a json object with the following keys: `id`, `text`, `metadata`
-- `tsv`: each line is a tab-separated string with the `id` and `text` column,
+- `jsonl`: each line is a JSON object with the following keys: `id`, `text`, `metadata`
+- `tsv`: each line is a tab-separated string with the `id` and `text` columns,
   followed by any other column that will be stored in the `metadata` field
 
 `jsonl` example:
@@ -408,7 +425,7 @@ id \t text \t any other column
 
 Once you have the BLINK dataset in the ReLiK format, you can create the windows with the following script:
 
-```console
+```bash
 # train
 python scripts/data/create_windows.py \
   data/blink/processed/blink-train-kilt-relik.jsonl \
@@ -422,7 +439,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```console
+```bash
 # train
 python scripts/data/blink/convert_to_dpr.py \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
@@ -439,25 +456,27 @@ python scripts/data/blink/convert_to_dpr.py \
 Since the AIDA dataset is not publicly available, we can provide the annotations for the AIDA dataset in the ReLiK format as an example.
 Assuming you have the full AIDA dataset in the `data/aida`, you can convert it to the ReLiK format and then create the windows with the following script:
 
-```console
-python scripts/data/create_windows.py \
-  data/data/processed/aida-train-relik.jsonl \
-  data/data/processed/aida-train-relik-windowed.jsonl
+```bash
+relik data create-windows \
+  data/aida/processed/aida-train-relik.jsonl \
+  data/aida/processed/aida-train-relik-windowed.jsonl
 ```
 
 and then convert it to the DPR format:
 
-```console
-python scripts/data/convert_to_dpr.py \
-  data/data/processed/aida-train-relik-windowed.jsonl \
-  data/data/processed/aida-train-relik-windowed-dpr.jsonl
+```bash
+relik data convert-to-dpr \
+  data/aida/processed/aida-train-relik-windowed.jsonl \
+  data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
+  data/kb/wikipedia/documents.jsonl \
+  --title-map data/kb/wikipedia/title_map.json
 ```
 
 #### Relation Extraction
 
 ##### NYT
 
-```console
+```bash
 python scripts/data/create_windows.py \
   data/data/processed/nyt/train.jsonl \
   data/data/processed/nyt/train-windowed.jsonl \
@@ -467,7 +486,7 @@ python scripts/data/create_windows.py \
 
 and then convert it to the DPR format:
 
-```console
+```bash
 python scripts/data/convert_to_dpr.py \
   data/data/processed/nyt/train-windowed.jsonl \
   data/data/processed/nyt/train-windowed-dpr.jsonl
@@ -489,35 +508,35 @@ The configuration files in `relik/retriever/conf` are `pretrain_iterable_in_batc
 
 For instance, to train the retriever on the AIDA dataset, you can run the following command:
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
-  train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
-  val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
-  test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
+  data.train_dataset_path=data/aida/processed/aida-train-relik-windowed-dpr.jsonl \
+  data.val_dataset_path=data/aida/processed/aida-dev-relik-windowed-dpr.jsonl \
+  data.test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl \
+  data.shared_params.documents_path=data/kb/wikipedia/documents.jsonl
 ```
 
 #### Relation Extraction
 
-The configuration files in `relik/retriever/conf` is `finetune_nyt_iterable_in_batch.yaml`, which we used to fine-tune the retriever for the NYT dataset. For cIE we repurpose the one pretrained from BLINK in the previous step.
+The configuration file in `relik/retriever/conf` is `finetune_nyt_iterable_in_batch.yaml`, which we used to fine-tune the retriever for the NYT dataset. For cIE we repurpose the one pretrained from BLINK in the previous step.
 
 For instance, to train the retriever on the NYT dataset, you can run the following command:
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_nyt_iterable_in_batch.yaml \
   model.language_model=intfloat/e5-base-v2 \
-  train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-dpr.jsonl \
-  val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-dpr.jsonl \
-  test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-dpr.jsonl
+  data.train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-dpr.jsonl \
+  data.val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-dpr.jsonl \
+  data.test_dataset_path=data/nyt/processed/nyt-test-relik-windowed-dpr.jsonl
 ```
-
 
 ### Inference
 
 By passing `train.only_test=True` to the `relik retriever train` command, you can skip the training and only evaluate the model.
 It needs also the path to the PyTorch Lightning checkpoint and the dataset to evaluate on.
 
-```console
+```bash
 relik retriever train relik/retriever/conf/finetune_iterable_in_batch.yaml \
   train.only_test=True \
   test_dataset_path=data/aida/processed/aida-test-relik-windowed-dpr.jsonl
@@ -595,15 +614,15 @@ and then it can be used to retrieve documents:
 retriever.retrieve("Michael Jordan was one of the best players in the NBA.", top_k=100)
 ```
 
-## Reader
+## 🤓 Reader
 
 The reader is responsible for extracting entities and relations from documents from a set of candidates (e.g., possible entities or relations).
 The reader can be trained for span extraction or triplet extraction.
-The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Linking , while the `RelikReaderForTripletExtraction` is used for triplet extraction, i.e. Relation Extraction.
+The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Linking, while the `RelikReaderForTripletExtraction` is used for triplet extraction, i.e. Relation Extraction.
 
 ### Data Preparation
 
-The reader requires the windowized dataset we created in section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
+The reader requires the windowized dataset we created in Section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
 The candidate can be added to the dataset using the `relik retriever add-candidates` command.
 
 ```bash
@@ -637,15 +656,15 @@ relik retriever add-candidates --help
 
 We need to add candidates to each window that will be used by the Reader, using our previously trained Retriever. Here is an example using our already trained retriever on Aida for the train split:
 
-```console
+```bash
 relik retriever add-candidates sapienzanlp/relik-retriever-e5-base-v2-aida-blink-encoder sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-index data/aida/processed/aida-train-relik-windowed.jsonl data/aida/processed/aida-train-relik-windowed-candidates.jsonl
 ```
 
 #### Relation Extraction
 
-The same thing happens for Relation Extraction. If you want to use our already trained retriever:
+The same thing happens for Relation Extraction. If you want to use our trained retriever:
 
-```console
+```bash
 relik retriever add-candidates sapienzanlp/relik-retriever-small-nyt-question-encoder sapienzanlp/relik-retriever-small-nyt-document-index data/nyt/processed/nyt-train-relik-windowed.jsonl data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl
 ```
 
@@ -663,7 +682,7 @@ Examples of configuration files can be found in the `relik/reader/conf` folder.
 The configuration files in `relik/reader/conf` are `large.yaml` and `base.yaml`, which we used to train the large and base reader, respectively.
 For instance, to train the large reader on the AIDA dataset run:
 
-```console
+```bash
 relik reader train relik/reader/conf/large.yaml \
   train_dataset_path=data/aida/processed/aida-train-relik-windowed-candidates.jsonl \
   val_dataset_path=data/aida/processed/aida-dev-relik-windowed-candidates.jsonl \
@@ -672,10 +691,10 @@ relik reader train relik/reader/conf/large.yaml \
 
 #### Relation Extraction
 
-The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml` and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
+The configuration files in `relik/reader/conf` are `large_nyt.yaml`, `base_nyt.yaml`, and `small_nyt.yaml`, which we used to train the large, base and small reader, respectively.
 For instance, to train the large reader on the AIDA dataset run:
 
-```console
+```bash
 relik reader train relik/reader/conf/large_nyt.yaml \
   train_dataset_path=data/nyt/processed/nyt-train-relik-windowed-candidates.jsonl \
   val_dataset_path=data/nyt/processed/nyt-dev-relik-windowed-candidates.jsonl \
@@ -703,7 +722,7 @@ pl_model = RelikReaderPLModule.load_from_checkpoint(
 pl_model.relik_reader_core_model.save_pretrained(experiment_path, push_to_hub=push_to_hub, repo_id=repo_id)
 ```
 
-with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
+with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be uploaded.
 
 The reader can be loaded from a repo id or a local path:
 
@@ -728,62 +747,62 @@ candidates = ["Michael Jordan", "NBA", "Chicago Bulls", "Basketball", "United St
 reader_span.read("Michael Jordan was one of the best players in the NBA.", candidates=candidates)
 ```
 
-## Performance
+## 📊 Performance
 
 ### Entity Linking
 
 We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://gerbil-qa.aksw.org/gerbil/). The following table shows the results (InKB Micro F1) of ReLiK Large and Base:
 
-| Model | AIDA-B | MSNBC | Der | K50 | R128 | R500 | OKE15 | OKE16 | AVG | AVG-OOD | Speed (ms) |
-|-------|--------|-------|-----|-----|------|------|-------|-------|-----|---------|------------|
-| Base | 85.25 | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2 | n |
-| Large | 86.37 | 75.04 | 56.25 | 72.8 | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15 | n |
+| Model | AIDA-B | MSNBC | Der   | K50   | R128  | R500  | OKE15 | OKE16 | AVG   | AVG-OOD | Speed (ms) |
+| ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ------- | ---------- |
+| Base  | 85.25  | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2    | n          |
+| Large | 86.37  | 75.04 | 56.25 | 72.8  | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15   | n          |
 
 To evaluate ReLiK we use the following steps:
 
-1. Download the GERBIL server from [here](LINK).
+1. Download the GERBIL server from [here](https://drive.google.com/file/d/1PvSlXke2cp_Jn-UgxIA8M9xN1G0Hv6ap/view?usp=sharing).
 
 2. Start the GERBIL server:
 
-```console
+```bash
 cd gerbil && ./start.sh
 ```
 
 2. Start the following services:
 
-```console
+```bash
 cd gerbil-SpotWrapNifWS4Test && mvn clean -Dmaven.tomcat.port=1235 tomcat:run
 ```
 
 3. Start the ReLiK server for GERBIL providing the model name as an argument (e.g. `sapienzanlp/relik-entity-linking-large`):
 
-```console
+```bash
 python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-entity-linking-large
 ```
 
-4. Open the url [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:
+4. Open the URL [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:
    - Select A2KB as experiment type
    - Select "Ma - strong annotation match"
-   - In Name filed write the name you want to give to the experiment
-   - In URI field write: [http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm](http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm)
+   - In the Name field write the name you want to give to the experiment
+   - In the URI field write: [http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm](http://localhost:1235/gerbil-spotWrapNifWS4Test/myalgorithm)
    - Select the datasets (We use AIDA-B, MSNBC, Der, K50, R128, R500, OKE15, OKE16)
    - Finally, run experiment
 
 ### Relation Extraction
 
-To evalute Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our already trained Reader:
+To evaluate Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our trained Reader:
 
-```console
+```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/test.window.candidates.jsonl --is-eval
 ```
 
-Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run:
+Be aware that we compute the threshold for predicting relations based on the development set. To compute it while evaluating you can run the following:
 
-```console
+```bash
 python relik/reader/trainer/predict_re.py --model_path sapienzanlp/relik-reader-deberta-v3-large-nyt --data_path /Users/perelluis/Documents/relik/data/debug/dev.window.candidates.jsonl --is-eval --compute-threshold
 ```
 
-## Cite this work
+## 💽 Cite this work
 
 If you use any part of this work, please consider citing the paper as follows:
 
@@ -799,6 +818,6 @@ If you use any part of this work, please consider citing the paper as follows:
 }
 ```
 
-## License
+## 🪪 License
 
 The data is licensed under [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/).

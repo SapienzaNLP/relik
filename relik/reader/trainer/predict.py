@@ -6,6 +6,7 @@ from relik.reader.pytorch_modules.span import RelikReaderForSpanExtraction
 from relik.reader.utils.strong_matching_eval import StrongMatching
 from relik.reader.data.relik_reader_sample import load_relik_reader_samples
 
+
 def predict(
     model_path: str,
     dataset_path: str,
@@ -13,7 +14,9 @@ def predict(
     is_eval: bool,
     output_path: Optional[str],
 ) -> None:
-    relik_reader = RelikReaderForSpanExtraction(model_path, dataset_kwargs={"use_nme": True}, device="cuda")
+    relik_reader = RelikReaderForSpanExtraction(
+        model_path, dataset_kwargs={"use_nme": True}, device="cuda"
+    )
     samples = list(load_relik_reader_samples(dataset_path))
     predicted_samples = relik_reader.read(
         samples=samples, token_batch_size=token_batch_size, progress_bar=True

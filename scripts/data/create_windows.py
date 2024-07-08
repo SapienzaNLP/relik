@@ -153,7 +153,7 @@ def _process_batch(
     for window in windowized_data:
         try:
             # we need to add the labels
-            doc_level_labels= doc_id_to_doc[window._d["doc_id"]]["doc_span_annotations"]
+            doc_level_labels = doc_id_to_doc[window._d["doc_id"]]["doc_span_annotations"]
             # if we have a title mapping, we need to map the labels to the
             # new titles
             if title_mapping is not None:

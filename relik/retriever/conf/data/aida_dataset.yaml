@@ -3,7 +3,7 @@ val_dataset_path: null
 test_dataset_path: null
 
 shared_params:
-  passages_path: null
+  documents_path: null
   max_passage_length: 64
   passage_batch_size: 64
   question_batch_size: 64
@@ -15,7 +15,7 @@ datamodule:
     train:
       _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
       name: "train"
-      path: {data.train_dataset_path}
+      path: ${data.train_dataset_path}
       tokenizer: ${model.language_model}
       max_passage_length: ${data.shared_params.max_passage_length}
       question_batch_size: ${data.shared_params.question_batch_size}
@@ -23,26 +23,32 @@ datamodule:
       subsample_strategy: null
       subsample_portion: 0.1
       shuffle: True
+      metadata_fields: ['definition']
+      metadata_separator: ' <def> '
       use_topics: ${data.shared_params.use_topics}
 
     val:
       - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
         name: "val"
-        path: {data.val_dataset_path}
+        path: ${data.val_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
+        metadata_fields: ['definition']
+        metadata_separator: ' <def> '
         use_topics: ${data.shared_params.use_topics}
 
     test:
       - _target_: relik.retriever.data.datasets.AidaInBatchNegativesDataset
         name: "test"
-        path: {data.test_dataset_path}
+        path: ${data.test_dataset_path}
         tokenizer: ${model.language_model}
         max_passage_length: ${data.shared_params.max_passage_length}
         question_batch_size: ${data.shared_params.question_batch_size}
         passage_batch_size: ${data.shared_params.passage_batch_size}
+        metadata_fields: ['definition']
+        metadata_separator: ' <def> '
         use_topics: ${data.shared_params.use_topics}
 
   num_workers:

@@ -440,6 +440,9 @@ class BaseDocumentIndex:
         # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
         if cls.__name__ != "BaseDocumentIndex":
             kwargs["_target_"] = f"{cls.__module__}.{cls.__name__}"
+
+        kwargs["device"] = device
+        kwargs["precision"] = precision
         # override the config with the kwargs
         config = OmegaConf.merge(config, OmegaConf.create(kwargs))
         logger.info("Loading Index from config:")
@@ -491,7 +494,7 @@ class BaseDocumentIndex:
                         "FAISS index file does not exist, but a torch embeddings file was found. "
                         "We will create a new index from the embeddings."
                     )
-        
+
         if embeddings_exists:
             if index is None:
                 logger.info(f"Loading embeddings from {embedding_path}")
@@ -513,8 +516,6 @@ class BaseDocumentIndex:
             documents=documents,
             embeddings=embeddings,
             index=index,
-            device=device,
-            precision=precision,
             name_or_path=name_or_path,
             _convert_="partial",
             *args,
