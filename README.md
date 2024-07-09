@@ -820,4 +820,4 @@ If you use any part of this work, please consider citing the paper as follows:
 
 ## 🪪 License
 
-The data is licensed under [Creative Commons Attribution-ShareAlike 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+The data is licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
