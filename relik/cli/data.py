@@ -232,6 +232,8 @@ def create_windows(
                         )
                         if (
                             subject_start_char >= window.offset
+                            and subject_end_char <= window.offset + len(window.text)
+                            and object_start_char >= window.offset
                             and object_end_char <= window.offset + len(window.text)
                         ):
                             window_level_triplet_labels.append(doc_level_triplet_label)
@@ -269,9 +271,25 @@ def create_windows(
                             or object_start_token is None
                             or object_end_token is None
                         ):
-                            raise ValueError(
-                                f"Could not find token for triplet: {triplet} in window: {window}"
-                            )
+                            # raise ValueError(
+                            #     f"Could not find token for triplet: {triplet} in window: {window}"
+                            # )
+                            # find entity in window_labels using character offsets, use same index to find it in window_labels_tokens
+                            if subject_start_token is None or subject_end_token is None:
+                                subject_index = None
+                                for idx, label in enumerate(window._d["window_labels"]):
+                                    if label[0] == subject_start_char and label[1] == subject_end_char:
+                                        subject_index = idx
+                                        break
+                                subject_start_token, subject_end_token, _ = window._d["window_labels_tokens"][subject_index]
+                            if object_start_token is None or object_end_token is None:
+                                object_index = None
+                                for idx, label in enumerate(window._d["window_labels"]):
+                                    if label[0] == object_start_char and label[1] == object_end_char:
+                                        object_index = idx
+                                        break
+                                object_start_token, object_end_token, _ = window._d["window_labels_tokens"][object_index]
+                            
                         window_level_triplet_labels_but_for_tokens.append(
                             {
                                 "subject": [
@@ -308,6 +326,8 @@ def create_windows(
                         ]
                         if (
                             subject_start_token >= window_token_start
+                            and subject_end_token <= window_token_end
+                            and object_end_token >= window_token_start
                             and object_end_token <= window_token_end
                         ):
                             window_level_triplet_labels_but_for_tokens.append(
@@ -533,7 +553,7 @@ def convert_to_dpr(
         for line in tqdm(f, desc="Processing data"):
             sentence = json.loads(line)
             # for sentence in aida_data:
-            question = sentence["text"]
+            question = sentence["doc_text"]
             positive_pssgs = []
             if label_type == "triplet":
                 for idx, triplet in enumerate(sentence["window_triplet_labels"]):

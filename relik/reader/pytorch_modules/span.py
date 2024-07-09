@@ -205,6 +205,9 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                         batch_out = self._batch_predict(**batch)
 
                         for sample in batch_out:
+                            if sample.spans is not None and len(sample.spans) > 0 and sample.window_labels:
+                                # remove window labels
+                                sample.window_labels = None
                             if (
                                 sample._mixin_prediction_position
                                 >= next_prediction_position
