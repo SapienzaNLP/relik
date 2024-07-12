@@ -427,12 +427,12 @@ Once you have the BLINK dataset in the ReLiK format, you can create the windows 
 
 ```bash
 # train
-python scripts/data/create_windows.py \
+relik data create-windows \
   data/blink/processed/blink-train-kilt-relik.jsonl \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl
 
 # dev
-python scripts/data/create_windows.py \
+relik data create-windows \
   data/blink/processed/blink-dev-kilt-relik.jsonl \
   data/blink/processed/blink-dev-kilt-relik-windowed.jsonl
 ```
@@ -441,14 +441,18 @@ and then convert it to the DPR format:
 
 ```bash
 # train
-python scripts/data/blink/convert_to_dpr.py \
+relik data convert-to-dpr \
   data/blink/processed/blink-train-kilt-relik-windowed.jsonl \
-  data/blink/processed/blink-train-kilt-relik-windowed-dpr.jsonl
+  data/blink/processed/blink-train-kilt-relik-windowed-dpr.jsonl \
+  data/kb/wikipedia/documents.jsonl \
+  --title-map data/kb/wikipedia/title_map.json
 
 # dev
-python scripts/data/blink/convert_to_dpr.py \
+relik data convert-to-dpr \
   data/blink/processed/blink-dev-kilt-relik-windowed.jsonl \
-  data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl
+  data/blink/processed/blink-dev-kilt-relik-windowed-dpr.jsonl \
+  data/kb/wikipedia/documents.jsonl \
+  --title-map data/kb/wikipedia/title_map.json
 ```
 
 ##### AIDA
@@ -753,10 +757,10 @@ reader_span.read("Michael Jordan was one of the best players in the NBA.", candi
 
 We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://gerbil-qa.aksw.org/gerbil/). The following table shows the results (InKB Micro F1) of ReLiK Large and Base:
 
-| Model | AIDA-B | MSNBC | Der   | K50   | R128  | R500  | OKE15 | OKE16 | AVG   | AVG-OOD | Speed (ms) |
-| ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ------- | ---------- |
-| Base  | 85.25  | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2    | n          |
-| Large | 86.37  | 75.04 | 56.25 | 72.8  | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15   | n          |
+| Model | AIDA-B | MSNBC | Der   | K50   | R128  | R500  | OKE15 | OKE16 | AVG   | AVG-OOD |
+| ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ------- |
+| Base  | 85.25  | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2    |
+| Large | 86.37  | 75.04 | 56.25 | 72.8  | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15   |
 
 To evaluate ReLiK we use the following steps:
 
