@@ -18,9 +18,10 @@ class RelikReaderConfig(PretrainedConfig):
         use_last_k_layers: int = 1,
         entity_type_loss: bool = False,
         add_entity_embedding: bool = None,
-        binary_end_logits: bool = True,
+        binary_end_logits: bool = False,
         training: bool = False,
         default_reader_class: Optional[str] = None,
+        threshold: Optional[float] = 0.5,
         **kwargs
     ) -> None:
         # TODO: add name_or_path to kwargs
@@ -37,6 +38,7 @@ class RelikReaderConfig(PretrainedConfig):
             if add_entity_embedding is None and entity_type_loss
             else add_entity_embedding
         )
+        self.threshold = threshold
         self.binary_end_logits = binary_end_logits
         self.training = training
         self.default_reader_class = default_reader_class

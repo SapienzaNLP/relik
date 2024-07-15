@@ -41,21 +41,24 @@ class StrongMatching:
             0,
         )
 
+        strict_eval = False
+
         # collect data from samples
         for sample in predicted_samples:
             if sample.window_triplet_labels_tokens is None:
                 sample.window_triplet_labels_tokens = []
-
+            token_offset = sample.char2token_start[str(sample.offset)]
             if sample.span_candidates:
+                strict_eval = True
                 predicted_annotations_strict = set(
                     [
                         (
-                            triplet["subject"][0],
-                            triplet["subject"][1],
+                            triplet["subject"][0] - token_offset,
+                            triplet["subject"][1] - token_offset,
                             triplet["subject"][2],
                             triplet["relation"],
-                            triplet["object"][0],
-                            triplet["object"][1],
+                            triplet["object"][0] - token_offset,
+                            triplet["object"][1] - token_offset,
                             triplet["object"][2],
                         )
                         for triplet in sample.predicted_relations
@@ -76,7 +79,7 @@ class StrongMatching:
                     ]
                 )
                 predicted_spans_strict = set(
-                    (ss, se, st) for (ss, se, st) in sample.predicted_entities
+                    (ss-token_offset, se-token_offset, st) for (ss, se, st) in sample.predicted_entities
                 )
                 gold_spans_strict = set(
                     (ss, se, st) for (ss, se, st) in sample.window_labels_tokens
@@ -84,16 +87,16 @@ class StrongMatching:
                 predicted_spans_in_triplets = set(
                     [
                         (
-                            triplet["subject"][0],
-                            triplet["subject"][1],
+                            triplet["subject"][0] - token_offset,
+                            triplet["subject"][1] - token_offset,
                             triplet["subject"][2],
                         )
                         for triplet in sample.predicted_relations
                     ]
                     + [
                         (
-                            triplet["object"][0],
-                            triplet["object"][1],
+                            triplet["object"][0] - token_offset,
+                            triplet["object"][1] - token_offset,
                             triplet["object"][2],
                         )
                         for triplet in sample.predicted_relations
@@ -137,12 +140,12 @@ class StrongMatching:
             predicted_annotations = set(
                 [
                     (
-                        triplet["subject"][0],
-                        triplet["subject"][1],
+                        triplet["subject"][0] - token_offset,
+                        triplet["subject"][1] - token_offset,
                         -1,
                         triplet["relation"],
-                        triplet["object"][0],
-                        triplet["object"][1],
+                        triplet["object"][0] - token_offset,
+                        triplet["object"][1] - token_offset,
                         -1,
                     )
                     for triplet in sample.predicted_relations
@@ -163,7 +166,7 @@ class StrongMatching:
                 ]
             )
             predicted_spans = set(
-                [(ss, se) for (ss, se, _) in sample.predicted_entities]
+                [(ss-token_offset, se-token_offset) for (ss, se, _) in sample.predicted_entities]
             )
             gold_spans = set([(ss, se) for (ss, se, _) in sample.window_labels_tokens])
             total_gold_spans += len(gold_spans)
@@ -189,7 +192,7 @@ class StrongMatching:
             correct_predictions, total_predictions, total_gold
         )
 
-        if sample.span_candidates:
+        if strict_eval:
             precision_strict, recall_strict, f1_strict = compute_metrics(
                 correct_predictions_strict, total_predictions_strict, total_gold
             )
@@ -245,7 +248,7 @@ class StrongMatchingPerRelation:
         for sample in predicted_samples:
             if sample.window_triplet_labels_tokens is None:
                 sample.window_triplet_labels_tokens = []
-
+            token_offset = sample.char2token_start[str(sample.offset)]
             if sample.span_candidates:
                 gold_annotations_strict = set(
                     [
@@ -264,12 +267,12 @@ class StrongMatchingPerRelation:
                 # compute correct preds per triplet["relation"]
                 for triplet in sample.predicted_relations:
                     predicted_annotations_strict = (
-                        triplet["subject"][0],
-                        triplet["subject"][1],
+                        triplet["subject"][0] - token_offset,
+                        triplet["subject"][1] - token_offset,
                         triplet["subject"][2],
                         triplet["relation"],
-                        triplet["object"][0],
-                        triplet["object"][1],
+                        triplet["object"][0] - token_offset,
+                        triplet["object"][1] - token_offset,
                         triplet["object"][2],
                     )
                     if predicted_annotations_strict in gold_annotations_strict:
@@ -291,12 +294,12 @@ class StrongMatchingPerRelation:
             )
             for triplet in sample.predicted_relations:
                 predicted_annotations = (
-                    triplet["subject"][0],
-                    triplet["subject"][1],
+                    triplet["subject"][0] - token_offset,
+                    triplet["subject"][1] - token_offset,
                     -1,
                     triplet["relation"],
-                    triplet["object"][0],
-                    triplet["object"][1],
+                    triplet["object"][0] - token_offset,
+                    triplet["object"][1] - token_offset,
                     -1,
                 )
                 if predicted_annotations in gold_annotations:

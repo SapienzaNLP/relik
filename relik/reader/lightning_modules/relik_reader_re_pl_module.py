@@ -47,6 +47,8 @@ class RelikReaderREPLModule(lightning.LightningModule):
         self.log("train-start_loss", relik_output["ned_start_loss"])
         self.log("train-end_loss", relik_output["ned_end_loss"])
         self.log("train-relation_loss", relik_output["re_loss"])
+        if "ned_type_loss" in relik_output:
+            self.log("train-ned_type_loss", relik_output["ned_type_loss"])
         return relik_output["loss"]
 
     def validation_step(

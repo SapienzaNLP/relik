@@ -181,6 +181,7 @@ def add_candidates(
     index_device: str = "cpu",
     precision: str = "fp32",
     use_doc_topics: bool = False,
+    log_recall: bool = False,
 ):
     """
     Adds candidates to the input samples based on retrieval from a document index.
@@ -212,6 +213,8 @@ def add_candidates(
             The precision to use for retrieval. Defaults to "fp32".
         use_doc_topics (bool):
             Whether to use document topics for retrieval. Defaults to False.
+        log_recall (bool):
+            Whether to log the recall of the retrieval. Defaults to False.
 
     Raises:
         ValueError: If the dataset does not contain topics but `use_doc_topics` is set to True.
@@ -242,6 +245,8 @@ def add_candidates(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    correct, total = 0, 0
+    
     with open(output_path, "w") as f_out:
         # get tokenizer
         tokenizer = retriever.question_tokenizer
@@ -286,7 +291,7 @@ def add_candidates(
                 batch_out = retriever.retrieve(**retrieve_kwargs)
                 retrieved_accumulator.extend(batch_out)
 
-                if len(retrieved_accumulator) % 10_000 == 0:
+                if len(retrieved_accumulator) % 1_000 == 0:
                     output_data = []
                     # get the correct document from the original dataset
                     # the dataloader is not shuffled, so we can just count the number of
@@ -308,12 +313,30 @@ def add_candidates(
                             sample["triplet_candidates_scores"] = [
                                 c.score for c in retrieved
                             ]
+                            if log_recall:
+                                for triplet in sample["window_triplet_labels"]:
+                                    relation = triplet["relation"]
+                                    if relation.lower() in candidate_titles:
+                                        correct += 1
+                                    else:
+                                        logger.debug(f"Did not find `{relation.lower()}` in candidates")
+                                    total += 1
                         else:
                             sample["span_candidates"] = candidate_titles
                             # sample["window_candidates"] = candidate_titles
                             sample["span_candidates_scores"] = [
                                 c.score for c in retrieved
                             ]
+                            if log_recall:
+                                candidate_titles_lower = [candidate.lower() for candidate in candidate_titles]
+                                for ss, se, label in sample["window_labels"]:
+                                    if label == "--NME--":
+                                        continue
+                                    if label.replace("_", " ").lower() in candidate_titles_lower:
+                                        correct += 1
+                                    else:
+                                        logger.debug(f"Did not find `{label.replace('_', ' ').lower()}` in candidates")
+                                    total += 1
                         output_data.append(sample)
 
                     for sample in output_data:
@@ -344,10 +367,27 @@ def add_candidates(
                         sample["triplet_candidates_scores"] = [
                             c.score for c in retrieved
                         ]
+                        if log_recall:
+                            for triplet in sample["window_triplet_labels"]:
+                                relation = triplet["relation"]
+                                if relation.lower() in candidate_titles:
+                                    correct += 1
+                                else:
+                                    logger.debug(f"Did not find `{relation.lower()}` in candidates")
+                                total += 1
                     else:
                         sample["span_candidates"] = candidate_titles
                         # sample["window_candidates"] = candidate_titles
                         sample["span_candidates_scores"] = [c.score for c in retrieved]
+                        if log_recall:
+                            for ss, se, label in sample["window_labels"]:
+                                if label == "--NME--":
+                                    continue
+                                if label.replace("_", " ").lower() in candidate_titles:
+                                    correct += 1
+                                else:
+                                    logger.debug(f"Did not find `{label.replace('_', ' ').lower()}` in candidates")
+                                total += 1
                     output_data.append(sample)
 
                 for sample in output_data:
@@ -358,3 +398,6 @@ def add_candidates(
 
             end = time.time()
             logger.info(f"Retrieval took {end - start} seconds")
+            if log_recall:
+                recall = correct / total
+                logger.info(f"Recall@{top_k}: {recall}")

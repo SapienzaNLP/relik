@@ -50,7 +50,7 @@ class TokenizationOutput(NamedTuple):
 class RelikREDataset(IterableDataset):
     def __init__(
         self,
-        dataset_path: str,
+        dataset_path: Optional[str],
         materialize_samples: bool,
         transformer_model: Union[str, PreTrainedTokenizer],
         special_symbols_re: List[str],
@@ -336,10 +336,10 @@ class RelikREDataset(IterableDataset):
         num_relations = len(sample.triplet_candidates)
         relation_labels = torch.zeros((num_entities, num_entities, num_relations))
 
-        if sample.window_triplet_labels is None:
+        if sample.window_triplet_labels_tokens is None:
             return relation_labels
 
-        for relation in sample.window_triplet_labels:
+        for relation in sample.window_triplet_labels_tokens:
             # Determine the index of this relation type in the triplet_candidates list.
             # If the relation type is not found, use a default index (e.g., for 'unknown' relation types).
             relation_idx = (
@@ -497,19 +497,19 @@ class RelikREDataset(IterableDataset):
             if not self.for_inference:
                 # check whether the sample has labels if not skip
                 if (
-                    sample.window_triplet_labels is None
-                    or len(sample.window_triplet_labels) == 0
+                    sample.window_triplet_labels_tokens is None
+                    or len(sample.window_triplet_labels_tokens) == 0
                 ) and self.skip_empty_training_samples:
-                    logger.warning(
-                        "Sample {} has no labels, skipping".format(sample.id)
-                    )
+                    # logger.warning(
+                    #     "Sample {} has no labels, skipping".format(sample.doc_id)
+                    # )
                     continue
 
                 # add gold candidates if missing
                 if self.add_gold_candidates:
                     candidates_set = set(sample.triplet_candidates)
                     candidates_to_add = set()
-                    for candidate_title in sample.window_triplet_labels:
+                    for candidate_title in sample.window_triplet_labels_tokens:
                         if candidate_title["relation"] not in candidates_set:
                             candidates_to_add.add(candidate_title["relation"])
                     if len(candidates_to_add) > 0:
@@ -518,7 +518,7 @@ class RelikREDataset(IterableDataset):
                         candidates_to_add = list(candidates_to_add)
                         added_gold_candidates = 0
                         gold_candidates_titles_set = set(
-                            set(ct["relation"] for ct in sample.window_triplet_labels)
+                            set(ct["relation"] for ct in sample.window_triplet_labels_tokens)
                         )
                         for i in reversed(range(len(sample.triplet_candidates))):
                             if (
@@ -722,7 +722,7 @@ class RelikREDataset(IterableDataset):
                         sample.triplet_candidates = sample.triplet_candidates[:i]
                 else:
                     gold_candidates_set = set(
-                        [wl["relation"] for wl in sample.window_triplet_labels]
+                        [wl["relation"] for wl in sample.window_triplet_labels_tokens]
                     )
                     gold_candidates_indices = [
                         i
@@ -894,7 +894,7 @@ class RelikREDataset(IterableDataset):
     def materialize_batches(
         self, dataset_elements: List[Dict[str, Any]]
     ) -> Generator[Dict[str, Any], None, None]:
-        if self.prebatch:
+        if self.prebatch and self.section_size is not None:
             dataset_elements = self.preshuffle_elements(dataset_elements)
 
         current_batch = []

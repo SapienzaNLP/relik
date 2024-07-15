@@ -1,0 +1,36 @@
+train_dataset_path: 
+val_dataset_path: 
+test_dataset_path: 
+
+train_dataset:
+  _target_: "relik.reader.data.relik_reader_re_data.RelikREDataset"
+  transformer_model: "${model.model.transformer_model}"
+  materialize_samples: False
+  shuffle_candidates: False
+  flip_candidates: 1.0
+  noise_param: 0.0
+  for_inference: False
+  tokens_per_batch: 4096
+  max_length: 1024
+  max_triplets: 25
+  max_spans: 75
+  min_length: -1
+  special_symbols: null
+  special_symbols_re: null
+  section_size: null
+  use_nme: True
+  sorting_fields: 
+    - "predictable_candidates"
+val_dataset:
+  _target_: "relik.reader.data.relik_reader_re_data.RelikREDataset"
+  transformer_model: "${model.model.transformer_model}"
+  materialize_samples: False
+  shuffle_candidates: False
+  flip_candidates: False
+  for_inference: True
+  use_nme: True
+  max_triplets: 25
+  max_spans: 75
+  min_length: -1
+  special_symbols: null
+  special_symbols_re: null

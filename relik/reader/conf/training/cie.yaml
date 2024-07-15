@@ -1,0 +1,13 @@
+seed: 15
+
+trainer:
+  _target_: lightning.Trainer
+  devices:
+    - 0
+  precision: "16-mixed"
+  max_steps: 100000
+  val_check_interval: 1.0
+  num_sanity_val_steps: 0
+  limit_val_batches: 1
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 2

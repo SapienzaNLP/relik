@@ -1,0 +1,14 @@
+# Required to make the "experiments" dir the default one for the output of the models
+hydra:
+  run:
+    dir: ./experiments/${model_name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
+
+model_name: relik-reader-deberta-large # no-proj-special-token  # -start-end-mask-0.001  # used to name the model in wandb and output dir
+project_name: relik-reader-cie # used to name the project in wandb
+offline: false  # if true, wandb will not be used
+
+defaults:
+  - _self_
+  - training: cie
+  - model: cie
+  - data: cie

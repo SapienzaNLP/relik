@@ -482,14 +482,14 @@ class RelikReaderREModel(PreTrainedModel):
         )
 
         if self.config.entity_type_loss and self.config.add_entity_embedding:
-            input_hidden_ents = 3 * self.config.linears_hidden_size
+            input_hidden_ents = 3
         else:
-            input_hidden_ents = 2 * self.config.linears_hidden_size
+            input_hidden_ents = 2
 
         self.re_projector = self._get_projection_layer(
             config.activation,
-            input_hidden=2 * self.transformer_model.config.hidden_size,
-            hidden=input_hidden_ents,
+            input_hidden=input_hidden_ents * self.transformer_model.config.hidden_size,
+            hidden=input_hidden_ents * self.config.linears_hidden_size,
             last_hidden=2 * self.config.linears_hidden_size,
         )
 
