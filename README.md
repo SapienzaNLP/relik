@@ -148,6 +148,40 @@ relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
+
+    RelikOutput(
+      text='Michael Jordan was one of the best players in the NBA.', 
+      tokens=Michael Jordan was one of the best players in the NBA., 
+      id=0, 
+      spans=[
+        Span(start=0, end=14, label='--NME--', text='Michael Jordan'), 
+        Span(start=50, end=53, label='--NME--', text='NBA')
+      ], 
+      triplets=[
+        Triplets(
+          subject=Span(start=0, end=14, label='--NME--', text='Michael Jordan'), 
+          label='company', 
+          object=Span(start=50, end=53, label='--NME--', text='NBA'), 
+          confidence=1.0
+          )
+      ], 
+      candidates=Candidates(
+        span=[], 
+        triplet=[
+                  [
+                    [
+                      {"text": "company", "id": 4, "metadata": {"definition": "company of this person"}}, 
+                      {"text": "nationality", "id": 10, "metadata": {"definition": "nationality of this person or entity"}}, 
+                      {"text": "child", "id": 17, "metadata": {"definition": "child of this person"}}, 
+                      {"text": "founded by", "id": 0, "metadata": {"definition": "founder or co-founder of this organization, religion or place"}}, 
+                      {"text": "residence", "id": 18, "metadata": {"definition": "place where this person has lived"}},
+                      ...
+                  ]
+              ]
+          ]
+      ),
+    )
+
 ### Models
 
 Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
@@ -481,7 +515,7 @@ relik data convert-to-dpr \
 ##### NYT
 
 ```bash
-python scripts/data/create_windows.py \
+relik data create-windows \
   data/data/processed/nyt/train.jsonl \
   data/data/processed/nyt/train-windowed.jsonl \
   --is-split-into-words \
@@ -491,7 +525,7 @@ python scripts/data/create_windows.py \
 and then convert it to the DPR format:
 
 ```bash
-python scripts/data/convert_to_dpr.py \
+relik data convert-to-dpr \
   data/data/processed/nyt/train-windowed.jsonl \
   data/data/processed/nyt/train-windowed-dpr.jsonl
 ```
