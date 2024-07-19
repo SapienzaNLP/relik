@@ -144,7 +144,7 @@ and for Relation Extraction:
 from relik import Relik
 from relik.inference.data.objects import RelikOutput
 
-relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
+relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-nyt-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
@@ -188,7 +188,7 @@ Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sa
 
 - **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
 - **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
-- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-large)
+- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
 
 ### Usage
 
