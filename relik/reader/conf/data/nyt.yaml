@@ -10,13 +10,13 @@ train_dataset:
   flip_candidates: 1.0
   noise_param: 0.0
   for_inference: False
-  tokens_per_batch: 4096
+  tokens_per_batch: 2048
   max_length: 1024
   max_triplets: 24
   max_spans:
   min_length: -1
   special_symbols: null
-  special_symbols_types: null
+  special_symbols_re: null
   section_size: null
   use_nme: False
   sorting_fields: 
@@ -33,4 +33,4 @@ val_dataset:
   max_spans:
   min_length: -1
   special_symbols: null
-  special_symbols_types: null
+  special_symbols_re: null
