@@ -189,6 +189,7 @@ Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sa
 - **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
 - **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
 - **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
+- **ReLiK Large for Closed Information Extraction**: [`sapienzanlp/relik_reader_cie_large_rebel`](https://huggingface.co/sapienzanlp/relik_reader_cie_large_rebel)
 
 ### Usage
 
