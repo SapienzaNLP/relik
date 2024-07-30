@@ -1,0 +1,14 @@
+model:
+  transformer_model: "microsoft/deberta-v3-small"
+
+optimizer:
+  lr: 0.00002
+  warmup_steps: 75000
+  total_steps: ${training.trainer.max_steps}
+  weight_decay: 0.01
+  no_decay_params:
+    - "bias"
+    - LayerNorm.weight
+
+relations_per_forward: 24
+entities_per_forward: 

@@ -51,7 +51,7 @@ pip install relik[train]
 
 Install with optional dependencies for [FAISS](https://github.com/facebookresearch/faiss)
 
-FAISS pypi package is only available for CPU. If you want to use GPU, you need to install it from source or use the conda package.
+FAISS PyPI package is only available for CPU. For GPU, install it from source or use the conda package.
 
 For CPU:
 
@@ -99,7 +99,7 @@ pip install -e .[all]
 
 ReLiK is a lightweight and fast model for **Entity Linking** and **Relation Extraction**.
 It is composed of two main components: a retriever and a reader.
-The retriever is responsible for retrieving relevant documents from a large collection of documents,
+The retriever is responsible for retrieving relevant documents from a large collection,
 while the reader is responsible for extracting entities and relations from the retrieved documents.
 ReLiK can be used with the `from_pretrained` method to load a pre-trained pipeline.
 
@@ -144,9 +144,43 @@ and for Relation Extraction:
 from relik import Relik
 from relik.inference.data.objects import RelikOutput
 
-relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-large")
+relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-nyt-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
+
+
+    RelikOutput(
+      text='Michael Jordan was one of the best players in the NBA.', 
+      tokens=Michael Jordan was one of the best players in the NBA., 
+      id=0, 
+      spans=[
+        Span(start=0, end=14, label='--NME--', text='Michael Jordan'), 
+        Span(start=50, end=53, label='--NME--', text='NBA')
+      ], 
+      triplets=[
+        Triplets(
+          subject=Span(start=0, end=14, label='--NME--', text='Michael Jordan'), 
+          label='company', 
+          object=Span(start=50, end=53, label='--NME--', text='NBA'), 
+          confidence=1.0
+          )
+      ], 
+      candidates=Candidates(
+        span=[], 
+        triplet=[
+                  [
+                    [
+                      {"text": "company", "id": 4, "metadata": {"definition": "company of this person"}}, 
+                      {"text": "nationality", "id": 10, "metadata": {"definition": "nationality of this person or entity"}}, 
+                      {"text": "child", "id": 17, "metadata": {"definition": "child of this person"}}, 
+                      {"text": "founded by", "id": 0, "metadata": {"definition": "founder or co-founder of this organization, religion or place"}}, 
+                      {"text": "residence", "id": 18, "metadata": {"definition": "place where this person has lived"}},
+                      ...
+                  ]
+              ]
+          ]
+      ),
+    )
 
 ### Models
 
@@ -154,7 +188,7 @@ Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sa
 
 - **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
 - **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
-- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-large)
+- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
 
 ### Usage
 
@@ -291,7 +325,7 @@ In the following sections, we provide a step-by-step guide on how to prepare the
 
 ### Entity Linking
 
-All your data should have the following starting structure:
+All your data should have the following structure:
 
 ```jsonl
 {
@@ -332,7 +366,7 @@ The Wikipedia index we used can be downloaded from [here](https://huggingface.co
 
 ### Relation Extraction
 
-All your data should have the following starting structure:
+All your data should have the following structure:
 
 ```jsonl
 {
@@ -360,13 +394,13 @@ All your data should have the following starting structure:
 }
 ```
 
-For Relation Extraction, we provide an example on how to preprocess the NYT datase from [raw_nyt](https://drive.google.com/file/d/1kAVwR051gjfKn3p6oKc7CzNT9g2Cjy6N/view) taken from the [CopyRE](https://github.com/xiangrongzeng/copy_re?tab=readme-ov-file). Download the dataset to data/raw_nyt and then run:
+For Relation Extraction, we provide an example of how to preprocess the NYT dataset from [raw_nyt](https://drive.google.com/file/d/1kAVwR051gjfKn3p6oKc7CzNT9g2Cjy6N/view) taken from [CopyRE](https://github.com/xiangrongzeng/copy_re?tab=readme-ov-file). Download the dataset to data/raw_nyt and then run:
 
 ```bash
 python scripts/data/nyt/preprocess_nyt.py data/raw_nyt data/nyt/processed/
 ```
 
-Please be aware that for fair comparison we reproduce the preprocessing from previous work, which leads to duplicate triplets due to the wrong handling of repeated surface forms for entity spans. If you want to correctly parse the original data to relik format you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
+Please be aware that for fair comparison we reproduced the preprocessing from previous work, which leads to duplicate triplets due to the incorrect handling of repeated surface forms for entity spans. If you want to correctly parse the original data to ReLiK format, you can set the flag --legacy-format False. Just be aware that the provided RE NYT models were trained on the legacy format.
 
 ## 🦮 Retriever
 
@@ -481,7 +515,7 @@ relik data convert-to-dpr \
 ##### NYT
 
 ```bash
-python scripts/data/create_windows.py \
+relik data create-windows \
   data/data/processed/nyt/train.jsonl \
   data/data/processed/nyt/train-windowed.jsonl \
   --is-split-into-words \
@@ -491,7 +525,7 @@ python scripts/data/create_windows.py \
 and then convert it to the DPR format:
 
 ```bash
-python scripts/data/convert_to_dpr.py \
+relik data convert-to-dpr \
   data/data/processed/nyt/train-windowed.jsonl \
   data/data/processed/nyt/train-windowed-dpr.jsonl
 ```
@@ -564,7 +598,7 @@ pl_module = GoldenRetrieverPLModule.load_from_checkpoint(checkpoint_path)
 pl_module.model.save_pretrained(retriever_folder, push_to_hub=push_to_hub, repo_id=repo_id)
 ```
 
-with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be pushed.
+With `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` as the repository id where the model will be pushed.
 
 The retriever needs an index to search for the documents. The index can be created using `relik retriever build-index` command
 
@@ -626,8 +660,8 @@ The `RelikReaderForSpanExtraction` is used for span extraction, i.e. Entity Link
 
 ### Data Preparation
 
-The reader requires the windowized dataset we created in Section [Before You Start](#before-you-start) augmented with the candidate from the retriever.
-The candidate can be added to the dataset using the `relik retriever add-candidates` command.
+The reader requires the windowized dataset we created in Section [Before You Start](#before-you-start) augmented with the candidates from the retriever.
+The candidates can be added to the dataset using the `relik retriever add-candidates` command.
 
 ```bash
 relik retriever add-candidates --help
@@ -726,7 +760,7 @@ pl_model = RelikReaderPLModule.load_from_checkpoint(
 pl_model.relik_reader_core_model.save_pretrained(experiment_path, push_to_hub=push_to_hub, repo_id=repo_id)
 ```
 
-with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` the repository id where the model will be uploaded.
+with `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` as the repository id where the model will be uploaded.
 
 The reader can be loaded from a repo id or a local path:
 
