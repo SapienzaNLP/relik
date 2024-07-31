@@ -412,13 +412,14 @@ class RelikReaderSpanModel(PreTrainedModel):
 
             # end
             # use ents_count to assign the labels to the correct positions i.e. using end_labels -> [[0,0,4,0], [0,0,0,2]] -> [4,2] (this is just an element, for batch we need to mask it with ents_count), ie -> [[4,2,-100,-100], [3,1,2,-100], [1,3,2,5]]
-            ed_labels = end_labels.clone()
-            ed_labels = torch.nn.utils.rnn.pad_sequence(
-                torch.split(ed_labels[ed_labels > 0], ents_count.tolist()),
-                batch_first=True,
-                padding_value=-100,
-            )
+
             if ned_end_logits is not None:
+                ed_labels = end_labels.clone()
+                ed_labels = torch.nn.utils.rnn.pad_sequence(
+                    torch.split(ed_labels[ed_labels > 0], ents_count.tolist()),
+                    batch_first=True,
+                    padding_value=-100,
+                )
                 end_labels[end_labels > 0] = 1
                 if not self.config.binary_end_logits:
                     # transform label to position in the sequence
@@ -429,14 +430,16 @@ class RelikReaderSpanModel(PreTrainedModel):
                     )
                 else:
                     ned_end_loss = self.criterion(ned_end_logits.reshape(-1, ned_end_logits.shape[-1]), end_labels.reshape(-1).long())
+                
+                # entity disambiguation loss
+                ed_loss = self.criterion(
+                    ed_logits.view(-1, ed_logits.shape[-1]),
+                    ed_labels.view(-1).long(),
+                )
+
             else:
                 ned_end_loss = 0
-
-            # entity disambiguation loss
-            ed_loss = self.criterion(
-                ed_logits.view(-1, ed_logits.shape[-1]),
-                ed_labels.view(-1).long(),
-            )
+                ed_loss = 0
 
             output_dict["ned_start_loss"] = ned_start_loss
             output_dict["ned_end_loss"] = ned_end_loss
