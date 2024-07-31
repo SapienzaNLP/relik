@@ -16,7 +16,7 @@ train_dataset:
   max_spans:
   min_length: -1
   special_symbols: null
-  special_symbols_types: null
+  special_symbols_re: null
   section_size: null
   use_nme: False
   sorting_fields: 
@@ -33,4 +33,4 @@ val_dataset:
   max_spans:
   min_length: -1
   special_symbols: null
-  special_symbols_types: null
+  special_symbols_re: null

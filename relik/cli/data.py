@@ -95,6 +95,7 @@ def create_windows(
             doc_level_labels = doc_id_to_doc[window._d["doc_id"]][
                 "doc_span_annotations"
             ]
+            doc_text = doc_id_to_doc[window._d["doc_id"]][text_field]
             # if we have a title mapping, we need to map the labels to the
             # new titles
             if title_mapping is not None:
@@ -119,10 +120,17 @@ def create_windows(
             if not labels_are_tokens:
                 for doc_level_label in doc_level_labels:
                     start_char, end_char, label_text = doc_level_label
+                    while len(doc_text) > end_char-1 and end_char-1 >= 0 and doc_text[end_char-1] == " ":
+                        end_char -= 1
+                    while len(doc_text) > start_char and start_char >= 0 and doc_text[start_char] == " ":
+                        start_char += 1
                     if start_char >= window.offset and end_char <= window.offset + len(
                         window.text
                     ):
-                        window_level_labels.append(doc_level_label)
+                        if start_char > end_char or start_char < window.offset or end_char > window.offset + len(window.text):
+                            print(f"Error in window {window._d['window_id']}, start: {start_char}, end: {end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}")
+                            continue
+                        window_level_labels.append([start_char, end_char, label_text])
                 window._d["window_labels"] = window_level_labels
                 # now we need to map the labels to the tokens
                 for label in window_level_labels:
@@ -157,12 +165,15 @@ def create_windows(
                                 window._d["token2char_end"].values(),
                             )
                         ):
-                            if start_char >= start and start_char < end:
+                            if start_char >= start and start_char <= end:
                                 start_token = token_id
-                            if end_char > start and end_char <= end:
+                            if end_char >= start and end_char <= end:
                                 end_token = token_id + 1
                             if start_token is not None and end_token is not None:
                                 break
+                    if start_token is None or end_token is None:
+                        print(f"Error in window {window._d['window_id']}, start: {start_char}, end: {end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}")
+                        continue
                     window_level_labels_but_for_tokens.append(
                         [start_token, end_token, label_text]
                     )
@@ -226,17 +237,39 @@ def create_windows(
                         subject_start_char, subject_end_char, subject_label_text = (
                             doc_level_triplet_label["subject"]
                         )
+                        while doc_text[subject_end_char-1] == " ": # remove trailing spaces
+                            subject_end_char -= 1
+                        while doc_text[subject_start_char] == " ":
+                            subject_start_char += 1
                         relation_label_text = doc_level_triplet_label["relation"]
                         object_start_char, object_end_char, object_label_text = (
                             doc_level_triplet_label["object"]
                         )
+                        while doc_text[object_end_char-1] == " ": # remove trailing spaces
+                            object_end_char -= 1
+                        while doc_text[object_start_char] == " ":
+                            object_start_char += 1
                         if (
                             subject_start_char >= window.offset
                             and subject_end_char <= window.offset + len(window.text)
                             and object_start_char >= window.offset
                             and object_end_char <= window.offset + len(window.text)
                         ):
-                            window_level_triplet_labels.append(doc_level_triplet_label)
+                            window_level_triplet_labels.append(
+                                {
+                                    "subject": [
+                                        subject_start_char,
+                                        subject_end_char,
+                                        subject_label_text,
+                                    ],
+                                    "relation": relation_label_text,
+                                    "object": [
+                                        object_start_char,
+                                        object_end_char,
+                                        object_label_text,
+                                    ],
+                                }
+                            )
                     window._d["window_triplet_labels"] = window_level_triplet_labels
                     # now we need to map the labels to the tokens
                     for triplet in window_level_triplet_labels:
@@ -281,6 +314,9 @@ def create_windows(
                                     if label[0] == subject_start_char and label[1] == subject_end_char:
                                         subject_index = idx
                                         break
+                                if subject_index is None:
+                                    print(f"Error in window {window._d['window_id']}, start: {subject_start_char}, end: {subject_end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}")
+                                    continue
                                 subject_start_token, subject_end_token, _ = window._d["window_labels_tokens"][subject_index]
                             if object_start_token is None or object_end_token is None:
                                 object_index = None
@@ -288,6 +324,9 @@ def create_windows(
                                     if label[0] == object_start_char and label[1] == object_end_char:
                                         object_index = idx
                                         break
+                                if object_index is None:
+                                    print(f"Error in window {window._d['window_id']}, start: {object_start_char}, end: {object_end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}")
+                                    continue
                                 object_start_token, object_end_token, _ = window._d["window_labels_tokens"][object_index]
                             
                         window_level_triplet_labels_but_for_tokens.append(
@@ -553,7 +592,7 @@ def convert_to_dpr(
         for line in tqdm(f, desc="Processing data"):
             sentence = json.loads(line)
             # for sentence in aida_data:
-            question = sentence["doc_text"]
+            question = sentence["doc_text"] if "doc_text" in sentence else sentence["text"]
             positive_pssgs = []
             if label_type == "triplet":
                 for idx, triplet in enumerate(sentence["window_triplet_labels"]):

@@ -1,6 +1,6 @@
-![](https://drive.google.com/uc?export=view&id=1uBKUIGaCO7RiIFOhgpc390rgN39jS7sF)
 <div align="center">
-  <img src="https://drive.google.com/uc?export=view&id=1jMitie7Gb9t_a7NEfS8ZctfzUijMf2kx" height="80">
+  <img src="https://github.com/SapienzaNLP/relik/blob/main/relik.png?raw=true" height="250">
+  <img src="https://github.com/SapienzaNLP/relik/blob/main/Sapienza_Babelscape.png?raw=true" height="100">
 </div>
 
 <div align="center">
@@ -22,7 +22,7 @@
 
 </div>
 
-A blazing fast and lightweight Information Extraction model for Entity Linking and Relation Extraction.
+A blazing fast and lightweight Information Extraction model for **Entity Linking** and **Relation Extraction**.
 
 ## 🛠️ Installation
 
@@ -189,6 +189,7 @@ Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sa
 - **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
 - **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
 - **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
+- **ReLiK Large for Closed Information Extraction**: [`sapienzanlp/relik_reader_cie_large_rebel`](https://huggingface.co/sapienzanlp/relik_reader_cie_large_rebel)
 
 ### Usage
 
@@ -858,4 +859,4 @@ If you use any part of this work, please consider citing the paper as follows:
 
 ## 🪪 License
 
-The data is licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+The data and software are licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
