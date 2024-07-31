@@ -22,7 +22,7 @@
 
 </div>
 
-A blazing fast and lightweight Information Extraction model for Entity Linking and Relation Extraction.
+A blazing fast and lightweight Information Extraction model for **Entity Linking** and **Relation Extraction**.
 
 ## 🛠️ Installation
 
