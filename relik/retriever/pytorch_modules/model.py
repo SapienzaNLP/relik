@@ -15,7 +15,7 @@ from tqdm import tqdm
 from relik.common.log import get_logger
 from relik.common.torch_utils import (
     get_autocast_context,
-)  # , # load_ort_optimized_hf_model
+)
 from relik.common.utils import get_callable_from_string, is_package_available, to_config
 from relik.retriever.common.model_inputs import ModelInputs
 from relik.retriever.data.base.datasets import BaseDataset
@@ -26,10 +26,6 @@ from relik.retriever.indexers.faissindex import FaissDocumentIndex
 from relik.retriever.indexers.inmemory import InMemoryDocumentIndex
 from relik.retriever.pytorch_modules import PRECISION_MAP, RetrievedSample
 from relik.retriever.pytorch_modules.hf import GoldenRetrieverModel
-
-# check if ORT is available
-if is_package_available("onnxruntime"):
-    from optimum.onnxruntime import ORTModel
 
 logger = get_logger(__name__, level=logging.INFO)
 

@@ -20,6 +20,7 @@ class RelikReaderREPLModule(lightning.LightningModule):
         linears_hidden_size: Optional[int] = 512,
         use_last_k_layers: int = 1,
         training: bool = False,
+        default_reader_class: str = "relik.reader.pytorch_modules.hf.modeling_relik.RelikReaderREModel",
         *args: Any,
         **kwargs: Any
     ):
@@ -37,6 +38,7 @@ class RelikReaderREPLModule(lightning.LightningModule):
             linears_hidden_size,
             use_last_k_layers,
             training=training,
+            default_reader_class=default_reader_class,
             **kwargs,
         )
         self.optimizer_factory = None

@@ -59,3 +59,18 @@ def resolve_config(type: str | None = None) -> OmegaConf:
     #     cfg = compose(config_name=config_name, overrides=overrides)
 
     return config_dir, config_name, overrides
+
+
+def int_or_str_typer(value: str) -> int | None:
+    """
+    Converts a string value to an integer or None.
+
+    Args:
+        value (str): The string value to be converted.
+
+    Returns:
+        int | None: The converted integer value or None if the input is "None".
+    """
+    if value == "None":
+        return None
+    return int(value)

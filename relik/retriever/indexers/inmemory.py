@@ -18,9 +18,6 @@ from relik.retriever.indexers.document import Document, DocumentStore
 from relik.retriever.pytorch_modules import PRECISION_MAP, RetrievedSample
 
 
-# check if ORT is available
-# if is_package_available("onnxruntime"):
-
 logger = get_logger(__name__, level=logging.INFO)
 
 
