@@ -792,10 +792,18 @@ reader_span.read("Michael Jordan was one of the best players in the NBA.", candi
 
 We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://gerbil-qa.aksw.org/gerbil/). The following table shows the results (InKB Micro F1) of ReLiK Large and Base:
 
-| Model | AIDA-B | MSNBC | Der   | K50   | R128  | R500  | OKE15 | OKE16 | AVG   | AVG-OOD |
-| ----- | ------ | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ------- |
-| Base  | 85.25  | 72.27 | 55.59 | 68.02 | 48.13 | 41.61 | 62.53 | 52.25 | 60.71 | 57.2    |
-| Large | 86.37  | 75.04 | 56.25 | 72.8  | 51.67 | 42.95 | 65.12 | 57.21 | 63.43 | 60.15   |
+| Model                                    | AIDA | MSNBC | Der  | K50  | R128 | R500 | O15  | O16  | Tot  | OOD  | AIT (m:s) |
+|------------------------------------------|------|-------|------|------|------|------|------|------|------|------|------------|
+| GENRE                                    | 83.7 | 73.7  | 54.1 | 60.7 | 46.7 | 40.3 | 56.1 | 50.0 | 58.2 | 54.5 | 38:00      |
+| EntQA                                    | 85.8 | 72.1  | 52.9 | 64.5 | **54.1** | 41.9 | 61.1 | 51.3 | 60.5 | 56.4 | 20:00      |
+| [ReLiK<sub>Base<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-base)                      | 85.3 | 72.3  | 55.6 | 68.0 | 48.1 | 41.6 | 62.5 | 52.3 | 60.7 | 57.2 | 00:29      |
+| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-large)                     | **86.4** | **75.0**  | **56.3** | **72.8** | 51.7 | **43.0** | **65.1** | **57.2** | **63.4** | **60.2** | 01:46      |
+
+Comparison systems' evaluation (InKB Micro F1) on the *in-domain* AIDA test set and *out-of-domain* MSNBC (MSN), Derczynski (Der), KORE50 (K50), N3-Reuters-128 (R128), 
+N3-RSS-500 (R500), OKE-15 (O15), and OKE-16 (O16) test sets. **Bold** indicates the best model. 
+GENRE uses mention dictionaries. 
+The AIT column shows the time in minutes and seconds (m:s) that the systems need to process the whole AIDA test set using an NVIDIA RTX 4090, 
+except for EntQA which does not fit in 24GB of RAM and for which an A100 is used.
 
 To evaluate ReLiK we use the following steps:
 
