@@ -55,13 +55,15 @@ def train(cfg: DictConfig) -> None:
     # model declaration
     model = RelikReaderREPLModule(
         cfg=OmegaConf.to_container(cfg),
-        transformer_model=cfg.model.model.transformer_model,
+        # transformer_model=cfg.model.model.transformer_model,
         additional_special_symbols=len(special_symbols),
         additional_special_symbols_types=len(special_symbols_types),
         entity_type_loss=True,
         add_entity_embedding=True,
         training=True,
+        **cfg.model.model,
     )
+
     model.relik_reader_re_model._tokenizer = train_dataset.tokenizer
     # optimizer declaration
     opt_conf = cfg.model.optimizer
