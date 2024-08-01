@@ -837,6 +837,15 @@ python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-
 
 ### Relation Extraction
 
+The following table shows the results (Micro F1) of ReLiK Large on the NYT dataset:
+
+| Model                                    | NYT | NYT (Pretr) | AIT (m:s) |
+|------------------------------------------|------|-------|------------|
+| REBEL                                    | 93.1 | 93.4  | 01:45      |
+| UiE                                      | 93.5 | --    | --      |
+| USM                                      | 94.0 | 94.1  | --      |
+| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large) | **95.0** | **94.9**  | 00:30      |
+
 To evaluate Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our trained Reader:
 
 ```bash
