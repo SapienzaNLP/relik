@@ -113,6 +113,8 @@ relik = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
+Output:
+
     RelikOutput(
       text="Michael Jordan was one of the best players in the NBA.",
       tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
@@ -148,6 +150,7 @@ relik = Relik.from_pretrained("sapienzanlp/relik-relation-extraction-nyt-large")
 relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 ```
 
+Output:
 
     RelikOutput(
       text='Michael Jordan was one of the best players in the NBA.', 
@@ -207,6 +210,8 @@ retriever = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large", read
 relik_out: RelikOutput = retriever("Michael Jordan was one of the best players in the NBA.")
 ```
 
+Output:
+
     RelikOutput(
       text="Michael Jordan was one of the best players in the NBA.",
       tokens=['Michael', 'Jordan', 'was', 'one', 'of', 'the', 'best', 'players', 'in', 'the', 'NBA', '.'],
@@ -246,6 +251,8 @@ candidates = [
 text = "Michael Jordan was one of the best players in the NBA."
 relik_out: RelikOutput = reader(text, candidates=candidates)
 ```
+
+Output:
 
     RelikOutput(
       text="Michael Jordan was one of the best players in the NBA.",
