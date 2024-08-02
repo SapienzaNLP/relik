@@ -305,22 +305,8 @@ def generate_graph(
 RELIK = os.getenv("RELIK", "localhost:8000/api/relik")
 
 
-def text_analysis(Text, Model, Relation_Threshold, Window_Size, Window_Stride):
-    global loaded_model
-    if Model is None:
-        return "", ""
-    # if loaded_model is None or loaded_model["key"] != Model:
-    #     relik = Relik.from_pretrained(Model, index_precision="bf16")
-    #     loaded_model = {"key": Model, "model": relik}
-    # else:
-    #     relik = loaded_model["model"]
-    # if Model not in relik_models:
-    #     raise ValueError(f"Model {Model} not found.")
-    # relik = relik_models[Model]
-    # spacy for span visualization
-
+def text_analysis(Text, Relation_Threshold, Window_Size, Window_Stride):
     relik = RELIK
-
     nlp = spacy.blank("xx")
     # annotated_text = relik(
     #     Text,
@@ -331,8 +317,10 @@ def text_analysis(Text, Model, Relation_Threshold, Window_Size, Window_Stride):
     #     window_size=Window_Size,
     #     window_stride=Window_Stride,
     # )
+    print(f"Using ReLiK at {relik}")
+    print(f"Querying ReLiK with ?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False")
     response = requests.get(
-        f"{relik}?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False"
+        f"http://{relik}/?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False",
     )
     if response.status_code != 200:
         raise gr.Error(response.text)
@@ -390,11 +378,6 @@ with gr.Blocks(fill_height=True, css=css, theme=theme) as demo:
         text_analysis,
         [
             gr.Textbox(label="Input Text", placeholder="Enter sentence here..."),
-            # gr.Dropdown(
-            #     relik_available_models,
-            #     value=relik_available_models[0],
-            #     label="Relik Model",
-            # ),
             gr.Slider(
                 minimum=0,
                 maximum=1,
