@@ -200,49 +200,6 @@ Output:
       ),
     )
 
-### Docker Images
-
-Docker images for ReLiK are available on [Docker Hub](https://hub.docker.com/r/sapienzanlp/relik). You can pull the latest image with:
-
-```bash
-docker pull sapienzanlp/relik:latest
-```
-
-and run the image with:
-
-```bash
-docker run -p 12345:8000 sapienzanlp/relik:latest -c relik-ie/relik-cie-small
-```
-
-The API will be available at `http://localhost:12345`. A quick documentation of the API can be found at `http://localhost:12345/docs`.
-
-Here the full list of parameters that can be passed to the docker image:
-
-```bash
-docker run sapienzanlp/relik:latest -h
-
-Usage: relik [-h --help] [-c --config] [-p --precision] [-d --device] [--retriever] [--retriever-device] 
-[--retriever-precision] [--index-device] [--index-precision] [--reader] [--reader-device] [--reader-precision] 
-[--annotation-type] [--frontend] [--workers] -- start the FastAPI server for the RElik model
-
-where:
-    -h --help               Show this help text
-    -c --config             Pretrained ReLiK config name (from HuggingFace) or path
-    -p --precision          Precision, default '32'.
-    -d --device             Device to use, default 'cpu'.
-    --retriever             Override retriever model name.
-    --retriever-device      Override retriever device.
-    --retriever-precision   Override retriever precision.
-    --index-device          Override index device.
-    --index-precision       Override index precision.
-    --reader                Override reader model name.
-    --reader-device         Override reader device.
-    --reader-precision      Override reader precision.
-    --annotation-type       Annotation type ('char', 'word'), default 'char'.
-    --frontend              Whether to start the frontend server.
-    --workers               Number of workers to use.
-```
-
 ### Usage
 
 Retrievers and Readers can be used separately.
@@ -342,7 +299,64 @@ Output:
 
 ### CLI
 
-ReLiK provides a CLI to perform inference on a text file or a directory of text files. The CLI can be used as follows:
+ReLiK provides a CLI to serve a [FastAPI](https://fastapi.tiangolo.com/) server for the model or to perform inference on a dataset.
+
+#### `relik serve`
+
+```bash
+relik serve --help
+
+Usage: relik serve [OPTIONS] RELIK_PRETRAINED [DEVICE] [RETRIEVER_DEVICE]                             
+                    [DOCUMENT_INDEX_DEVICE] [READER_DEVICE] [PRECISION]                                
+                    [RETRIEVER_PRECISION] [DOCUMENT_INDEX_PRECISION]                                   
+                    [READER_PRECISION] [ANNOTATION_TYPE]                                               
+                                                                                                       
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    relik_pretrained              TEXT                        [default: None] [required]           │
+│      device                        [DEVICE]                    The device to use for relik (e.g.,   │
+│                                                                'cuda', 'cpu').                      │
+│                                                                [default: None]                      │
+│      retriever_device              [RETRIEVER_DEVICE]          The device to use for the retriever  │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      document_index_device         [DOCUMENT_INDEX_DEVICE]     The device to use for the index      │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      reader_device                 [READER_DEVICE]             The device to use for the reader     │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      precision                     [PRECISION]                 The precision to use for relik       │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: 32]                        │
+│      retriever_precision           [RETRIEVER_PRECISION]       The precision to use for the         │
+│                                                                retriever (e.g., '32', '16').        │
+│                                                                [default: None]                      │
+│      document_index_precision      [DOCUMENT_INDEX_PRECISION]  The precision to use for the index   │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: None]                      │
+│      reader_precision              [READER_PRECISION]          The precision to use for the reader  │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: None]                      │
+│      annotation_type               [ANNOTATION_TYPE]           The type of annotation to use (e.g., │
+│                                                                'CHAR', 'WORD').                     │
+│                                                                [default: char]                      │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --host                         TEXT     [default: 0.0.0.0]                                          │
+│ --port                         INTEGER  [default: 8000]                                             │
+│ --frontend    --no-frontend             [default: no-frontend]                                      │
+│ --help                                  Show this message and exit.                                 │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+```
+
+For example:
+
+```bash
+relik serve sapienzanlp/relik-entity-linking-large
+```
+
+#### `relik inference`
 
 ```bash
 relik inference --help
@@ -374,6 +388,56 @@ For example:
 
 ```bash
 relik inference sapienzanlp/relik-entity-linking-large data.txt output.jsonl
+```
+
+### Docker Images
+
+Docker images for ReLiK are available on [Docker Hub](https://hub.docker.com/r/sapienzanlp/relik). You can pull the latest image with:
+
+```bash
+docker pull sapienzanlp/relik:latest
+```
+
+and run the image with:
+
+```bash
+docker run -p 12345:8000 sapienzanlp/relik:latest -c relik-ie/relik-cie-small
+```
+
+The API will be available at `http://localhost:12345`. It exposes a single endpoint `/relik` with several parameters that can be passed to the model.
+A quick documentation of the API can be found at `http://localhost:12345/docs`. Here is a simple example of how to query the API:
+
+```bash
+curl -X 'GET' \
+  'http://127.0.0.1:12345/api/relik?text=Michael%20Jordan%20was%20one%20of%20the%20best%20players%20in%20the%20NBA.&is_split_into_words=false&retriever_batch_size=32&reader_batch_size=32&return_windows=false&use_doc_topic=false&annotation_type=char&relation_threshold=0.5' \
+  -H 'accept: application/json'
+```
+
+Here the full list of parameters that can be passed to the docker image:
+
+```bash
+docker run sapienzanlp/relik:latest -h
+
+Usage: relik [-h --help] [-c --config] [-p --precision] [-d --device] [--retriever] [--retriever-device] 
+[--retriever-precision] [--index-device] [--index-precision] [--reader] [--reader-device] [--reader-precision] 
+[--annotation-type] [--frontend] [--workers] -- start the FastAPI server for the RElik model
+
+where:
+    -h --help               Show this help text
+    -c --config             Pretrained ReLiK config name (from HuggingFace) or path
+    -p --precision          Precision, default '32'.
+    -d --device             Device to use, default 'cpu'.
+    --retriever             Override retriever model name.
+    --retriever-device      Override retriever device.
+    --retriever-precision   Override retriever precision.
+    --index-device          Override index device.
+    --index-precision       Override index precision.
+    --reader                Override reader model name.
+    --reader-device         Override reader device.
+    --reader-precision      Override reader precision.
+    --annotation-type       Annotation type ('char', 'word'), default 'char'.
+    --frontend              Whether to start the frontend server.
+    --workers               Number of workers to use.
 ```
 
 ## 📚 Before You Start
@@ -848,12 +912,12 @@ reader_span.read("Michael Jordan was one of the best players in the NBA.", candi
 
 We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://gerbil-qa.aksw.org/gerbil/). The following table shows the results (InKB Micro F1) of ReLiK Large and Base:
 
-| Model                                    | AIDA | MSNBC | Der  | K50  | R128 | R500 | O15  | O16  | Tot  | OOD  | AIT (m:s) |
-|------------------------------------------|------|-------|------|------|------|------|------|------|------|------|------------|
-| GENRE                                    | 83.7 | 73.7  | 54.1 | 60.7 | 46.7 | 40.3 | 56.1 | 50.0 | 58.2 | 54.5 | 38:00      |
-| EntQA                                    | 85.8 | 72.1  | 52.9 | 64.5 | **54.1** | 41.9 | 61.1 | 51.3 | 60.5 | 56.4 | 20:00      |
-| [ReLiK<sub>Base<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-base)                      | 85.3 | 72.3  | 55.6 | 68.0 | 48.1 | 41.6 | 62.5 | 52.3 | 60.7 | 57.2 | 00:29      |
-| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-large)                     | **86.4** | **75.0**  | **56.3** | **72.8** | 51.7 | **43.0** | **65.1** | **57.2** | **63.4** | **60.2** | 01:46      |
+| Model                                                                                 | AIDA     | MSNBC    | Der      | K50      | R128     | R500     | O15      | O16      | Tot      | OOD      | AIT (m:s) |
+| ------------------------------------------------------------------------------------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | --------- |
+| GENRE                                                                                 | 83.7     | 73.7     | 54.1     | 60.7     | 46.7     | 40.3     | 56.1     | 50.0     | 58.2     | 54.5     | 38:00     |
+| EntQA                                                                                 | 85.8     | 72.1     | 52.9     | 64.5     | **54.1** | 41.9     | 61.1     | 51.3     | 60.5     | 56.4     | 20:00     |
+| [ReLiK<sub>Base<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-base)   | 85.3     | 72.3     | 55.6     | 68.0     | 48.1     | 41.6     | 62.5     | 52.3     | 60.7     | 57.2     | 00:29     |
+| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-large) | **86.4** | **75.0** | **56.3** | **72.8** | 51.7     | **43.0** | **65.1** | **57.2** | **63.4** | **60.2** | 01:46     |
 
 Comparison systems' evaluation (InKB Micro F1) on the *in-domain* AIDA test set and *out-of-domain* MSNBC (MSN), Derczynski (Der), KORE50 (K50), N3-Reuters-128 (R128), 
 N3-RSS-500 (R500), OKE-15 (O15), and OKE-16 (O16) test sets. **Bold** indicates the best model. 
@@ -895,12 +959,12 @@ python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-
 
 The following table shows the results (Micro F1) of ReLiK Large on the NYT dataset:
 
-| Model                                    | NYT | NYT (Pretr) | AIT (m:s) |
-|------------------------------------------|------|-------|------------|
-| REBEL                                    | 93.1 | 93.4  | 01:45      |
-| UiE                                      | 93.5 | --    | --      |
-| USM                                      | 94.0 | 94.1  | --      |
-| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large) | **95.0** | **94.9**  | 00:30      |
+| Model                                                                                          | NYT      | NYT (Pretr) | AIT (m:s) |
+| ---------------------------------------------------------------------------------------------- | -------- | ----------- | --------- |
+| REBEL                                                                                          | 93.1     | 93.4        | 01:45     |
+| UiE                                                                                            | 93.5     | --          | --        |
+| USM                                                                                            | 94.0     | 94.1        | --        |
+| [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large) | **95.0** | **94.9**    | 00:30     |
 
 To evaluate Relation Extraction we can directly use the reader with the script relik/reader/trainer/predict_re.py, pointing at the file with already retrieved candidates. If you want to use our trained Reader:
 
