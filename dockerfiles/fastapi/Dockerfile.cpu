@@ -15,4 +15,4 @@ RUN pip install --upgrade --no-cache-dir .[serve] -c constraints.cpu.txt \
 
 EXPOSE 8000
 
-ENTRYPOINT ["relik serve"]
+ENTRYPOINT ["scripts/docker/start-gunic.sh"]
