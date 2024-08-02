@@ -216,10 +216,9 @@ def serve(
         annotation_type=annotation_type,
         host=host,
         port=port,
+        frontend=frontend
     )
 
-    if frontend:
-        serve_gradio()
 
 
 if __name__ == "__main__":

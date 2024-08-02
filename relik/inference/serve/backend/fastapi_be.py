@@ -148,6 +148,16 @@ class RelikServer:
         relation_threshold: float = 0.5,
     ) -> List:
         try:
+            if window_size:
+                # check if window size is a number as string
+                if window_size.isdigit():
+                    window_size = int(window_size)
+
+            if window_stride:
+                # check if window stride is a number as string
+                if window_stride.isdigit():
+                    window_stride = int(window_stride)
+
             # get predictions for the retriever
             return await self(
                 text=text,
@@ -182,6 +192,7 @@ def main(
     workers: int = None,
     host: str = "localhost",
     port: int = 8000,
+    frontend: bool = False,
 ):
     app = FastAPI(
         title="ReLiK - A blazing fast and lightweight Information Extraction model for Entity Linking and Relation Extraction.",
@@ -201,6 +212,12 @@ def main(
         annotation_type=annotation_type,
     )
     app.include_router(server.router)
+    if frontend:
+        from relik.inference.serve.frontend.gradio_fe import main as serve_frontend
+        import threading
+
+        threading.Thread(target=serve_frontend, daemon=True).start()
+
     uvicorn.run(app, host=host, port=port, log_level="info", workers=workers)
 
 

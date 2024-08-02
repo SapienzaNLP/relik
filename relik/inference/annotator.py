@@ -348,6 +348,37 @@ class Relik:
                 self.window_manager = WindowManager(
                     self.tokenizer, self.sentence_splitter
                 )
+            else:
+                if isinstance(self.sentence_splitter, WindowSentenceSplitter):
+                    if not isinstance(window_size, int):
+                        logger.warning(
+                            "With WindowSentenceSplitter the window_size must be an integer. "
+                            f"Using the default window size {self.window_manager.window_size}."
+                            f"If you want to change the window size to `sentence` or `none`, "
+                            f"please create a new Relik instance."
+                        )
+                        window_size = self.window_manager.window_size
+                        window_stride = self.window_manager.window_stride
+                if isinstance(self.sentence_splitter, SpacySentenceSplitter):
+                    if window_size != "sentence":
+                        logger.warning(
+                            "With SpacySentenceSplitter the window_size must be `sentence`. "
+                            f"Using the default window size {self.window_manager.window_size}."
+                            f"If you want to change the window size to an integer or `none`, "
+                            f"please create a new Relik instance."
+                        )
+                        window_size = "sentence"
+                        window_stride = None
+                if isinstance(self.sentence_splitter, BlankSentenceSplitter):
+                    if window_size != "none" or window_stride is not None:
+                        logger.warning(
+                            "With BlankSentenceSplitter the window_size must be `none`. "
+                            f"Using the default window size {self.window_manager.window_size}."
+                            f"If you want to change the window size to an integer or `sentence`, "
+                            f"please create a new Relik instance."
+                        )
+                        window_size = "none"
+                        window_stride = None
 
             # sanity check for window size and stride
             if (
@@ -428,7 +459,8 @@ class Relik:
                                 **kwargs,
                             )
                             windows_candidates[task_type] = [
-                                [p.document for p in predictions] for predictions in retriever_out
+                                [p.document for p in predictions]
+                                for predictions in retriever_out
                             ]
             else:
                 # check if the candidates are a list of lists
@@ -467,7 +499,8 @@ class Relik:
                         **kwargs,
                     )
                     windows_candidates[task_type] = [
-                        [p.document for p in predictions] for predictions in retriever_out
+                        [p.document for p in predictions]
+                        for predictions in retriever_out
                     ]
 
         # clean up None's
@@ -518,6 +551,8 @@ class Relik:
         windows = windows + blank_windows
         windows.sort(key=lambda x: (x.doc_id, x.offset))
 
+        print(windows)
+
         # if there is no reader, just return the windows
         if self.reader is None:
             # normalize window candidates to be a list of lists, like when the reader is used
@@ -528,6 +563,7 @@ class Relik:
             merged_windows = self.window_manager.merge_windows(windows)
 
         # transform predictions into RelikOutput objects
+        print(merged_windows)
         output = []
         for w in merged_windows:
             span_labels = []
