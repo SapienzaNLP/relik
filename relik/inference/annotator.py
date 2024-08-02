@@ -551,8 +551,6 @@ class Relik:
         windows = windows + blank_windows
         windows.sort(key=lambda x: (x.doc_id, x.offset))
 
-        print(windows)
-
         # if there is no reader, just return the windows
         if self.reader is None:
             # normalize window candidates to be a list of lists, like when the reader is used
@@ -563,7 +561,6 @@ class Relik:
             merged_windows = self.window_manager.merge_windows(windows)
 
         # transform predictions into RelikOutput objects
-        print(merged_windows)
         output = []
         for w in merged_windows:
             span_labels = []

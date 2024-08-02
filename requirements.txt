@@ -4,7 +4,7 @@ torch==2.3.1
 
 transformers[sentencepiece]>=4.41,<4.42
 rich>=13.0.0,<14.0.0
-scikit-learn>=1.3,<1.4
+scikit-learn>=1.5,<1.6
 overrides>=7.4,<7.9
 art==6.2
 pprintpp==0.4.0
@@ -28,12 +28,12 @@ faiss-cpu==1.8.0 # needed by: faiss
 # serve
 fastapi>=0.112,<0.113 # needed by: serve, ray
 uvicorn[standard]==0.23.2 # needed by: serve, ray
-gunicorn==21.2.0 # needed by: serve, ray
+gunicorn==22.0.0 # needed by: serve, ray
 streamlit>=1.28,<1.29 # needed by: serve, ray
 streamlit_extras>=0.3,<0.4 # needed by: serve, ray
 gradio>=4.37,<4.38 # needed by: serve, ray
 pyvis # needed by: serve, ray
-ray[serve]>=2.7,<=2.8 # needed by: ray
+ray[serve]>=2.34,<=2.35 # needed by: ray
 
 # dev
 pre-commit # needed by: dev

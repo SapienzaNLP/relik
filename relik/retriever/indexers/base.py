@@ -445,7 +445,7 @@ class BaseDocumentIndex:
         config = OmegaConf.load(config_path)
         # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
 
-        target = config.pop("_target_", None)
+        target = config.get("_target_", None)
         if cls.__name__ != "BaseDocumentIndex" and target is None:
             kwargs["_target_"] = f"{cls.__module__}.{cls.__name__}"
 
@@ -483,7 +483,6 @@ class BaseDocumentIndex:
         # boolean variables to check if the index and embeddings exist
         index_exists = index_path.exists()
         embeddings_exists = embedding_path.exists()
-        # use_faiss = "FaissDocumentIndex" in cls.__name__
 
         if use_faiss:
             if index_exists:
