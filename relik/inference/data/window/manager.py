@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from relik.inference.data.splitters.blank_sentence_splitter import BlankSentenceSplitter
 from relik.inference.data.splitters.base_sentence_splitter import BaseSentenceSplitter
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
+from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentenceSplitter
 from relik.inference.data.tokenizers.base_tokenizer import BaseTokenizer
 from relik.reader.data.relik_reader_sample import RelikReaderSample
 from relik.inference.data.objects import AnnotationType, TaskType
@@ -227,10 +228,10 @@ class WindowManager:
         if len(windows) == 1:
             return self._normalize_single_window(windows[0])
 
-        if not isinstance(self.splitter, WindowSentenceSplitter):
-            # here we don't really need to merge windows, just normalize them
-            # TODO: check if we need to merge windows in this case
-            return [self._normalize_single_window(w) for w in windows]
+        # if not isinstance(self.splitter, WindowSentenceSplitter):
+        #     # here we don't really need to merge windows, just normalize them
+        #     # TODO: check if we need to merge windows in this case
+        #     return [self._normalize_single_window(w) for w in windows]
 
         if len(windows) > 0 and getattr(windows[0], "offset", None) is not None:
             windows = sorted(windows, key=(lambda x: x.offset))
@@ -507,7 +508,10 @@ class WindowManager:
         ) = self._merge_predictions(window1, window2)
 
         # merge text, take into account overlapping chars
-        m_text = window1.text[: window2.offset] + window2.text
+        if isinstance(self.splitter, SpacySentenceSplitter):
+            m_text = window1.text[: window2.offset] + " "  + window2.text
+        else:
+            m_text = window1.text[: window2.offset] + window2.text
 
         merging_output.update(
             dict(
