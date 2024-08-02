@@ -428,7 +428,8 @@ class Relik:
                                 **kwargs,
                             )
                             windows_candidates[task_type] = [
-                                [p.document for p in predictions] for predictions in retriever_out
+                                [p.document for p in predictions]
+                                for predictions in retriever_out
                             ]
             else:
                 # check if the candidates are a list of lists
@@ -467,7 +468,8 @@ class Relik:
                         **kwargs,
                     )
                     windows_candidates[task_type] = [
-                        [p.document for p in predictions] for predictions in retriever_out
+                        [p.document for p in predictions]
+                        for predictions in retriever_out
                     ]
 
         # clean up None's

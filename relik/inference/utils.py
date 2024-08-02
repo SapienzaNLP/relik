@@ -113,25 +113,29 @@ def load_retriever(
             f"We will use the same model `{retriever}` for both query and passage encoder. "
             "If you want to use different models, please provide a dictionary with keys `question_encoder` and `passage_encoder`."
         )
-        retriever = {"question_encoder": retriever}
+        retriever = {
+            "question_encoder": retriever,
+            "_target_": "relik.retriever.pytorch_modules.model.GoldenRetriever",
+        }
     # we need to check weather the DictConfig is a DictConfig for an instance of GoldenRetriever
     # or a primitive Dict
-    if isinstance(retriever, DictConfig):
-        # then it is probably a primitive Dict
-        if "_target_" not in retriever:
-            retriever = OmegaConf.to_container(retriever, resolve=True)
-            # convert the key to TaskType
-            try:
-                retriever = {TaskType(k.lower()): v for k, v in retriever.items()}
-            except ValueError as e:
-                raise ValueError(
-                    f"Please choose a valid task type (one of {list(TaskType)}) for each retriever."
-                ) from e
+    # if isinstance(retriever, (DictConfig, Dict)):
+    #     # then it is probably a primitive Dict
+    #     if "_target_" not in retriever:
+    #         retriever["_target_"] = "relik.retriever.pytorch_modules.model.GoldenRetriever"
+    #         retriever = OmegaConf.to_container(retriever, resolve=True)
+    #         # convert the key to TaskType
+    #         try:
+    #             retriever = {TaskType(k.lower()): v for k, v in retriever.items()}
+    #         except ValueError as e:
+    #             raise ValueError(
+    #                 f"Please choose a valid task type (one of {list(TaskType)}) for each retriever."
+    #             ) from e
 
-    if isinstance(retriever, Dict):
+    try:
         # convert the key to TaskType
         retriever = {TaskType(k): v for k, v in retriever.items()}
-    else:
+    except ValueError as e:
         retriever = {task: retriever}
 
     # instantiate each retriever
@@ -186,18 +190,32 @@ def _instantiate_index(
     """
     if not isinstance(index, BaseDocumentIndex):
         index = OmegaConf.create(index)
-        use_faiss = kwargs.get("use_faiss", False)
-        if use_faiss:
-            index = OmegaConf.merge(
-                index,
-                {
-                    "_target_": "relik.retriever.indexers.faissindex.FaissDocumentIndex.from_pretrained",
-                },
-            )
+        # use_faiss = kwargs.get("use_faiss", False)
+        if "use_faiss" not in kwargs:
+            kwargs["use_faiss"] = False
+        # if use_faiss:
+        #     index = OmegaConf.merge(
+        #         index,
+        #         {
+        #             "_target_": "relik.retriever.indexers.faissindex.FaissDocumentIndex.from_pretrained",
+        #         },
+        #     )
+        # else:
+        # index = OmegaConf.merge(
+        #     index,
+        #     {
+        #         "_target_": "relik.retriever.indexers.base.BaseDocumentIndex.from_pretrained",
+        #     },
+        # )
         if device is not None:
             kwargs["device"] = device
         if precision is not None:
             kwargs["precision"] = precision
+
+        if "_target_" not in index:
+            index["_target_"] = (
+                "relik.retriever.indexers.base.BaseDocumentIndex.from_pretrained"
+            )
 
         # merge the kwargs
         index = OmegaConf.merge(index, OmegaConf.create(kwargs))
@@ -260,23 +278,27 @@ def load_index(
     # we need to check weather the DictConfig is a DictConfig for an instance of BaseDocumentIndex
     # or a primitive Dict
     if isinstance(index, str):
+        # use_faiss = kwargs.get("use_faiss", False)
         index = {"name_or_path": index}
-    if isinstance(index, DictConfig):
-        # then it is probably a primitive Dict
-        if "_target_" not in index:
-            index = OmegaConf.to_container(index, resolve=True)
-            # convert the key to TaskType
-            try:
-                index = {TaskType(k.lower()): v for k, v in index.items()}
-            except ValueError as e:
-                raise ValueError(
-                    f"Please choose a valid task type (one of {list(TaskType)}) for each index."
-                ) from e
+        # if use_faiss:
+        #     index["_target_"] = "relik.retriever.indexers.faissindex.FaissDocumentIndex.from_pretrained"
 
-    if isinstance(index, Dict):
+    # if isinstance(index, DictConfig):
+    #     # then it is probably a primitive Dict
+    #     if "_target_" not in index:
+    #         index = OmegaConf.to_container(index, resolve=True)
+    #         # convert the key to TaskType
+    #         try:
+    #             index = {TaskType(k.lower()): v for k, v in index.items()}
+    #         except ValueError as e:
+    #             raise ValueError(
+    #                 f"Please choose a valid task type (one of {list(TaskType)}) for each index."
+    #             ) from e
+
+    try:
         # convert the key to TaskType
         index = {TaskType(k): v for k, v in index.items()}
-    else:
+    except ValueError as e:
         index = {task: index}
 
     # instantiate each retriever
@@ -294,7 +316,6 @@ def load_index(
             precision,
             **kwargs,
         )
-
     # clean up None retrievers from the dictionary
     _index = {task_type: i for task_type, i in _index.items() if i is not None}
     return _index

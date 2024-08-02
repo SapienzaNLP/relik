@@ -425,9 +425,15 @@ class BaseDocumentIndex:
 
         model_dir = from_cache(
             name_or_path,
-            filenames=[config_file_name, document_file_name, embedding_file_name],
+            filenames=[
+                config_file_name,
+                document_file_name,
+                embedding_file_name,
+                index_file_name,
+            ],
             cache_dir=cache_dir,
             force_download=force_download,
+            ignore_failure=True,
         )
 
         config_path = model_dir / config_file_name
@@ -438,8 +444,12 @@ class BaseDocumentIndex:
 
         config = OmegaConf.load(config_path)
         # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
-        if cls.__name__ != "BaseDocumentIndex":
+
+        target = config.pop("_target_", None)
+        if cls.__name__ != "BaseDocumentIndex" and target is None:
             kwargs["_target_"] = f"{cls.__module__}.{cls.__name__}"
+
+        use_faiss = kwargs.get("use_faiss", False) or "FaissDocumentIndex" in target
 
         kwargs["device"] = device
         kwargs["precision"] = precision
@@ -473,7 +483,7 @@ class BaseDocumentIndex:
         # boolean variables to check if the index and embeddings exist
         index_exists = index_path.exists()
         embeddings_exists = embedding_path.exists()
-        use_faiss = "FaissDocumentIndex" in cls.__name__
+        # use_faiss = "FaissDocumentIndex" in cls.__name__
 
         if use_faiss:
             if index_exists:

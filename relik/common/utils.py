@@ -316,25 +316,34 @@ def download_from_hf(
     local_files_only: bool = False,
     subfolder: str = "",
     repo_type: str = "model",
+    ignore_failure: bool = False,
 ):
     if isinstance(path_or_repo_id, Path):
         path_or_repo_id = str(path_or_repo_id)
 
     downloaded_paths = []
     for filename in filenames:
-        downloaded_path = hf_cached_file(
-            path_or_repo_id,
-            filename,
-            cache_dir=cache_dir,
-            force_download=force_download,
-            proxies=proxies,
-            resume_download=resume_download,
-            use_auth_token=use_auth_token,
-            revision=revision,
-            local_files_only=local_files_only,
-            subfolder=subfolder,
-        )
-        downloaded_paths.append(downloaded_path)
+        try:
+            downloaded_path = hf_cached_file(
+                path_or_repo_id,
+                filename,
+                cache_dir=cache_dir,
+                force_download=force_download,
+                proxies=proxies,
+                resume_download=resume_download,
+                use_auth_token=use_auth_token,
+                revision=revision,
+                local_files_only=local_files_only,
+                subfolder=subfolder,
+            )
+            downloaded_paths.append(downloaded_path)
+        except OSError:
+            if ignore_failure:
+                logger.error(
+                    f"Couldn't download {filename} from {path_or_repo_id}, ignoring"
+                )
+            else:
+                raise
 
     # we want the folder where the files are downloaded
     # the best guess is the parent folder of the first file
@@ -382,6 +391,7 @@ def from_cache(
     local_files_only: bool = False,
     subfolder: str = "",
     filenames: Optional[List[str]] = None,
+    ignore_failure: bool = False,
 ) -> Path:
     """
     Given something that could be either a local path or a URL (or a SapienzaNLP model id),
@@ -413,6 +423,8 @@ def from_cache(
             In case the relevant file is in a subfolder of the URL, specify it here.
         filenames (:obj:`List[str]`, `optional`):
             List of filenames to look for in the directory structure.
+        ignore_failure (:obj:`bool`, `optional`, defaults to :obj:`False`):
+            Whether or not to ignore the failure to download the file and return the path to the file in cache.
 
     Returns:
         :obj:`Path`: Path to the cached file.
@@ -447,6 +459,7 @@ def from_cache(
             revision,
             local_files_only,
             subfolder,
+            ignore_failure=ignore_failure,
         )
 
     # if is_hf_hub_url(url_or_filename):
