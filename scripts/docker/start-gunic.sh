@@ -6,12 +6,13 @@ set -e
 CHECK_MARK="\033[0;32m\xE2\x9C\x94\033[0m"
 # usage text
 USAGE="$(basename "$0") [-h --help] [-c --config] [-p --precision] [-d --device] [--retriever] [--retriever-device] 
-[--retriever-precision] [--index-device] [--index-precision] [--reader] [--reader-device] [--reader-precision]
+[--retriever-precision] [--index-device] [--index-precision] [--reader] [--reader-device] [--reader-precision] 
+[--annotation-type] [--frontend] [--workers] -- start the FastAPI server for the RElik model
 
 where:
     -h --help               Show this help text
-    -c --config             Config name (from HuggingFace) or path
-    -p --precision          Training precision, default '32'.
+    -c --config             Pretrained ReLiK config name (from HuggingFace) or path
+    -p --precision          Precision, default '32'.
     -d --device             Device to use, default 'cpu'.
     --retriever             Override retriever model name.
     --retriever-device      Override retriever device.
@@ -22,6 +23,8 @@ where:
     --reader-device         Override reader device.
     --reader-precision      Override reader precision.
     --annotation-type       Annotation type ('char', 'word'), default 'char'.
+    --frontend              Whether to start the frontend server.
+    --workers               Number of workers to use.
 "
 
 # Transform long options to short ones
@@ -41,13 +44,15 @@ for arg in "$@"; do
   '--reader-device') set -- "$@" '-a' ;;
   '--reader-precision') set -- "$@" '-b' ;;
   '--annotation-type') set -- "$@" '-f' ;;
+  '--frontend') set -- "$@" '-v' ;;
+  '--workers') set -- "$@" '-z' ;;
   *) set -- "$@" "$arg" ;;
   esac
 done
 
 # check for named params
 #while [ $OPTIND -le "$#" ]; do
-while getopts ":hc:p:d:q:w:e:r:t:y:a:b:f:" opt; do
+while getopts ":hc:p:d:q:w:e:r:t:y:a:b:f:vz:" opt; do
   case $opt in
   h)
     printf "%s$USAGE" && exit 0
@@ -88,11 +93,82 @@ while getopts ":hc:p:d:q:w:e:r:t:y:a:b:f:" opt; do
   f)
     export ANNOTATION_TYPE=$OPTARG
     ;;
+  v)
+    export FRONTEND=true
+    ;;
+  z)
+    export WORKERS=$OPTARG
+    ;;
   \?)
     echo "Invalid option -$OPTARG" >&2 && echo "$USAGE" && exit 0
     ;;
   esac
 done
+
+if [ -z "$RELIK_PRETRAINED" ]; then
+  echo "No ReLiK model specified. Please provide a model name or path. Exiting." &&
+  exit 1
+fi
+
+# Device
+if [ -z "$DEVICE" ]; then
+  # echo "DEVICE not set, using default"
+  export DEVICE=cpu
+fi
+
+# Retriever device
+if [ -z "$RETRIEVER_DEVICE" ]; then
+  # echo "RETRIEVER_DEVICE not set, using default"
+  export RETRIEVER_DEVICE=$DEVICE
+fi
+
+# Index device
+if [ -z "$INDEX_DEVICE" ]; then
+  # echo "INDEX_DEVICE not set, using default"
+  export INDEX_DEVICE=$DEVICE
+fi
+
+# Reader device
+if [ -z "$READER_DEVICE" ]; then
+  # echo "READER_DEVICE not set, using default"
+  export READER_DEVICE=$DEVICE
+fi
+
+if [ -z "$PRECISION" ]; then
+  # echo "PRECISION not set, using default"
+  export PRECISION=32
+fi
+
+if [ -z "$RETRIEVER_PRECISION" ]; then
+  # echo "RETRIEVER_PRECISION not set, using default"
+  export RETRIEVER_PRECISION=$PRECISION
+fi
+
+if [ -z "$INDEX_PRECISION" ]; then
+  # echo "INDEX_PRECISION not set, using default"
+  export INDEX_PRECISION=$PRECISION
+fi
+
+if [ -z "$READER_PRECISION" ]; then
+  # echo "READER_PRECISION not set, using default"
+  export READER_PRECISION=$PRECISION
+fi
+
+if [ -z "$ANNOTATION_TYPE" ]; then
+  # echo "ANNOTATION_TYPE not set, using default"
+  export ANNOTATION_TYPE=char
+fi
+
+if [ -z "$FRONTEND" ]; then
+  # echo "FRONTEND not set, using default"
+  export FRONTEND=false
+fi
+
+if [ -z "$WORKERS" ]; then
+  # echo "WORKERS not set, using default"
+  WORKERS=1
+fi
+
 
 # FastAPI app location
 if [ -z "$APP_MODULE" ]; then
@@ -120,5 +196,18 @@ if [ -z "$GUNICORN_CONF" ]; then
 fi
 
 # Start Ray Serve with the app
-exec gunicorn -k uvicorn.workers.UvicornWorker -c "$GUNICORN_CONF" "$APP_MODULE" -b 0.0.0.0:8000
-# exec micromamba run -n base serve run "$APP_MODULE" --host 0.0.0.0 --port 8000
+# exec gunicorn -k uvicorn.workers.UvicornWorker -c "$GUNICORN_CONF" "$APP_MODULE" -b 0.0.0.0:8000
+exec relik serve $RELIK_PRETRAINED \
+  --device $DEVICE \
+  --retriever-device $RETRIEVER_DEVICE \
+  --index-device $INDEX_DEVICE \
+  --reader-device $READER_DEVICE \
+  --precision $PRECISION \
+  --retriever-precision $RETRIEVER_PRECISION \
+  --index-precision $INDEX_PRECISION \
+  --reader-precision $READER_PRECISION \
+  --annotation-type $ANNOTATION_TYPE \
+  --frontend $FRONTEND \
+  --workers $WORKERS \
+  --host 0.0.0.0 \
+  --port 8000

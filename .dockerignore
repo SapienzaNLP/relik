@@ -5,4 +5,11 @@ resources
 outputs
 retrievers
 experiments
+build
+dist
+models
+outputs
+pretrained_configs
+.idea
+.vscode
 *.egg-info

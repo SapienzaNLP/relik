@@ -13,6 +13,6 @@ WORKDIR /home/relik-user/relik
 RUN pip install --upgrade --no-cache-dir .[serve] -c constraints.cpu.txt \
     && chmod +x scripts/docker/start-gunic.sh
 
-EXPOSE 8000
+EXPOSE 8000 8001
 
 ENTRYPOINT ["scripts/docker/start-gunic.sh"]

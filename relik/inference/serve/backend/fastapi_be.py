@@ -179,6 +179,7 @@ def main(
     document_index_precision: str = None,
     reader_precision: str = None,
     annotation_type: str = "char",
+    workers: int = None,
     host: str = "localhost",
     port: int = 8000,
 ):
@@ -200,7 +201,7 @@ def main(
         annotation_type=annotation_type,
     )
     app.include_router(server.router)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info", workers=workers)
 
 
 if __name__ == "__main__":
@@ -249,6 +250,9 @@ if __name__ == "__main__":
     )
     arg_parser.add_argument(
         "--annotation_type", type=str, default="char", help="Type of annotation"
+    )
+    arg_parser.add_argument(
+        "--workers", type=int, default=None, help="Number of workers"
     )
     arg_parser.add_argument(
         "--host", type=str, default="localhost", help="Host address"

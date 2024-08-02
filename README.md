@@ -9,10 +9,10 @@
 
 [![Conference](http://img.shields.io/badge/ACL-2024-4b44ce.svg)](https://2024.aclweb.org/)
 [![Paper](http://img.shields.io/badge/paper-ACL--anthology-B31B1B.svg)](https://aclanthology.org/)
-[![arXiv](https://img.shields.io/badge/arXiv-placeholder-b31b1b.svg)](https://arxiv.org/abs/2408.00103)
+[![arXiv](https://img.shields.io/badge/arXiv-2408.00103-b31b1b.svg)](https://arxiv.org/abs/2408.00103)
 
 [![Hugging Face Collection](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-FCD21D)](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19)
-[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-FCD21D)](https://huggingface.co/spaces/sapienzanlp/relik-demo)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-FCD21D)](https://huggingface.co/spaces/relik-ie/Information-Extraction)
 
 [![Lightning](https://img.shields.io/badge/-Lightning-792ee5?logo=pytorchlightning&logoColor=white)](https://github.com/Lightning-AI/lightning)
 [![PyTorch](https://img.shields.io/badge/PyTorch-orange?logo=pytorch)](https://pytorch.org/)
@@ -92,6 +92,21 @@ pip install -e .[all]
 ```
 
 </details>
+
+
+## 🤖 Models
+
+- **ReLiK Large for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
+- **ReLiK Large for Entity Linking (🔥 EL for the wild)**: [`relik-ie/relik-entity-linking-large-robust`](https://huggingface.co/relik-ie/relik-entity-linking-large-robust)
+- **ReLiK Large for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
+- **ReLiK Large for Entity Linking (📝 Paper version)**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
+- **ReLik Base for Entity Linking (📝 Paper version)**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
+- **ReLiK Large for Relation Extraction (📝 Paper version)**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
+
+A full list of models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+
+Other models sizes will be available in the future 👀.
+
 
 ## 🚀 Quick Start
 
@@ -185,14 +200,48 @@ Output:
       ),
     )
 
-### Models
+### Docker Images
 
-Models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
+Docker images for ReLiK are available on [Docker Hub](https://hub.docker.com/r/sapienzanlp/relik). You can pull the latest image with:
 
-- **ReLiK Large for Entity Linking**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
-- **ReLik Base for Entity Linking**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
-- **ReLiK Large for Relation Extraction**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
-- **ReLiK Large for Closed Information Extraction**: [`sapienzanlp/relik_reader_cie_large_rebel`](https://huggingface.co/sapienzanlp/relik_reader_cie_large_rebel)
+```bash
+docker pull sapienzanlp/relik:latest
+```
+
+and run the image with:
+
+```bash
+docker run -p 12345:8000 sapienzanlp/relik:latest -c relik-ie/relik-cie-small
+```
+
+The API will be available at `http://localhost:12345`. A quick documentation of the API can be found at `http://localhost:12345/docs`.
+
+Here the full list of parameters that can be passed to the docker image:
+
+```bash
+docker run sapienzanlp/relik:latest -h
+
+Usage: relik [-h --help] [-c --config] [-p --precision] [-d --device] [--retriever] [--retriever-device] 
+[--retriever-precision] [--index-device] [--index-precision] [--reader] [--reader-device] [--reader-precision] 
+[--annotation-type] [--frontend] [--workers] -- start the FastAPI server for the RElik model
+
+where:
+    -h --help               Show this help text
+    -c --config             Pretrained ReLiK config name (from HuggingFace) or path
+    -p --precision          Precision, default '32'.
+    -d --device             Device to use, default 'cpu'.
+    --retriever             Override retriever model name.
+    --retriever-device      Override retriever device.
+    --retriever-precision   Override retriever precision.
+    --index-device          Override index device.
+    --index-precision       Override index precision.
+    --reader                Override reader model name.
+    --reader-device         Override reader device.
+    --reader-precision      Override reader precision.
+    --annotation-type       Annotation type ('char', 'word'), default 'char'.
+    --frontend              Whether to start the frontend server.
+    --workers               Number of workers to use.
+```
 
 ### Usage
 
