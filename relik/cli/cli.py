@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional, Union
+from typing import Annotated, Optional, Union
 
 import typer
 from tqdm import tqdm
@@ -18,6 +18,7 @@ from relik.inference.data.splitters.window_based_splitter import WindowSentenceS
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from relik.inference.data.window.manager import WindowManager
 from relik.inference.serve.backend.fastapi_be import main as serve_fastapi
+from relik.inference.serve.frontend.gradio_fe import main as serve_gradio
 
 logger = get_logger(__name__)
 
@@ -144,17 +145,63 @@ def inference(
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 def serve(
     relik_pretrained: str,
-    device: str = "cpu",
-    retriever_device: str = None,
-    document_index_device: str = None,
-    reader_device: str = None,
-    precision: str = "32",
-    retriever_precision: str = None,
-    document_index_precision: str = None,
-    reader_precision: str = None,
-    annotation_type: str = "char",
+    device: Annotated[
+        str,
+        typer.Argument(
+            help="The device to use for relik (e.g., 'cuda', 'cpu').",
+        ),
+    ] = None,
+    retriever_device: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The device to use for the retriever (e.g., 'cuda', 'cpu').",
+        ),
+    ] = None,
+    document_index_device: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The device to use for the index (e.g., 'cuda', 'cpu').",
+        ),
+    ] = None,
+    reader_device: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The device to use for the reader (e.g., 'cuda', 'cpu').",
+        ),
+    ] = None,
+    precision: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The precision to use for relik (e.g., '32', '16').",
+        ),
+    ] = "32",
+    retriever_precision: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The precision to use for the retriever (e.g., '32', '16').",
+        ),
+    ] = None,
+    document_index_precision: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The precision to use for the index (e.g., '32', '16').",
+        ),
+    ] = None,
+    reader_precision: Annotated[
+        Union[str, None],
+        typer.Argument(
+            help="The precision to use for the reader (e.g., '32', '16').",
+        ),
+    ] = None,
+    annotation_type: Annotated[
+        str,
+        typer.Argument(
+            help="The type of annotation to use (e.g., 'CHAR', 'WORD').",
+        ),
+    ] = "char",
     host: str = "0.0.0.0",
     port: int = 8000,
+    frontend: bool = False,
 ):
     serve_fastapi(
         relik_pretrained=relik_pretrained,
@@ -170,6 +217,9 @@ def serve(
         host=host,
         port=port,
     )
+
+    if frontend:
+        serve_gradio()
 
 
 if __name__ == "__main__":

@@ -434,5 +434,10 @@ with gr.Blocks(fill_height=True, css=css, theme=theme) as demo:
     gr.Markdown("")
     gr.Markdown(INSTRUCTION)
 
+
+def main(server_port: int = 8001):
+    demo.launch(server_port)
+
+
 if __name__ == "__main__":
-    demo.launch()
+    main()

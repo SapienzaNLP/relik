@@ -26,7 +26,7 @@ wandb>=0.15,<0.16
 faiss-cpu==1.8.0 # needed by: faiss
 
 # serve
-fastapi>=0.104,<0.105 # needed by: serve, ray
+fastapi>=0.112,<0.113 # needed by: serve, ray
 uvicorn[standard]==0.23.2 # needed by: serve, ray
 gunicorn==21.2.0 # needed by: serve, ray
 streamlit>=1.28,<1.29 # needed by: serve, ray
