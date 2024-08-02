@@ -106,7 +106,7 @@ class RelikOutput:
     def to_dict(self):
         self_dict = {
             "text": self.text,
-            "tokens": self.tokens,
+            "tokens": [tok.text for tok in self.tokens],
             "spans": self.spans,
             "triplets": self.triplets,
             "candidates": {

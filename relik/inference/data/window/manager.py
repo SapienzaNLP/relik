@@ -74,7 +74,11 @@ class WindowManager:
             documents, is_split_into_words=is_split_into_words
         )
 
-        if task_type == TaskType.SPAN and annotation_type == AnnotationType.WORD and mentions is not None:
+        if (
+            task_type == TaskType.SPAN
+            and annotation_type == AnnotationType.WORD
+            and mentions is not None
+        ):
             # we need to move the mentions to the char level
             mentions = [
                 [
@@ -87,7 +91,11 @@ class WindowManager:
                 ]
                 for i, doc_mentions in enumerate(mentions)
             ]
-        elif task_type == TaskType.TRIPLET and annotation_type == AnnotationType.CHAR and mentions is not None:
+        elif (
+            task_type == TaskType.TRIPLET
+            and annotation_type == AnnotationType.CHAR
+            and mentions is not None
+        ):
             # we need to move the mentions to the word level, i.e. find the start of the word with character m[0] and the end of the word with character m[1]
             mentions = [
                 [

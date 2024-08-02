@@ -519,7 +519,10 @@ class RelikREDataset(IterableDataset):
                         candidates_to_add = list(candidates_to_add)
                         added_gold_candidates = 0
                         gold_candidates_titles_set = set(
-                            set(ct["relation"] for ct in sample.window_triplet_labels_tokens)
+                            set(
+                                ct["relation"]
+                                for ct in sample.window_triplet_labels_tokens
+                            )
                         )
                         for i in reversed(range(len(sample.triplet_candidates))):
                             if (
@@ -700,25 +703,35 @@ class RelikREDataset(IterableDataset):
                     acceptable_tokens_from_candidates = (
                         self.model_max_length - 20 - len(input_subwords)
                     )
-                    current_len = len(candidates_encoding_result[i]) + len(
-                        candidates_encoding_result[i + len(sample.span_candidates)]
-                    ) if len(self.special_symbols_types) > 0 else len(
-                        candidates_encoding_result[i]
+                    current_len = (
+                        len(candidates_encoding_result[i])
+                        + len(
+                            candidates_encoding_result[i + len(sample.span_candidates)]
+                        )
+                        if len(self.special_symbols_types) > 0
+                        else len(candidates_encoding_result[i])
                     )
-                    while (
-                        cum_len + current_len
-                        < acceptable_tokens_from_candidates
-                    ):
+                    while cum_len + current_len < acceptable_tokens_from_candidates:
                         cum_len += current_len
                         i += 1
-                        if len(self.special_symbols_types) == 0 or i + len(sample.span_candidates) >= len(candidates_encoding_result):
+                        if len(self.special_symbols_types) == 0 or i + len(
+                            sample.span_candidates
+                        ) >= len(candidates_encoding_result):
                             current_len = len(candidates_encoding_result[i])
                         else:
-                            current_len = len(candidates_encoding_result[i] + candidates_encoding_result[i + len(sample.span_candidates)])
+                            current_len = len(
+                                candidates_encoding_result[i]
+                                + candidates_encoding_result[
+                                    i + len(sample.span_candidates)
+                                ]
+                            )
 
                     assert i > 0
 
-                    candidates_encoding_result = candidates_encoding_result[:i] + candidates_encoding_result[len(sample.span_candidates):i]
+                    candidates_encoding_result = (
+                        candidates_encoding_result[:i]
+                        + candidates_encoding_result[len(sample.span_candidates) : i]
+                    )
                     if len(self.special_symbols_types) > 0:
                         candidates_entities_symbols = candidates_entities_symbols[:i]
                         sample.span_candidates = sample.span_candidates[:i]
@@ -799,7 +812,7 @@ class RelikREDataset(IterableDataset):
                     if len(self.special_symbols_types) > 0:
                         sample.triplet_candidates = [
                             sample.triplet_candidates[i - len(sample.span_candidates)]
-                            for i in new_indices[len(sample.span_candidates) :-1]
+                            for i in new_indices[len(sample.span_candidates) : -1]
                         ]
                         candidates_symbols = candidates_symbols[
                             : len(sample.triplet_candidates)
@@ -829,9 +842,11 @@ class RelikREDataset(IterableDataset):
             tokenization_output = self._build_tokenizer_essentials(
                 input_ids,
                 input_subwords,
-                min(len(sample.span_candidates), len(self.special_symbols_types))
-                if sample.span_candidates is not None
-                else 0,
+                (
+                    min(len(sample.span_candidates), len(self.special_symbols_types))
+                    if sample.span_candidates is not None
+                    else 0
+                ),
             )
             # labels creation
             start_labels, end_labels, disambiguation_labels, relation_labels = (
@@ -891,8 +906,8 @@ class RelikREDataset(IterableDataset):
         if not self.for_inference:
             dataset_elements = np.random.permutation(dataset_elements)
 
-        sorting_fn = (
-            lambda elem: add_noise_to_value(
+        sorting_fn = lambda elem: (
+            add_noise_to_value(
                 sum(len(elem[k]) for k in self.sorting_fields),
                 noise_param=self.noise_param,
             )
@@ -1141,9 +1156,11 @@ class RelikREDataset(IterableDataset):
                 (
                     sample.token2word_start[str(span_start)],
                     sample.token2word_end[str(span_end)] + 1,
-                    sample.span_candidates[entity[2]]
-                    if sample.span_candidates and len(entity) > 2
-                    else "--NME--",
+                    (
+                        sample.span_candidates[entity[2]]
+                        if sample.span_candidates and len(entity) > 2
+                        else "--NME--"
+                    ),
                 )
             )
         for predicted_triplet, predicted_triplet_probabilities in zip(
@@ -1192,7 +1209,7 @@ class RelikREDataset(IterableDataset):
             for triplet in sample.predicted_relations:
                 triplet["subject"] = (
                     sample.token2char_start[
-                    str(sample.word2token_start[str(triplet["subject"][0])])
+                        str(sample.word2token_start[str(triplet["subject"][0])])
                     ],
                     sample.token2char_end[
                         str(sample.word2token_end[str(triplet["subject"][1] - 1)])

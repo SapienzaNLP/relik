@@ -390,7 +390,9 @@ class RelikDataset(IterableDataset):
                 len(start_labels), 1
             )
         else:
-            end_labels_tensor = torch.stack([torch.tensor(label) for label in end_labels])
+            end_labels_tensor = torch.stack(
+                [torch.tensor(label) for label in end_labels]
+            )
             end_labels_tensor[ignored_labels_indices.repeat(len(end_labels), 1)] = -100
 
         return start_labels, end_labels_tensor

@@ -46,6 +46,7 @@ def train():
 
     _reader_train()
 
+
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 def train_cie():
     """

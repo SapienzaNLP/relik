@@ -639,9 +639,11 @@ class GoldenRetriever(torch.nn.Module):
         config = {
             "_target_": f"{cls.__class__.__module__}.{cls.__class__.__name__}",
             "question_encoder": cls.question_encoder.config.name_or_path,
-            "passage_encoder": cls.passage_encoder.config.name_or_path
-            if not cls.passage_encoder_is_question_encoder
-            else None,
+            "passage_encoder": (
+                cls.passage_encoder.config.name_or_path
+                if not cls.passage_encoder_is_question_encoder
+                else None
+            ),
             "document_index": to_config(cls.document_index),
         }
         return config

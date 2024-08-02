@@ -33,12 +33,9 @@ class MatrixMultiplicationModule(torch.nn.Module):
 class InMemoryDocumentIndex(BaseDocumentIndex):
     def __init__(
         self,
-        documents: str
-        | List[str]
-        | os.PathLike
-        | List[os.PathLike]
-        | DocumentStore
-        | None = None,
+        documents: (
+            str | List[str] | os.PathLike | List[os.PathLike] | DocumentStore | None
+        ) = None,
         embeddings: torch.Tensor | None = None,
         metadata_fields: List[str] | None = None,
         separator: str | None = None,

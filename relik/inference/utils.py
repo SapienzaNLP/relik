@@ -337,7 +337,7 @@ def load_reader(
             "_target_": "relik.reader.pytorch_modules.base.RelikReaderBase.from_pretrained",
             "model_name_or_dir": reader,
         }
-    
+
     if not isinstance(reader, DictConfig):
         # then it is probably a primitive Dict
         # if "_target_" not in reader:
@@ -345,7 +345,7 @@ def load_reader(
         # reader = OmegaConf.to_container(reader, resolve=True)
         # if not isinstance(reader, DictConfig):
         reader = OmegaConf.create(reader)
-    
+
     reader = (
         hydra.utils.instantiate(
             reader,

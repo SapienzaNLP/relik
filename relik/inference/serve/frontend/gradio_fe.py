@@ -2,13 +2,15 @@ from functools import partial
 import os
 
 import gradio as gr
+import requests
 import spacy
 from pyvis.network import Network
 from spacy import displacy
-from spacy.tokens import Doc
+from spacy.tokens import Doc, Span
 
 from relik.common.utils import CONFIG_NAME, from_cache
 from relik.inference.annotator import Relik
+from relik.inference.data.objects import RelikOutput
 from relik.inference.serve.frontend.utils import get_random_color
 
 
@@ -22,7 +24,7 @@ DESCRIPTION = """
 <div style="display:flex; justify-content: center; align-items: center; flex-direction: row;">
     <a href="https://2024.aclweb.org/"><img src="http://img.shields.io/badge/ACL-2024-4b44ce.svg"></a> &nbsp; &nbsp; 
     <a href="https://aclanthology.org/"><img src="http://img.shields.io/badge/paper-ACL--anthology-B31B1B.svg"></a> &nbsp; &nbsp; 
-    <a href="https://arxiv.org/abs/placeholder"><img src="https://img.shields.io/badge/arXiv-placeholder-b31b1b.svg"></a>
+    <a href="https://arxiv.org/abs/2408.00103"><img src="https://img.shields.io/badge/arXiv-2408.00103-b31b1b.svg"></a>
 </div>
 <br>
 <div style="display:flex; justify-content: center; align-items: center; flex-direction: row;">
@@ -50,7 +52,7 @@ DESCRIPTION = """
         <a href="https://riccardorlando.xyz/" style="color: #919191;" target="_blank">Riccardo Orlando</a>, 
         <a href="https://littlepea13.github.io/" style="color: #919191;" target="_blank">Pere-Lluís Huguet Cabot</a>, 
         <a href="https://edobobo.github.io/" style="color: #919191;" target="_blank">Edoardo Barba</a>, 
-        and <a href="https://www.diag.uniroma1.it/navigli/" style="color: #919191;" target="_blank">Roberto Navigli</a>, 
+        and <a href="https://www.diag.uniroma1.it/navigli/" style="color: #919191;" target="_blank">Roberto Navigli</a> 
     </span>
 <h2>
 </div>
@@ -120,79 +122,52 @@ For more information, please refer to the [source code](https://github.com/Sapie
 """
 
 
-relik_available_models = [
-    # "sapienzanlp/relik-entity-linking-large",
-    "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index",
-    # "PereLluis13/relik-relation-extraction-nyt-large",
-    # "Local"
-]
-demo_index_el = {
-    "span": {
-        "_target_": "relik.retriever.indexers.inmemory.InMemoryDocumentIndex.from_pretrained",
-        "name_or_path": "sapienzanlp/relik-retriever-e5-base-v2-aida-blink-wikipedia-2Mpopular-index",
-    }
-}
-relik_models = {
-    # "sapienzanlp/relik-entity-linking-large": Relik.from_pretrained(
-    #     "sapienzanlp/relik-entity-linking-large",
-    #     index_precision="bf16",
-    #     index=demo_index_el,
-    #     reader_kwargs={"dataset_kwargs": {"use_nme": True}},
-    # ),
-    "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index": Relik.from_pretrained(
-        "PereLluis13/relik-entity-linking-large-wikipedia-aida-interleave-2M-index",
-        index_precision="bf16",
-        reader="/media/data/relik/models/PereLluis13/relik-reader-deberta-large-wikipedia-aida-full-interleave",
-        device="cuda",
-        reader_kwargs={"dataset_kwargs": {"use_nme": True}},
-    ),
-    # "PereLluis13/relik-relation-extraction-nyt-large": Relik.from_pretrained(
-    #     "PereLluis13/relik-relation-extraction-nyt-large"
-    # ),
-    # "Local": Relik.from_pretrained(
-    #     "/root/relik-sapienzanlp/pretrained_configs/relik-test",
-    #     index_precision="bf16",
-    #     device="cuda",
-    #     reader_kwargs={"dataset_kwargs": {"use_nme": True}},
-    # ),
-}
+# relik_available_models = [
+#     "relik-ie/relik-reader-small-cie-wikipedia",
+# ]
+
+# relik_models = {
+#     "relik-ie/relik-reader-small-cie-wikipedia": Relik.from_pretrained(
+#         "relik-ie/relik-reader-small-cie-wikipedia",
+#         index_precision="bf16",
+#         device="cuda",
+#         reader_kwargs={"dataset_kwargs": {"use_nme": True}},
+#     ),
+# }
 
 
-def get_span_annotations(response):
-    el_link_wrapper = (
-        "<link rel='stylesheet' "
-        "href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'>"
-        "<a href='https://en.wikipedia.org/wiki/{}' style='color: #414141'><i class='fa-brands"
-        " fa-wikipedia-w fa-xs' style='color: #414141'></i> <span style='font-size: 1.0em; font-family: monospace'> "
-        "{}</span></a>"
-    )
-    tokens = [token.text for token in response.tokens]
-    labels = ["O"] * len(tokens)
+def get_span_annotations(response, doc):
     dict_ents = {}
-    # make BIO labels
+    el_link_wrapper = "<link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css'><a href='https://en.wikipedia.org/wiki/{}' style='color: #414141'><i class='fa-brands fa-wikipedia-w fa-xs' style='color: #414141'></i> {}</a>"
+
+    spans = []
     for idx, span in enumerate(response.spans):
-        labels[span.start] = (
-            "B-" + span.label + str(idx)
-            if span.label == "--NME--"
-            else "B-" + el_link_wrapper.format(span.label.replace(" ", "_"), span.label)
-        )
-        for i in range(span.start + 1, span.end):
-            labels[i] = (
-                "I-" + span.label + str(idx)
-                if span.label == "--NME--"
-                else "I-"
-                + el_link_wrapper.format(span.label.replace(" ", "_"), span.label)
+        spans.append(
+            Span(
+                doc,
+                span.start,
+                span.end,
+                (
+                    el_link_wrapper.format(span.label.replace(" ", "_"), span.label)
+                    if span.label != "--NME--"
+                    else "--NME--"
+                ),
+                # kb_id=span.label.replace(" ", "_")
             )
+        )
         dict_ents[(span.start, span.end)] = (
             span.label + str(idx),
-            " ".join(tokens[span.start : span.end]),
+            doc[span.start : span.end].text,
+            span.label,
+            span.label.replace(" ", "_"),
         )
-    unique_labels = set(w[2:] for w in labels if w != "O")
-    options = {"ents": unique_labels, "colors": get_random_color(unique_labels)}
-    return tokens, labels, options, dict_ents
+    colors = get_random_color(set([span.label_ for span in spans]))
+    return spans, colors, dict_ents
 
 
-def generate_graph(dict_ents, response, options, bgcolor="#111827", font_color="white"):
+def generate_graph(
+    spans, response, colors, dict_ents, bgcolor="#111827", font_color="white"
+):
     g = Network(
         width="720px",
         height="600px",
@@ -209,23 +184,112 @@ def generate_graph(dict_ents, response, options, bgcolor="#111827", font_color="
         damping=0.09,
         overlap=0,
     )
-    for ent in dict_ents:
-        g.add_node(
-            dict_ents[ent][0],
-            label=dict_ents[ent][1],
-            color=options["colors"][dict_ents[ent][0]],
-            title=dict_ents[ent][0],
-            size=15,
-            labelHighlightBold=True,
-        )
 
+    for ent in spans:
+        # if not NME use title:
+        if dict_ents[(ent.start, ent.end)][2] != "--NME--":
+            g.add_node(
+                dict_ents[(ent.start, ent.end)][2],
+                label=dict_ents[(ent.start, ent.end)][2],
+                color=colors[ent.label_],
+                title=dict_ents[(ent.start, ent.end)][2],
+                size=15,
+                labelHighlightBold=True,
+            )
+        else:
+            g.add_node(
+                ent.text,
+                label=ent.text,
+                color=colors[ent.label_],
+                title=ent.text,
+                size=15,
+                labelHighlightBold=True,
+            )
+    seen_rels = set()
     for rel in response.triplets:
+        if (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] == "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] == "--NME--"
+        ):
+            if (rel.subject.text, rel.object.text, rel.label) in seen_rels:
+                continue
+        elif (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] == "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] != "--NME--"
+        ):
+            if (
+                rel.subject.text,
+                dict_ents[(rel.object.start, rel.object.end)][2],
+                rel.label,
+            ) in seen_rels:
+                continue
+        elif (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] != "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] == "--NME--"
+        ):
+            if (
+                dict_ents[(rel.subject.start, rel.subject.end)][2],
+                rel.object.text,
+                rel.label,
+            ) in seen_rels:
+                continue
+        else:
+            if (
+                dict_ents[(rel.subject.start, rel.subject.end)][2],
+                dict_ents[(rel.object.start, rel.object.end)][2],
+                rel.label,
+            ) in seen_rels:
+                continue
+
         g.add_edge(
-            dict_ents[(rel.subject.start, rel.subject.end)][0],
-            dict_ents[(rel.object.start, rel.object.end)][0],
+            (
+                dict_ents[(rel.subject.start, rel.subject.end)][2]
+                if dict_ents[(rel.subject.start, rel.subject.end)][2] != "--NME--"
+                else dict_ents[(rel.subject.start, rel.subject.end)][1]
+            ),
+            (
+                dict_ents[(rel.object.start, rel.object.end)][2]
+                if dict_ents[(rel.object.start, rel.object.end)][2] != "--NME--"
+                else dict_ents[(rel.object.start, rel.object.end)][1]
+            ),
             label=rel.label,
             title=rel.label,
         )
+        if (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] != "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] != "--NME--"
+        ):
+            seen_rels.add(
+                (
+                    dict_ents[(rel.subject.start, rel.subject.end)][2],
+                    dict_ents[(rel.object.start, rel.object.end)][2],
+                    rel.label,
+                )
+            )
+        elif (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] != "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] == "--NME--"
+        ):
+            seen_rels.add(
+                (
+                    dict_ents[(rel.subject.start, rel.subject.end)][2],
+                    rel.object.text,
+                    rel.label,
+                )
+            )
+        elif (
+            dict_ents[(rel.subject.start, rel.subject.end)][2] == "--NME--"
+            and dict_ents[(rel.object.start, rel.object.end)][2] != "--NME--"
+        ):
+            seen_rels.add(
+                (
+                    rel.subject.text,
+                    dict_ents[(rel.object.start, rel.object.end)][2],
+                    rel.label,
+                )
+            )
+        else:
+            seen_rels.add((rel.subject.text, rel.object.text, rel.label))
     # g.show(filename, notebook=False)
     html = g.generate_html()
     # need to remove ' from HTML
@@ -238,7 +302,10 @@ def generate_graph(dict_ents, response, options, bgcolor="#111827", font_color="
     allowpaymentrequest="" frameborder="0" srcdoc='{html}'></iframe>"""
 
 
-def text_analysis(Text, Model):
+RELIK = os.getenv("RELIK", "localhost:8000/api/relik")
+
+
+def text_analysis(Text, Model, Relation_Threshold, Window_Size, Window_Stride):
     global loaded_model
     if Model is None:
         return "", ""
@@ -247,17 +314,37 @@ def text_analysis(Text, Model):
     #     loaded_model = {"key": Model, "model": relik}
     # else:
     #     relik = loaded_model["model"]
-    if Model not in relik_models:
-        raise ValueError(f"Model {Model} not found.")
-    relik = relik_models[Model]
+    # if Model not in relik_models:
+    #     raise ValueError(f"Model {Model} not found.")
+    # relik = relik_models[Model]
     # spacy for span visualization
+
+    relik = RELIK
+
     nlp = spacy.blank("xx")
-    annotated_text = relik(Text, annotation_type="word", num_workers=0, remove_nmes= False)
-    tokens, labels, options, dict_ents = get_span_annotations(response=annotated_text)
+    # annotated_text = relik(
+    #     Text,
+    #     annotation_type="word",
+    #     num_workers=0,
+    #     remove_nmes=False,
+    #     relation_threshold=Relation_Threshold,
+    #     window_size=Window_Size,
+    #     window_stride=Window_Stride,
+    # )
+    response = requests.get(
+        f"{relik}?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False"
+    )
+    if response.status_code != 200:
+        raise gr.Error(response.text)
+    annotated_text = RelikOutput(**response.json())
+    doc = Doc(nlp.vocab, words=[token.text for token in annotated_text.tokens])
+    spans, colors, dict_ents = get_span_annotations(response=annotated_text, doc=doc)
+    doc.spans["sc"] = spans
 
     # build the EL display
-    doc = Doc(nlp.vocab, words=tokens, ents=labels)
-    display_el = displacy.render(doc, style="ent", options=options)
+    display_el = displacy.render(
+        doc, style="span", options={"colors": colors}
+    )  # , "kb_url_template": "https://en.wikipedia.org/wiki/{}"})
     display_el = display_el.replace("\n", " ")
     # heuristic, prevents split of annotation decorations
     display_el = display_el.replace(
@@ -271,7 +358,7 @@ def text_analysis(Text, Model):
     display_re = ""
     if annotated_text.triplets:
         # background_color should be the same as the background of the page
-        display_re = generate_graph(dict_ents, annotated_text, options)
+        display_re = generate_graph(spans, annotated_text, colors, dict_ents)
     return display_el, display_re
 
 
@@ -291,7 +378,7 @@ mark {
     color: black;
 }
 #el {
-    color: black;
+    white-space: nowrap;
 }
 """
 
@@ -303,16 +390,44 @@ with gr.Blocks(fill_height=True, css=css, theme=theme) as demo:
         text_analysis,
         [
             gr.Textbox(label="Input Text", placeholder="Enter sentence here..."),
-            gr.Dropdown(
-                relik_available_models,
-                value=relik_available_models[0],
-                label="Relik Model",
+            # gr.Dropdown(
+            #     relik_available_models,
+            #     value=relik_available_models[0],
+            #     label="Relik Model",
+            # ),
+            gr.Slider(
+                minimum=0,
+                maximum=1,
+                step=0.05,
+                value=0.5,
+                label="Relation Threshold",
+                info="Minimum confidence for relation extraction (Only for RE and cIE)",
+            ),
+            gr.Slider(
+                minimum=16,
+                maximum=128,
+                step=16,
+                value=64,
+                label="Window Size",
+                info="Window size for the sliding window",
+            ),
+            gr.Slider(
+                minimum=8,
+                maximum=64,
+                step=8,
+                value=32,
+                label="Window Stride",
+                info="Window stride for the sliding window",
             ),
         ],
         [gr.HTML(label="Entities"), gr.HTML(label="Relations")],
         examples=[
-            ["Michael Jordan was one of the best players in the NBA."],
-            ["Rome is the capital city of Italy."],
+            [
+                "Avram Noam Chomsky  born December 7, 1928) is an American professor and public intellectual known for his work in linguistics, political activism, and social criticism. Sometimes called 'the father of modern linguistics', Chomsky is also a major figure in analytic philosophy and one of the founders of the field of cognitive science. He is a laureate professor of linguistics at the University of Arizona and an institute professor emeritus at the Massachusetts Institute of Technology (MIT). Among the most cited living authors, Chomsky has written more than 150 books on topics such as linguistics, war, and politics. In addition to his work in linguistics, since the 1960s Chomsky has been an influential voice on the American left as a consistent critic of U.S. foreign policy, contemporary capitalism, and corporate influence on political institutions and the media."
+            ],
+            [
+                "'Bella ciao' (Italian pronunciation: [ˈbɛlla ˈtʃaːo]; 'Goodbye beautiful') is an Italian song dedicated to the partisans of the Italian resistance, which fought against the occupying troops of Nazi Germany and the collaborationist Fascist forces during the liberation of Italy. It was based on a folk song of the late 19th century, sung by female workers of the paddy fields in Northern Italy (mondine) in protest against harsh working conditions. Versions of 'Bella ciao' continue to be sung worldwide as a hymn of resistance."
+            ],
         ],
         allow_flagging="never",
     )
@@ -320,4 +435,4 @@ with gr.Blocks(fill_height=True, css=css, theme=theme) as demo:
     gr.Markdown(INSTRUCTION)
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    demo.launch()

@@ -154,9 +154,9 @@ class RelikReaderPredictor:
                 # update prediction position position
                 for sample in batch_out:
                     if sample._mixin_prediction_position >= next_prediction_position:
-                        position2predicted_sample[
-                            sample._mixin_prediction_position
-                        ] = sample
+                        position2predicted_sample[sample._mixin_prediction_position] = (
+                            sample
+                        )
 
                 # yield
                 while next_prediction_position in position2predicted_sample:

@@ -21,4 +21,4 @@ class ShuffleTrainCallback(Callback):
             # os.system(f"mv {self.data_path}.shuf {self.data_path}")
             lines = open(self.data_path).readlines()
             random.shuffle(lines)
-            open(self.data_path, 'w').writelines(lines)
+            open(self.data_path, "w").writelines(lines)

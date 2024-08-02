@@ -93,10 +93,16 @@ def train(cfg: DictConfig) -> None:
 
     if (
         cfg.data.train_dataset.section_size == None
-    ): # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
-        callbacks.append(ShuffleTrainCallback(data_path=to_absolute_path(cfg.data.train_dataset_path)))
+    ):  # If section_size is None, we shuffle the dataset. This increases a lot the speed for bigger datasets but be careful, as it will shuffle the file itself at the end of each epoch
+        callbacks.append(
+            ShuffleTrainCallback(
+                data_path=to_absolute_path(cfg.data.train_dataset_path)
+            )
+        )
 
-    wandb_logger = WandbLogger(cfg.model_name, project=cfg.project_name, offline=cfg.offline)
+    wandb_logger = WandbLogger(
+        cfg.model_name, project=cfg.project_name, offline=cfg.offline
+    )
 
     # trainer declaration
     trainer: Trainer = hydra.utils.instantiate(
@@ -110,7 +116,11 @@ def train(cfg: DictConfig) -> None:
         model=model,
         train_dataloaders=DataLoader(train_dataset, batch_size=None, num_workers=0),
         val_dataloaders=DataLoader(val_dataset, batch_size=None, num_workers=0),
-        ckpt_path=cfg.training.ckpt_path if "ckpt_path" in cfg.training and cfg.training.ckpt_path else None,
+        ckpt_path=(
+            cfg.training.ckpt_path
+            if "ckpt_path" in cfg.training and cfg.training.ckpt_path
+            else None
+        ),
     )
 
     # Load best checkpoint

@@ -79,7 +79,8 @@ class StrongMatching:
                     ]
                 )
                 predicted_spans_strict = set(
-                    (ss-token_offset, se-token_offset, st) for (ss, se, st) in sample.predicted_entities
+                    (ss - token_offset, se - token_offset, st)
+                    for (ss, se, st) in sample.predicted_entities
                 )
                 gold_spans_strict = set(
                     (ss, se, st) for (ss, se, st) in sample.window_labels_tokens
@@ -166,7 +167,10 @@ class StrongMatching:
                 ]
             )
             predicted_spans = set(
-                [(ss-token_offset, se-token_offset) for (ss, se, _) in sample.predicted_entities]
+                [
+                    (ss - token_offset, se - token_offset)
+                    for (ss, se, _) in sample.predicted_entities
+                ]
             )
             gold_spans = set([(ss, se) for (ss, se, _) in sample.window_labels_tokens])
             total_gold_spans += len(gold_spans)

@@ -17,6 +17,7 @@ from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentence
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from relik.inference.data.window.manager import WindowManager
+from relik.inference.serve.backend.fastapi_be import main as serve_fastapi
 
 logger = get_logger(__name__)
 
@@ -138,6 +139,37 @@ def inference(
                         "spans": prdiction_dict["spans"],
                     }
                     f_out.write(json.dumps(prediction_dict) + "\n")
+
+
+@app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
+def serve(
+    relik_pretrained: str,
+    device: str = "cpu",
+    retriever_device: str = None,
+    document_index_device: str = None,
+    reader_device: str = None,
+    precision: str = "32",
+    retriever_precision: str = None,
+    document_index_precision: str = None,
+    reader_precision: str = None,
+    annotation_type: str = "char",
+    host: str = "0.0.0.0",
+    port: int = 8000,
+):
+    serve_fastapi(
+        relik_pretrained=relik_pretrained,
+        device=device,
+        retriever_device=retriever_device,
+        document_index_device=document_index_device,
+        reader_device=reader_device,
+        precision=precision,
+        retriever_precision=retriever_precision,
+        document_index_precision=document_index_precision,
+        reader_precision=reader_precision,
+        annotation_type=annotation_type,
+        host=host,
+        port=port,
+    )
 
 
 if __name__ == "__main__":

@@ -51,11 +51,9 @@ class GoldenRetrieverPredictionCallback(PredictionCallback):
         self,
         trainer: pl.Trainer,
         pl_module: pl.LightningModule,
-        datasets: DictConfig
-        | BaseDataset
-        | List[DictConfig]
-        | List[BaseDataset]
-        | None = None,
+        datasets: (
+            DictConfig | BaseDataset | List[DictConfig] | List[BaseDataset] | None
+        ) = None,
         dataloaders: DataLoader | List[DataLoader] | None = None,
         *args,
         **kwargs,

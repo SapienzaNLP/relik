@@ -246,7 +246,7 @@ def add_candidates(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     correct, total = 0, 0
-    
+
     with open(output_path, "w") as f_out:
         # get tokenizer
         tokenizer = retriever.question_tokenizer
@@ -319,7 +319,9 @@ def add_candidates(
                                     if relation.lower() in candidate_titles:
                                         correct += 1
                                     else:
-                                        logger.debug(f"Did not find `{relation.lower()}` in candidates")
+                                        logger.debug(
+                                            f"Did not find `{relation.lower()}` in candidates"
+                                        )
                                     total += 1
                         else:
                             sample["span_candidates"] = candidate_titles
@@ -328,14 +330,21 @@ def add_candidates(
                                 c.score for c in retrieved
                             ]
                             if log_recall:
-                                candidate_titles_lower = [candidate.lower() for candidate in candidate_titles]
+                                candidate_titles_lower = [
+                                    candidate.lower() for candidate in candidate_titles
+                                ]
                                 for ss, se, label in sample["window_labels"]:
                                     if label == "--NME--":
                                         continue
-                                    if label.replace("_", " ").lower() in candidate_titles_lower:
+                                    if (
+                                        label.replace("_", " ").lower()
+                                        in candidate_titles_lower
+                                    ):
                                         correct += 1
                                     else:
-                                        logger.debug(f"Did not find `{label.replace('_', ' ').lower()}` in candidates")
+                                        logger.debug(
+                                            f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
+                                        )
                                     total += 1
                         output_data.append(sample)
 
@@ -373,7 +382,9 @@ def add_candidates(
                                 if relation.lower() in candidate_titles:
                                     correct += 1
                                 else:
-                                    logger.debug(f"Did not find `{relation.lower()}` in candidates")
+                                    logger.debug(
+                                        f"Did not find `{relation.lower()}` in candidates"
+                                    )
                                 total += 1
                     else:
                         sample["span_candidates"] = candidate_titles
@@ -386,7 +397,9 @@ def add_candidates(
                                 if label.replace("_", " ").lower() in candidate_titles:
                                     correct += 1
                                 else:
-                                    logger.debug(f"Did not find `{label.replace('_', ' ').lower()}` in candidates")
+                                    logger.debug(
+                                        f"Did not find `{label.replace('_', ' ').lower()}` in candidates"
+                                    )
                                 total += 1
                     output_data.append(sample)
 

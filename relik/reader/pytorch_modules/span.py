@@ -205,7 +205,11 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
                         batch_out = self._batch_predict(**batch)
 
                         for sample in batch_out:
-                            if sample.spans is not None and len(sample.spans) > 0 and sample.window_labels:
+                            if (
+                                sample.spans is not None
+                                and len(sample.spans) > 0
+                                and sample.window_labels
+                            ):
                                 # remove window labels
                                 sample.window_labels = None
                             if (
@@ -299,7 +303,7 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
         )
 
         ned_start_predictions = forward_output["ned_start_predictions"].cpu().numpy()
-        ned_end_predictions = forward_output["ned_end_predictions"] #.cpu().numpy()
+        ned_end_predictions = forward_output["ned_end_predictions"]  # .cpu().numpy()
         ed_predictions = forward_output["ed_predictions"].cpu().numpy()
         ed_probabilities = forward_output["ed_probabilities"].cpu().numpy()
 
@@ -320,10 +324,10 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
             # ne_end_indices = [ti for ti, c in enumerate(ne_ep[1:]) if c > 0]
             final_class2predicted_spans = collections.defaultdict(list)
             spans2predicted_probabilities = dict()
-            for start_token_index, end_token_index in zip(
-                ne_start_indices, ne_ep
-            ):
-                for end_token_index in [ti for ti, c in enumerate(end_token_index[1:]) if c > 0]:
+            for start_token_index, end_token_index in zip(ne_start_indices, ne_ep):
+                for end_token_index in [
+                    ti for ti, c in enumerate(end_token_index[1:]) if c > 0
+                ]:
                     # predicted candidate
                     token_class = edp[ent_count] - 1
                     predicted_candidate_title = pred_cands[token_class]
@@ -333,9 +337,9 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
 
                     # candidates probabilities
                     classes_probabilities = edpr[ent_count]
-                    classes_probabilities_best_indices = classes_probabilities.argsort()[
-                        ::-1
-                    ]
+                    classes_probabilities_best_indices = (
+                        classes_probabilities.argsort()[::-1]
+                    )
                     titles_2_probs = []
                     top_k = (
                         min(
@@ -373,8 +377,8 @@ class RelikReaderForSpanExtraction(RelikReaderBase):
 
             # try-out for a new format
             sample_patch["predicted_spans"] = final_class2predicted_spans
-            sample_patch[
-                "predicted_spans_probabilities"
-            ] = spans2predicted_probabilities
+            sample_patch["predicted_spans_probabilities"] = (
+                spans2predicted_probabilities
+            )
 
             yield ts

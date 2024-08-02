@@ -149,7 +149,9 @@ class Relik:
                 f"Invalid retriever type {type(retriever)}. "
                 f"Please provide a `GoldenRetriever` or a dictionary of retrievers."
             )
-        self._retriever = {task_type: r for task_type, r in self._retriever.items() if r is not None}
+        self._retriever = {
+            task_type: r for task_type, r in self._retriever.items() if r is not None
+        }
 
         self._index: Dict[TaskType, GoldenRetriever] = {
             TaskType.SPAN: None,
@@ -192,7 +194,9 @@ class Relik:
                 f"Invalid index type {type(index)}. "
                 f"Please provide a `BaseDocumentIndex` or a dictionary of indexes."
             )
-        self._index = {task_type: i for task_type, i in self._index.items() if i is not None}
+        self._index = {
+            task_type: i for task_type, i in self._index.items() if i is not None
+        }
 
         # if isinstance(index, BaseDocumentIndex):
         #     index = {self.task: index}

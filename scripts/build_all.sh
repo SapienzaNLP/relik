@@ -6,8 +6,8 @@ VERSION=$(python -c "import relik; print(relik.__version__)")
 echo "Building version: $VERSION"
 
 # echo "==== Building CPU images ===="
-docker build -f dockerfiles/ray/Dockerfile.cpu -t relik:$VERSION-cpu-ray .
-# docker build -f dockerfiles/fastapi/Dockerfile.cpu -t relik:$VERSION-cpu-fastapi .
+# docker build -f dockerfiles/ray/Dockerfile.cpu -t relik:$VERSION-cpu-ray .
+docker build -f dockerfiles/fastapi/Dockerfile.cpu -t relik:$VERSION-cpu-fastapi .
 
 # echo "==== Building GPU images ===="
 # docker build -f dockerfiles/ray/Dockerfile.cuda -t relik:$VERSION-cuda-ray .

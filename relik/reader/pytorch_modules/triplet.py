@@ -106,11 +106,15 @@ class RelikReaderForTripletExtraction(RelikReaderBase):
                     self.relik_reader_model.config.additional_special_symbols,
                     use_nme=kwargs.get("use_nme_re", False),
                 ),
-                special_symbols=self.default_data_class.get_special_symbols(
-                    self.relik_reader_model.config.additional_special_symbols_types - 1
-                )
-                if self.relik_reader_model.config.additional_special_symbols_types > 0
-                else [],
+                special_symbols=(
+                    self.default_data_class.get_special_symbols(
+                        self.relik_reader_model.config.additional_special_symbols_types
+                        - 1
+                    )
+                    if self.relik_reader_model.config.additional_special_symbols_types
+                    > 0
+                    else []
+                ),
                 for_inference=True,
                 use_nme=kwargs.get("use_nme", False),
             )

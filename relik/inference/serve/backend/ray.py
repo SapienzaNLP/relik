@@ -48,13 +48,15 @@ app = FastAPI(
 
 @serve.deployment(
     ray_actor_options={
-        "num_gpus": RAY_MANAGER.num_gpus
-        if (
-            SERVER_MANAGER.device == "cuda"
-            or SERVER_MANAGER.retriever_device == "cuda"
-            or SERVER_MANAGER.reader_device == "cuda"
+        "num_gpus": (
+            RAY_MANAGER.num_gpus
+            if (
+                SERVER_MANAGER.device == "cuda"
+                or SERVER_MANAGER.retriever_device == "cuda"
+                or SERVER_MANAGER.reader_device == "cuda"
+            )
+            else 0
         )
-        else 0
     },
     autoscaling_config={
         "min_replicas": RAY_MANAGER.min_replicas,

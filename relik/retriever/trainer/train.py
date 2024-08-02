@@ -52,12 +52,12 @@ class RetrieverTrainer:
         self,
         retriever: GoldenRetriever,
         train_dataset: GoldenRetrieverDataset | None = None,
-        val_dataset: GoldenRetrieverDataset
-        | list[GoldenRetrieverDataset]
-        | None = None,
-        test_dataset: GoldenRetrieverDataset
-        | list[GoldenRetrieverDataset]
-        | None = None,
+        val_dataset: (
+            GoldenRetrieverDataset | list[GoldenRetrieverDataset] | None
+        ) = None,
+        test_dataset: (
+            GoldenRetrieverDataset | list[GoldenRetrieverDataset] | None
+        ) = None,
         num_workers: int = 4,
         optimizer: torch.optim.Optimizer = RAdamW,
         lr: float = 1e-5,
@@ -770,9 +770,7 @@ def train(conf: omegaconf.DictConfig) -> None:
     logger.info(pformat(OmegaConf.to_container(conf)))
 
     logger.info("Instantiating the Retriever")
-    retriever: GoldenRetriever = hydra.utils.instantiate(
-        conf.model, _recursive_=False
-    )
+    retriever: GoldenRetriever = hydra.utils.instantiate(conf.model, _recursive_=False)
 
     logger.info("Instantiating datasets")
     train_dataset: GoldenRetrieverDataset = hydra.utils.instantiate(
