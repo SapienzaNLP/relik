@@ -392,10 +392,14 @@ relik inference sapienzanlp/relik-entity-linking-large data.txt output.jsonl
 
 ### Docker Images
 
-Docker images for ReLiK are available on [Docker Hub](https://hub.docker.com/r/sapienzanlp/relik). You can pull the latest image with:
+Docker images for ReLiK are available on [Docker Hub](https://hub.docker.com/r/sapienzanlp/relik). You can pull the following images
 
 ```bash
-docker pull sapienzanlp/relik:latest
+docker pull sapienzanlp/reli-cpu:latest
+```
+
+```bash
+docker pull sapienzanlp/reli-cuda:latest
 ```
 
 and run the image with:
