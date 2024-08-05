@@ -124,31 +124,33 @@ class Relik:
             TaskType.SPAN: None,
             TaskType.TRIPLET: None,
         }
-        if isinstance(retriever, GoldenRetriever):
-            if self.task in [TaskType.SPAN, TaskType.BOTH]:
-                self._retriever[TaskType.SPAN] = retriever
-            if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
-                self._retriever[TaskType.TRIPLET] = retriever
-            # check if both retrievers are the same
-            if self._retriever[TaskType.SPAN] == self._retriever[TaskType.TRIPLET]:
-                logger.warning("The retriever is the same for both tasks.")
-        elif isinstance(retriever, (Dict, DictConfig)):
-            for task_type, r in retriever.items():
-                # convert task_type to TaskType
-                if isinstance(task_type, str):
-                    try:
-                        task_type = TaskType(task_type.lower())
-                    except ValueError:
-                        raise ValueError(
-                            f"Task `{task_type}` not recognized. "
-                            f"Please choose one of {list(TaskType)}."
-                        )
-                self._retriever[task_type] = r
-        else:
-            raise ValueError(
-                f"Invalid retriever type {type(retriever)}. "
-                f"Please provide a `GoldenRetriever` or a dictionary of retrievers."
-            )
+        if retriever:
+            if isinstance(retriever, GoldenRetriever):
+                if self.task in [TaskType.SPAN, TaskType.BOTH]:
+                    self._retriever[TaskType.SPAN] = retriever
+                if self.task in [TaskType.TRIPLET, TaskType.BOTH]:
+                    self._retriever[TaskType.TRIPLET] = retriever
+                # check if both retrievers are the same
+                if self._retriever[TaskType.SPAN] == self._retriever[TaskType.TRIPLET]:
+                    logger.warning("The retriever is the same for both tasks.")
+            elif isinstance(retriever, (Dict, DictConfig)):
+                for task_type, r in retriever.items():
+                    # convert task_type to TaskType
+                    if isinstance(task_type, str):
+                        try:
+                            task_type = TaskType(task_type.lower())
+                        except ValueError:
+                            raise ValueError(
+                                f"Task `{task_type}` not recognized. "
+                                f"Please choose one of {list(TaskType)}."
+                            )
+                    self._retriever[task_type] = r
+            else:
+                raise ValueError(
+                    f"Invalid retriever type {type(retriever)}. "
+                    f"Please provide a `GoldenRetriever` or a dictionary of retrievers."
+                )
+
         self._retriever = {
             task_type: r for task_type, r in self._retriever.items() if r is not None
         }
