@@ -417,6 +417,7 @@ class BaseDocumentIndex:
     ) -> "BaseDocumentIndex":
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
+        skip_metadata = kwargs.pop("skip_metadata", False)
 
         config_file_name = config_file_name or cls.CONFIG_NAME
         document_file_name = document_file_name or cls.DOCUMENTS_FILE_NAME
@@ -464,7 +465,7 @@ class BaseDocumentIndex:
         if not documents_path.exists():
             raise ValueError(f"Document file `{documents_path}` does not exist.")
         logger.info(f"Loading documents from {documents_path}")
-        documents = DocumentStore.from_file(documents_path)
+        documents = DocumentStore.from_file(documents_path, skip_metadata)
         # TODO: probably is better to do the opposite and iterate over the config
         # check for each possible attribute ind DocumentStore
         for attr in dir(documents):

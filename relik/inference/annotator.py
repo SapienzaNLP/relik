@@ -676,6 +676,7 @@ class Relik:
 
         # notable parameters
         index_kwargs["use_faiss"] = kwargs.pop("use_faiss", False)
+        index_kwargs["skip_metadata"] = kwargs.pop("skip_metadata", False)
         reader_kwargs["use_nme"] = kwargs.pop("use_nme", False)
 
         model_dir = from_cache(
