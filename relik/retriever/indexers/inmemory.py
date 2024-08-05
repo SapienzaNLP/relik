@@ -285,6 +285,9 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
             query = query.to(self.embeddings.device)
             if query.dtype != self.embeddings.dtype:
                 query = query.to(self.embeddings.dtype)
+            # if embedding dimension is different from query dimension, reshape query
+            if query.shape[-1] != self.embeddings.shape[-1]:
+                query = query[..., : self.embeddings.shape[-1]]
             similarity = torch.matmul(query, self.embeddings.T)
             # similarity = self.mm(query)
             # Retrieve the indices of the top k passage embeddings

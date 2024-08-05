@@ -893,7 +893,7 @@ class RelikREDataset(IterableDataset):
                 "end_labels": end_labels,
                 "disambiguation_labels": disambiguation_labels,
                 "relation_labels": relation_labels,
-                "predictable_candidates": candidates_symbols,
+                "predictable_candidates": candidates_symbols + candidates_entities_symbols,
             }
         if self.materialize_samples:
             self.samples = data_acc
