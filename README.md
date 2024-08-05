@@ -96,9 +96,15 @@ pip install -e .[all]
 
 ## 🤖 Models
 
+New models:
+
+- **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
 - **ReLiK Large for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
 - **ReLiK Large for Entity Linking (🔥 EL for the wild)**: [`relik-ie/relik-entity-linking-large-robust`](https://huggingface.co/relik-ie/relik-entity-linking-large-robust)
 - **ReLiK Large for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
+
+Models from the paper:
+
 - **ReLiK Large for Entity Linking (📝 Paper version)**: [`sapienzanlp/relik-entity-linking-large`](https://huggingface.co/sapienzanlp/relik-entity-linking-large)
 - **ReLik Base for Entity Linking (📝 Paper version)**: [`sapienzanlp/relik-entity-linking-base`](https://huggingface.co/sapienzanlp/relik-entity-linking-base)
 - **ReLiK Large for Relation Extraction (📝 Paper version)**: [`sapienzanlp/relik-relation-extraction-nyt-large`](https://huggingface.co/sapienzanlp/relik-relation-extraction-nyt-large)
@@ -916,6 +922,7 @@ We evaluate the performance of ReLiK on Entity Linking using [GERBIL](http://ger
 | ------------------------------------------------------------------------------------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | --------- |
 | GENRE                                                                                 | 83.7     | 73.7     | 54.1     | 60.7     | 46.7     | 40.3     | 56.1     | 50.0     | 58.2     | 54.5     | 38:00     |
 | EntQA                                                                                 | 85.8     | 72.1     | 52.9     | 64.5     | **54.1** | 41.9     | 61.1     | 51.3     | 60.5     | 56.4     | 20:00     |
+| [ReLiK<sub>small<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-small) | 82.2     | 72.7     | 55.6     | 68.3     | 48.0     | 42.3     | 62.7     | 53.6     | 60.7     | 57.6     | 00:29     |
 | [ReLiK<sub>Base<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-base)   | 85.3     | 72.3     | 55.6     | 68.0     | 48.1     | 41.6     | 62.5     | 52.3     | 60.7     | 57.2     | 00:29     |
 | [ReLiK<sub>Large<sub>](https://huggingface.co/sapienzanlp/relik-entity-linking-large) | **86.4** | **75.0** | **56.3** | **72.8** | 51.7     | **43.0** | **65.1** | **57.2** | **63.4** | **60.2** | 01:46     |
 
@@ -944,7 +951,7 @@ cd gerbil-SpotWrapNifWS4Test && mvn clean -Dmaven.tomcat.port=1235 tomcat:run
 3. Start the ReLiK server for GERBIL providing the model name as an argument (e.g. `sapienzanlp/relik-entity-linking-large`):
 
 ```bash
-python relik/reader/utils/gerbil_server.py --relik-model-name sapienzanlp/relik-entity-linking-large
+python relik/reader/utils/gerbil.py --relik-model-name sapienzanlp/relik-entity-linking-large
 ```
 
 4. Open the URL [http://localhost:1234/gerbil](http://localhost:1234/gerbil) and:

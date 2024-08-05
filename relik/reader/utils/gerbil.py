@@ -226,8 +226,11 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
 
-    responses_log_dir = Path(args.responses_log_dir)
-    responses_log_dir.mkdir(parents=True, exist_ok=True)
+    responses_log_dir = args.responses_log_dir
+    if responses_log_dir is not None:
+        # raise ValueError("Responses log dir not specified")
+        responses_log_dir = Path(args.responses_log_dir)
+        responses_log_dir.mkdir(parents=True, exist_ok=True)
 
     # init manager
     manager.response_logger_dir = args.responses_log_dir
