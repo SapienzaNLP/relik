@@ -416,6 +416,12 @@ docker run -p 12345:8000 sapienzanlp/relik:latest --config relik-ie/relik-cie-sm
 docker run -p 12345:8000 --gpus all sapienzanlp/relik:latest --config relik-ie/relik-cie-small --device cuda
 ```
 
+If instead a GPU is not available, a CPU version of the image can be used:
+
+```bash
+docker run -p 12345:8000 sapienzanlp/relik:1.0.5-cpu-fastapi --config relik-ie/relik-cie-small
+```
+
 Tip: you can mount your `.cache/huggingface` folder to the docker container to avoid downloading the model weights every time you run the container.
 
 ```bash
