@@ -415,6 +415,29 @@ class BaseDocumentIndex:
         *args,
         **kwargs,
     ) -> "BaseDocumentIndex":
+        """
+        Loads a pre-trained document index from the specified location.
+
+        Args:
+            name_or_path (Union[str, os.PathLike]): The name or path of the pre-trained model.
+            device (str, optional): The device to load the model on. Defaults to "cpu".
+            precision (str | None, optional): The precision of the model. Defaults to None.
+            config_file_name (str | None, optional): The name of the configuration file. Defaults to None.
+            document_file_name (str | None, optional): The name of the document file. Defaults to None.
+            embedding_file_name (str | None, optional): The name of the embedding file. Defaults to None.
+            index_file_name (str | None, optional): The name of the index file. Defaults to None.
+            *args: Additional positional arguments.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            BaseDocumentIndex: The loaded pre-trained document index.
+
+        Raises:
+            FileNotFoundError: If the model configuration file is not found.
+            ValueError: If the document file does not exist.
+            ImportError: If the `faiss` package is not installed when trying to load a FAISS index.
+
+        """
         cache_dir = kwargs.pop("cache_dir", None)
         force_download = kwargs.pop("force_download", False)
         skip_metadata = kwargs.pop("skip_metadata", False)

@@ -310,7 +310,20 @@ class DocumentStore:
         return cls([Document.from_dict(doc) for doc in d])
 
     @classmethod
-    def from_file(cls, file_path: Union[str, Path], skip_metadata: bool = False, **kwargs):
+    def from_file(
+        cls, file_path: Union[str, Path], skip_metadata: bool = False, **kwargs
+    ):
+        """
+        Load documents from a file.
+
+        Args:
+            file_path (Union[str, Path]): The path to the file containing the documents.
+            skip_metadata (bool, optional): Whether to skip loading metadata for each document. Defaults to False.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            cls: An instance of the class with the loaded documents.
+        """
         with open(file_path, "r") as f:
             docs = []
             for line in f:
@@ -318,8 +331,6 @@ class DocumentStore:
                 if skip_metadata:
                     doc.pop("metadata", None)
                 docs.append(Document.from_dict(doc))
-            # load a json lines file
-            # d = [Document.from_dict(json.loads(line)) for line in f]
         return cls(docs)
 
     @classmethod
