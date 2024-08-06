@@ -95,6 +95,7 @@ class RelikServer:
             retriever_precision=self.retriever_precision,
             document_index_precision=self.document_index_precision,
             reader_precision=self.reader_precision,
+            skip_metadata=True,
         )
 
         self.router = APIRouter()

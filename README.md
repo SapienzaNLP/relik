@@ -407,7 +407,19 @@ docker pull sapienzanlp/relik:latest
 and run the image with:
 
 ```bash
-docker run -p 12345:8000 sapienzanlp/relik:latest -c relik-ie/relik-cie-small
+docker run -p 12345:8000 sapienzanlp/relik:latest --config relik-ie/relik-cie-small
+```
+
+`sapienzanlp/relik:latest` points to the latest CUDA version of the model. To run with GPU support:
+
+```bash
+docker run -p 12345:8000 --gpus all sapienzanlp/relik:latest --config relik-ie/relik-cie-small --device cuda
+```
+
+Tip: you can mount your `.cache/huggingface` folder to the docker container to avoid downloading the model weights every time you run the container.
+
+```bash
+docker run -p 12345:8000 -v ~/.cache/huggingface:/home/relik-user/.cache/huggingface sapienzanlp/relik:latest --config relik-ie/relik-cie-small
 ```
 
 The API will be available at `http://localhost:12345`. It exposes a single endpoint `/relik` with several parameters that can be passed to the model.
