@@ -1,11 +1,11 @@
-FROM nvidia/cuda:12.1.0-base-ubuntu22.04
+FROM nvidia/cuda:12.0.0-base-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN adduser --disabled-password --gecos '' relik-user \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    curl wget python3.10 python3-distutils python3-pip \
+    curl wget python3.11 python3-distutils python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 USER relik-user
@@ -14,6 +14,9 @@ ENV PATH=${PATH}:/home/relik-user/.local/bin
 # Set the working directory
 COPY --chown=relik-user:relik-user . /home/relik-user/relik
 WORKDIR /home/relik-user/relik
+
+RUN mkdir -p /home/relik-user/.cache/huggingface
+
 
 RUN pip install --upgrade --no-cache-dir .[serve] \
     && chmod +x scripts/docker/start-gunic.sh

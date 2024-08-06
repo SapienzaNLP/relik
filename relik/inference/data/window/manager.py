@@ -509,7 +509,7 @@ class WindowManager:
 
         # merge text, take into account overlapping chars
         if isinstance(self.splitter, SpacySentenceSplitter):
-            m_text = window1.text[: window2.offset] + " "  + window2.text
+            m_text = window1.text[: window2.offset] + " " + window2.text
         else:
             m_text = window1.text[: window2.offset] + window2.text
 

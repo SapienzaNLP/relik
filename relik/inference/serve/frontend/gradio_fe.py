@@ -318,7 +318,9 @@ def text_analysis(Text, Relation_Threshold, Window_Size, Window_Stride):
     #     window_stride=Window_Stride,
     # )
     print(f"Using ReLiK at {relik}")
-    print(f"Querying ReLiK with ?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False")
+    print(
+        f"Querying ReLiK with ?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False"
+    )
     response = requests.get(
         f"http://{relik}/?text={Text}&relation_threshold={Relation_Threshold}&window_size={Window_Size}&window_stride={Window_Stride}&annotation_type=word&remove_nmes=False",
     )

@@ -12,4 +12,4 @@ docker build -f dockerfiles/fastapi/Dockerfile.cpu -t relik:$LATEST_VERSION-cpu-
 
 echo "==== Building GPU images ===="
 # docker build -f dockerfiles/ray/Dockerfile.cuda -t relik:$VERSION-cuda-ray .
-docker build -f dockerfiles/fastapi/Dockerfile.cuda -t relik:$LATEST_VERSION-cuda-fastapi .
+# docker build -f dockerfiles/fastapi/Dockerfile.cuda -t relik:$LATEST_VERSION-cuda-fastapi .

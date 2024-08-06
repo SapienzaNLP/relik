@@ -648,15 +648,18 @@ class GoldenRetriever(torch.nn.Module):
         }
         return config
 
+
 class GoldenSillyRetriever(GoldenRetriever):
     def __init__(self, documents: List[str], *args, **kwargs):
         self.documents = DocumentStore([Document(doc) for doc in documents])
         self.document_index = BaseDocumentIndex(self.documents)
-    def retrieve(self,
-                text: Optional[Union[str, List[str]]] = None,
-                k: int = 100,
-                *args,
-                **kwargs,
+
+    def retrieve(
+        self,
+        text: Optional[Union[str, List[str]]] = None,
+        k: int = 100,
+        *args,
+        **kwargs,
     ) -> List[List[RetrievedSample]]:
         if isinstance(text, str):
             text = [text]
@@ -666,11 +669,12 @@ class GoldenSillyRetriever(GoldenRetriever):
             [RetrievedSample(score=1.0, document=doc) for doc in self.documents[:k]]
             for _ in text
         ]
+
     def index(self):
-        pass
-    def eval(self):
-        pass
+        raise NotImplementedError
+
     def save_pretrained(self):
-        pass
+        raise NotImplementedError
+
     def to(self, device):
-        pass
+        raise NotImplementedError

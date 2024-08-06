@@ -144,61 +144,19 @@ def inference(
 
 @app.command(context_settings=dict(ignore_unknown_options=True, allow_extra_args=True))
 def serve(
-    relik_pretrained: str,
-    device: Annotated[
+    relik_pretrained: Annotated[
         str,
-        typer.Argument(
-            help="The device to use for relik (e.g., 'cuda', 'cpu').",
-        ),
-    ] = None,
-    retriever_device: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The device to use for the retriever (e.g., 'cuda', 'cpu').",
-        ),
-    ] = None,
-    document_index_device: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The device to use for the index (e.g., 'cuda', 'cpu').",
-        ),
-    ] = None,
-    reader_device: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The device to use for the reader (e.g., 'cuda', 'cpu').",
-        ),
-    ] = None,
-    precision: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The precision to use for relik (e.g., '32', '16').",
-        ),
-    ] = "32",
-    retriever_precision: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The precision to use for the retriever (e.g., '32', '16').",
-        ),
-    ] = None,
-    document_index_precision: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The precision to use for the index (e.g., '32', '16').",
-        ),
-    ] = None,
-    reader_precision: Annotated[
-        Union[str, None],
-        typer.Argument(
-            help="The precision to use for the reader (e.g., '32', '16').",
-        ),
-    ] = None,
-    annotation_type: Annotated[
-        str,
-        typer.Argument(
-            help="The type of annotation to use (e.g., 'CHAR', 'WORD').",
-        ),
-    ] = "char",
+        typer.Argument(help="The device to use for relik (e.g., 'cuda', 'cpu')."),
+    ],
+    device: str = "cpu",
+    retriever_device: str = None,
+    document_index_device: str = None,
+    reader_device: str = None,
+    precision: int = 32,
+    retriever_precision: int = None,
+    document_index_precision: int = None,
+    reader_precision: int = None,
+    annotation_type: str = "char",
     host: str = "0.0.0.0",
     port: int = 8000,
     frontend: bool = False,
@@ -216,9 +174,8 @@ def serve(
         annotation_type=annotation_type,
         host=host,
         port=port,
-        frontend=frontend
+        frontend=frontend,
     )
-
 
 
 if __name__ == "__main__":

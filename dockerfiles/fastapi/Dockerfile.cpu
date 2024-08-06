@@ -1,4 +1,4 @@
-FROM python:3.10.13-slim-bullseye
+FROM python:3.11.9-slim-bullseye
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -9,6 +9,11 @@ ENV PATH=${PATH}:/home/relik-user/.local/bin
 # Set the working directory
 COPY --chown=relik-user:relik-user . /home/relik-user/relik
 WORKDIR /home/relik-user/relik
+
+# mount huggingface cache dir
+RUN mkdir -p /home/relik-user/.cache/huggingface
+# ENV HF_HOME=/home/relik-user/.cache/huggingface
+# mount huggingface
 
 RUN pip install --upgrade --no-cache-dir .[serve] -c constraints.cpu.txt \
     && chmod +x scripts/docker/start-gunic.sh

@@ -196,9 +196,7 @@ if [ -z "$GUNICORN_CONF" ]; then
 fi
 
 # Start Ray Serve with the app
-# exec gunicorn -k uvicorn.workers.UvicornWorker -c "$GUNICORN_CONF" "$APP_MODULE" -b 0.0.0.0:8000
-exec relik serve $RELIK_PRETRAINED \
-  --device $DEVICE \
+exec relik serve $RELIK_PRETRAINED --device $DEVICE \
   --retriever-device $RETRIEVER_DEVICE \
   --index-device $INDEX_DEVICE \
   --reader-device $READER_DEVICE \
