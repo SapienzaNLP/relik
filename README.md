@@ -93,12 +93,11 @@ pip install -e .[all]
 
 </details>
 
-
 ## 🤖 Models
 
 New models:
 
-- **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
+- **ReLiK Small for Entity Linking (🆕🤏⚡ Small and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
 - **ReLiK Large for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
 - **ReLiK Large for Entity Linking (🔥 EL for the wild)**: [`relik-ie/relik-entity-linking-large-robust`](https://huggingface.co/relik-ie/relik-entity-linking-large-robust)
 - **ReLiK Large for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
@@ -112,7 +111,6 @@ Models from the paper:
 A full list of models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
 
 Other models sizes will be available in the future 👀.
-
 
 ## 🚀 Quick Start
 
@@ -317,42 +315,30 @@ Usage: relik serve [OPTIONS] RELIK_PRETRAINED [DEVICE] [RETRIEVER_DEVICE]
                     [RETRIEVER_PRECISION] [DOCUMENT_INDEX_PRECISION]                                   
                     [READER_PRECISION] [ANNOTATION_TYPE]                                               
                                                                                                        
-╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────╮
-│ *    relik_pretrained              TEXT                        [default: None] [required]           │
-│      device                        [DEVICE]                    The device to use for relik (e.g.,   │
-│                                                                'cuda', 'cpu').                      │
-│                                                                [default: None]                      │
-│      retriever_device              [RETRIEVER_DEVICE]          The device to use for the retriever  │
-│                                                                (e.g., 'cuda', 'cpu').               │
-│                                                                [default: None]                      │
-│      document_index_device         [DOCUMENT_INDEX_DEVICE]     The device to use for the index      │
-│                                                                (e.g., 'cuda', 'cpu').               │
-│                                                                [default: None]                      │
-│      reader_device                 [READER_DEVICE]             The device to use for the reader     │
-│                                                                (e.g., 'cuda', 'cpu').               │
-│                                                                [default: None]                      │
-│      precision                     [PRECISION]                 The precision to use for relik       │
-│                                                                (e.g., '32', '16').                  │
-│                                                                [default: 32]                        │
-│      retriever_precision           [RETRIEVER_PRECISION]       The precision to use for the         │
-│                                                                retriever (e.g., '32', '16').        │
-│                                                                [default: None]                      │
-│      document_index_precision      [DOCUMENT_INDEX_PRECISION]  The precision to use for the index   │
-│                                                                (e.g., '32', '16').                  │
-│                                                                [default: None]                      │
-│      reader_precision              [READER_PRECISION]          The precision to use for the reader  │
-│                                                                (e.g., '32', '16').                  │
-│                                                                [default: None]                      │
-│      annotation_type               [ANNOTATION_TYPE]           The type of annotation to use (e.g., │
-│                                                                'CHAR', 'WORD').                     │
-│                                                                [default: char]                      │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
-│ --host                         TEXT     [default: 0.0.0.0]                                          │
-│ --port                         INTEGER  [default: 8000]                                             │
-│ --frontend    --no-frontend             [default: no-frontend]                                      │
-│ --help                                  Show this message and exit.                                 │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭╭─ Arguments ──────────────────────────────────────────────────────╮
+│ *    relik_pretrained      TEXT  The device to use for relik     │
+│                                  (e.g., 'cuda', 'cpu').          │
+│                                  [default: None]                 │
+│                                  [required]                      │
+╰──────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────╮
+│ --device                              TEXT     [default: cpu]    │
+│ --retriever-devi…                     TEXT     [default: None]   │
+│ --document-index…                     TEXT     [default: None]   │
+│ --reader-device                       TEXT     [default: None]   │
+│ --precision                           INTEGER  [default: 32]     │
+│ --retriever-prec…                     INTEGER  [default: None]   │
+│ --document-index…                     INTEGER  [default: None]   │
+│ --reader-precisi…                     INTEGER  [default: None]   │
+│ --annotation-type                     TEXT     [default: char]   │
+│ --host                                TEXT     [default:         │
+│                                                0.0.0.0]          │
+│ --port                                INTEGER  [default: 8000]   │
+│ --frontend           --no-frontend             [default:         │
+│                                                no-frontend]      │
+│ --help                                         Show this message │
+│                                                and exit.         │
+╰──────────────────────────────────────────────────────────────────╯
 
 ```
 
@@ -369,25 +355,25 @@ relik inference --help
 
   Usage: relik inference [OPTIONS] MODEL_NAME_OR_PATH INPUT_PATH OUTPUT_PATH
 
-╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────╮
-│ *    model_name_or_path      TEXT  [default: None] [required]                                           │
-│ *    input_path              TEXT  [default: None] [required]                                           │
-│ *    output_path             TEXT  [default: None] [required]                                           │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────╮
-│ --batch-size                               INTEGER  [default: 8]                                        │
-│ --num-workers                              INTEGER  [default: 4]                                        │
-│ --device                                   TEXT     [default: cuda]                                     │
-│ --precision                                TEXT     [default: fp16]                                     │
-│ --top-k                                    INTEGER  [default: 100]                                      │
-│ --window-size                              INTEGER  [default: None]                                     │
-│ --window-stride                            INTEGER  [default: None]                                     │
-│ --annotation-type                          TEXT     [default: char]                                     │
-│ --progress-bar        --no-progress-bar             [default: progress-bar]                             │
-│ --model-kwargs                             TEXT     [default: None]                                     │
-│ --inference-kwargs                         TEXT     [default: None]                                     │
-│ --help                                              Show this message and exit.                         │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Arguments ──────────────────────────────────────────────────────────────────────╮
+│ *    model_name_or_path      TEXT  [default: None] [required]                    │
+│ *    input_path              TEXT  [default: None] [required]                    │
+│ *    output_path             TEXT  [default: None] [required]                    │
+╰──────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────────╮
+│ --batch-size                               INTEGER  [default: 8]                 │
+│ --num-workers                              INTEGER  [default: 4]                 │
+│ --device                                   TEXT     [default: cuda]              │
+│ --precision                                TEXT     [default: fp16]              │
+│ --top-k                                    INTEGER  [default: 100]               │
+│ --io-batch-size                            INTEGER  [default: 1000]              │
+│ --annotation-type                          TEXT     [default: char]              │
+│ --progress-bar        --no-progress-bar             [default: progress-bar]      │
+│ --model-kwargs                             TEXT     [default: None]              │
+│ --inference-kwargs                         TEXT     [default: None]              │
+│ --help                                              Show this message and exit.  │
+╰──────────────────────────────────────────────────────────────────────────────────╯
+
 ```
 
 For example:

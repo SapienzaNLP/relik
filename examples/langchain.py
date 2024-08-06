@@ -1,3 +1,5 @@
+# pip install langchain-core langchain-experimental
+
 from langchain_experimental.graph_transformers import RelikGraphTransformer
 from langchain_core.documents import Document
 
