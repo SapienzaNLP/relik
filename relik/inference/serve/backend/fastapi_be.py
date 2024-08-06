@@ -52,6 +52,7 @@ class RelikServer:
         document_index_precision: str | int | torch.dtype | None = None,
         reader_precision: str | int | torch.dtype | None = None,
         annotation_type: str = "char",
+        skip_metadata: bool = False,
         **kwargs,
     ):
         num_threads = os.getenv("TORCH_NUM_THREADS", psutil.cpu_count(logical=False))
@@ -95,7 +96,7 @@ class RelikServer:
             retriever_precision=self.retriever_precision,
             document_index_precision=self.document_index_precision,
             reader_precision=self.reader_precision,
-            skip_metadata=True,
+            skip_metadata=skip_metadata,
         )
 
         self.router = APIRouter()
