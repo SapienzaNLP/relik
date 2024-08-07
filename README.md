@@ -11,6 +11,7 @@
 [![Paper](http://img.shields.io/badge/paper-ACL--anthology-B31B1B.svg)](https://aclanthology.org/)
 [![arXiv](https://img.shields.io/badge/arXiv-2408.00103-b31b1b.svg)](https://arxiv.org/abs/2408.00103)
 
+[![relik](https://img.shields.io/badge/ReLiK-white?logo=data:image/png;base64,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)](https://github.com/SapienzaNLP/relik)
 [![Hugging Face Collection](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-FCD21D)](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19)
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-FCD21D)](https://huggingface.co/spaces/relik-ie/Information-Extraction)
 
@@ -93,11 +94,12 @@ pip install -e .[all]
 
 </details>
 
+
 ## 🤖 Models
 
 New models:
 
-- **ReLiK Small for Entity Linking (🆕🤏⚡ Small and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
+- **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
 - **ReLiK Large for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
 - **ReLiK Large for Entity Linking (🔥 EL for the wild)**: [`relik-ie/relik-entity-linking-large-robust`](https://huggingface.co/relik-ie/relik-entity-linking-large-robust)
 - **ReLiK Large for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
@@ -111,6 +113,7 @@ Models from the paper:
 A full list of models can be found on [🤗 Hugging Face](https://huggingface.co/collections/sapienzanlp/relik-retrieve-read-and-link-665d9e4a5c3ecba98c1bef19).
 
 Other models sizes will be available in the future 👀.
+
 
 ## 🚀 Quick Start
 
@@ -315,30 +318,42 @@ Usage: relik serve [OPTIONS] RELIK_PRETRAINED [DEVICE] [RETRIEVER_DEVICE]
                     [RETRIEVER_PRECISION] [DOCUMENT_INDEX_PRECISION]                                   
                     [READER_PRECISION] [ANNOTATION_TYPE]                                               
                                                                                                        
-╭╭─ Arguments ──────────────────────────────────────────────────────╮
-│ *    relik_pretrained      TEXT  The device to use for relik     │
-│                                  (e.g., 'cuda', 'cpu').          │
-│                                  [default: None]                 │
-│                                  [required]                      │
-╰──────────────────────────────────────────────────────────────────╯
-╭─ Options ────────────────────────────────────────────────────────╮
-│ --device                              TEXT     [default: cpu]    │
-│ --retriever-devi…                     TEXT     [default: None]   │
-│ --document-index…                     TEXT     [default: None]   │
-│ --reader-device                       TEXT     [default: None]   │
-│ --precision                           INTEGER  [default: 32]     │
-│ --retriever-prec…                     INTEGER  [default: None]   │
-│ --document-index…                     INTEGER  [default: None]   │
-│ --reader-precisi…                     INTEGER  [default: None]   │
-│ --annotation-type                     TEXT     [default: char]   │
-│ --host                                TEXT     [default:         │
-│                                                0.0.0.0]          │
-│ --port                                INTEGER  [default: 8000]   │
-│ --frontend           --no-frontend             [default:         │
-│                                                no-frontend]      │
-│ --help                                         Show this message │
-│                                                and exit.         │
-╰──────────────────────────────────────────────────────────────────╯
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    relik_pretrained              TEXT                        [default: None] [required]           │
+│      device                        [DEVICE]                    The device to use for relik (e.g.,   │
+│                                                                'cuda', 'cpu').                      │
+│                                                                [default: None]                      │
+│      retriever_device              [RETRIEVER_DEVICE]          The device to use for the retriever  │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      document_index_device         [DOCUMENT_INDEX_DEVICE]     The device to use for the index      │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      reader_device                 [READER_DEVICE]             The device to use for the reader     │
+│                                                                (e.g., 'cuda', 'cpu').               │
+│                                                                [default: None]                      │
+│      precision                     [PRECISION]                 The precision to use for relik       │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: 32]                        │
+│      retriever_precision           [RETRIEVER_PRECISION]       The precision to use for the         │
+│                                                                retriever (e.g., '32', '16').        │
+│                                                                [default: None]                      │
+│      document_index_precision      [DOCUMENT_INDEX_PRECISION]  The precision to use for the index   │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: None]                      │
+│      reader_precision              [READER_PRECISION]          The precision to use for the reader  │
+│                                                                (e.g., '32', '16').                  │
+│                                                                [default: None]                      │
+│      annotation_type               [ANNOTATION_TYPE]           The type of annotation to use (e.g., │
+│                                                                'CHAR', 'WORD').                     │
+│                                                                [default: char]                      │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────╮
+│ --host                         TEXT     [default: 0.0.0.0]                                          │
+│ --port                         INTEGER  [default: 8000]                                             │
+│ --frontend    --no-frontend             [default: no-frontend]                                      │
+│ --help                                  Show this message and exit.                                 │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 ```
 
@@ -355,25 +370,25 @@ relik inference --help
 
   Usage: relik inference [OPTIONS] MODEL_NAME_OR_PATH INPUT_PATH OUTPUT_PATH
 
-╭─ Arguments ──────────────────────────────────────────────────────────────────────╮
-│ *    model_name_or_path      TEXT  [default: None] [required]                    │
-│ *    input_path              TEXT  [default: None] [required]                    │
-│ *    output_path             TEXT  [default: None] [required]                    │
-╰──────────────────────────────────────────────────────────────────────────────────╯
-╭─ Options ────────────────────────────────────────────────────────────────────────╮
-│ --batch-size                               INTEGER  [default: 8]                 │
-│ --num-workers                              INTEGER  [default: 4]                 │
-│ --device                                   TEXT     [default: cuda]              │
-│ --precision                                TEXT     [default: fp16]              │
-│ --top-k                                    INTEGER  [default: 100]               │
-│ --io-batch-size                            INTEGER  [default: 1000]              │
-│ --annotation-type                          TEXT     [default: char]              │
-│ --progress-bar        --no-progress-bar             [default: progress-bar]      │
-│ --model-kwargs                             TEXT     [default: None]              │
-│ --inference-kwargs                         TEXT     [default: None]              │
-│ --help                                              Show this message and exit.  │
-╰──────────────────────────────────────────────────────────────────────────────────╯
-
+╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────╮
+│ *    model_name_or_path      TEXT  [default: None] [required]                                           │
+│ *    input_path              TEXT  [default: None] [required]                                           │
+│ *    output_path             TEXT  [default: None] [required]                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --batch-size                               INTEGER  [default: 8]                                        │
+│ --num-workers                              INTEGER  [default: 4]                                        │
+│ --device                                   TEXT     [default: cuda]                                     │
+│ --precision                                TEXT     [default: fp16]                                     │
+│ --top-k                                    INTEGER  [default: 100]                                      │
+│ --window-size                              INTEGER  [default: None]                                     │
+│ --window-stride                            INTEGER  [default: None]                                     │
+│ --annotation-type                          TEXT     [default: char]                                     │
+│ --progress-bar        --no-progress-bar             [default: progress-bar]                             │
+│ --model-kwargs                             TEXT     [default: None]                                     │
+│ --inference-kwargs                         TEXT     [default: None]                                     │
+│ --help                                              Show this message and exit.                         │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
 For example:
@@ -393,25 +408,7 @@ docker pull sapienzanlp/relik:latest
 and run the image with:
 
 ```bash
-docker run -p 12345:8000 sapienzanlp/relik:latest --config relik-ie/relik-cie-small
-```
-
-`sapienzanlp/relik:latest` points to the latest CUDA version of the model. To run with GPU support:
-
-```bash
-docker run -p 12345:8000 --gpus all sapienzanlp/relik:latest --config relik-ie/relik-cie-small --device cuda
-```
-
-If instead a GPU is not available, a CPU version of the image can be used:
-
-```bash
-docker run -p 12345:8000 sapienzanlp/relik:1.0.5-cpu-fastapi --config relik-ie/relik-cie-small
-```
-
-Tip: you can mount your `.cache/huggingface` folder to the docker container to avoid downloading the model weights every time you run the container.
-
-```bash
-docker run -p 12345:8000 -v ~/.cache/huggingface:/home/relik-user/.cache/huggingface sapienzanlp/relik:latest --config relik-ie/relik-cie-small
+docker run -p 12345:8000 sapienzanlp/relik:latest -c relik-ie/relik-cie-small
 ```
 
 The API will be available at `http://localhost:12345`. It exposes a single endpoint `/relik` with several parameters that can be passed to the model.
