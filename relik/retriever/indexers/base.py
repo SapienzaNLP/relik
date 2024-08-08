@@ -467,13 +467,15 @@ class BaseDocumentIndex:
             )
 
         config = OmegaConf.load(config_path)
-        # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
 
+        # add the actual cls class to the config in place of the _target_ if cls is not BaseDocumentIndex
         target = config.get("_target_", None)
+        use_faiss = kwargs.get("use_faiss", False) or "FaissDocumentIndex" in target
+
         if cls.__name__ != "BaseDocumentIndex" and target is None:
             kwargs["_target_"] = f"{cls.__module__}.{cls.__name__}"
-
-        use_faiss = kwargs.get("use_faiss", False) or "FaissDocumentIndex" in target
+        if use_faiss and "FaissDocumentIndex" not in target:
+            kwargs["_target_"] = "relik.retriever.indexers.faissindex.FaissDocumentIndex"
 
         kwargs["device"] = device
         kwargs["precision"] = precision

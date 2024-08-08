@@ -212,7 +212,7 @@ Output:
 Retrievers and Readers can be used separately.
 In the case of retriever-only ReLiK, the output will contain the candidates for the input text.
 
-Reader-only example:
+Retriever-only example:
 
 ```python
 from relik import Relik
@@ -246,7 +246,7 @@ Output:
       ),
     )
 
-Retriever-only example:
+Reader-only example:
 
 ```python
 from relik import Relik

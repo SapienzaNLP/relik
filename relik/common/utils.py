@@ -339,9 +339,10 @@ def download_from_hf(
             downloaded_paths.append(downloaded_path)
         except OSError:
             if ignore_failure:
-                logger.warn(
-                    f"Couldn't download {filename} from {path_or_repo_id}, ignoring"
-                )
+                # logger.warn(
+                #     f"Couldn't download {filename} from {path_or_repo_id}, ignoring"
+                # )
+                pass
             else:
                 raise
 

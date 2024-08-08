@@ -179,8 +179,8 @@ class FaissDocumentIndex(BaseDocumentIndex):
                 embeddings.cpu() if isinstance(embeddings, torch.Tensor) else embeddings
             )
 
-        # convert to float32 if embeddings is a torch.Tensor and is float16
-        if isinstance(embeddings, torch.Tensor) and embeddings.dtype == torch.float16:
+        # convert to float32 if embeddings is a torch.Tensor and not already float32
+        if isinstance(embeddings, torch.Tensor) and embeddings.dtype != torch.float32:
             embeddings = embeddings.float()
 
         # logger.info("Training the index.")

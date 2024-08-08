@@ -41,7 +41,7 @@ class InMemoryDocumentIndex(BaseDocumentIndex):
         separator: str | None = None,
         name_or_path: str | os.PathLike | None = None,
         device: str = "cpu",
-        precision: str | int | torch.dtype = 32,
+        precision: str | int | torch.dtype | None = 32,
         *args,
         **kwargs,
     ) -> None:
