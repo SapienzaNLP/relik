@@ -839,6 +839,8 @@ class RelikReaderREModel(PreTrainedModel):
         start_counts = (start_position > 0).sum(1)
         if (start_counts > 0).any():
             ned_end_predictions = ned_end_predictions.split(start_counts.tolist())
+        else:
+            ned_end_predictions = [torch.empty(0, input_ids.shape[1], dtype=torch.int64) for _ in range(batch_size)]
         # limit to 30 predictions per document using start_counts, by setting all po after sum is 30 to 0
         # if is_validation or is_prediction:
         #     ned_start_predictions[ned_start_predictions == 1] = start_counts

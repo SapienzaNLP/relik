@@ -689,7 +689,7 @@ class RelikDataset(IterableDataset):
     def materialize_batches(
         self, dataset_elements: List[Dict[str, Any]]
     ) -> Generator[Dict[str, Any], None, None]:
-        if self.prebatch and self.section_size is not None:
+        if self.prebatch and self.section_size is not None and not self.for_inference:
             dataset_elements = self.preshuffle_elements(dataset_elements)
 
         current_batch = []
