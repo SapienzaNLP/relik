@@ -95,15 +95,17 @@ pip install -e .[all]
 
 </details>
 
-
 ## 🤖 Models
 
-New models:
+- **ReLiK Large for Relation Extraction (🆕 Large RE v2)**: [`relik-ie/relik-relation-extraction-large`](https://huggingface.co/relik-ie/relik-relation-extraction-large)
+- **ReLiK Large for Closed Information Extraction (🆕 large EL + RE, Colab ✅)**: [`relik-ie/relik-relation-extraction-large`](https://huggingface.co/relik-ie/relik-relation-extraction-large)
+- **ReLiK Extra Large for Closed Information Extraction (🆕 Our thicc boi for EL + RE)**: [`relik-ie/relik-cie-xl`](https://huggingface.co/relik-ie/relik-cie-xl)
+- **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast EL, Colab ✅)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
 
-- **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
-- **ReLiK Large for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
+- **ReLiK Small for Entity Linking (⚡ Small and Fast EL)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
+- **ReLiK Small for Closed Information Extraction (🔥 EL + RE)**: [`relik-ie/relik-cie-small`](https://huggingface.co/relik-ie/relik-cie-small)
 - **ReLiK Large for Entity Linking (🔥 EL for the wild)**: [`relik-ie/relik-entity-linking-large-robust`](https://huggingface.co/relik-ie/relik-entity-linking-large-robust)
-- **ReLiK Large for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
+- **ReLiK Small for Entity Linking (🔥 RE + NER)**: [`relik-ie/relik-relation-extraction-small-wikipedia-ner`](https://huggingface.co/relik-ie/relik-relation-extraction-small-wikipedia-ner)
 
 Models from the paper:
 
