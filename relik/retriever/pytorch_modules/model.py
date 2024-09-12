@@ -265,7 +265,7 @@ class GoldenRetriever(torch.nn.Module):
         input_ids: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
         token_type_ids: Optional[torch.Tensor] = None,
-        k: int | None = None,
+        k: int = 100,
         max_length: int | None = None,
         precision: Optional[Union[str, int]] = None,
         collate_fn: Optional[Callable] = None,
@@ -306,6 +306,10 @@ class GoldenRetriever(torch.nn.Module):
         Returns:
             `List[List[RetrievedSample]]`: The retrieved passages and their indices.
         """
+
+        if "top_k" in kwargs:
+            k = kwargs.pop("top_k")
+
         if self.document_index is None:
             raise ValueError(
                 "The indexer must be indexed before it can be used within the retriever."
@@ -378,6 +382,8 @@ class GoldenRetriever(torch.nn.Module):
     ) -> ModelInputs:
         # get text and text pair
         # TODO: check if only retriever is used
+        if not isinstance(x, list):
+            x = [x]
         _text = [sample[0] for sample in x]
         _text_pair = [sample[1] for sample in x]
         _text_pair = None if any([t is None for t in _text_pair]) else _text_pair
