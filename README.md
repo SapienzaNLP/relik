@@ -98,7 +98,7 @@ pip install -e .[all]
 ## 🤖 Models
 
 - **ReLiK Large for Relation Extraction (🆕 Large RE v2, Colab ✅)**: [`relik-ie/relik-relation-extraction-large`](https://huggingface.co/relik-ie/relik-relation-extraction-large)
-- **ReLiK Large for Closed Information Extraction (🆕 large EL + RE, Colab ✅)**: [`relik-ie/relik-relation-extraction-large`](https://huggingface.co/relik-ie/relik-relation-extraction-large)
+- **ReLiK Large for Closed Information Extraction (🆕 large EL + RE, Colab ✅)**: [`https://huggingface.co/relik-ie/relik-cie-large`](https://huggingface.co/relik-ie/relik-cie-large)
 - **ReLiK Extra Large for Closed Information Extraction (🆕 Our thicc boi for EL + RE)**: [`relik-ie/relik-cie-xl`](https://huggingface.co/relik-ie/relik-cie-xl)
 - **ReLiK Small for Entity Linking (🆕🤏⚡ Tiny and Fast EL, Colab ✅)**: [`sapienzanlp/relik-entity-linking-small`](https://huggingface.co/sapienzanlp/relik-entity-linking-small)
 
