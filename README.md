@@ -731,10 +731,10 @@ pl_module.model.save_pretrained(retriever_folder, push_to_hub=push_to_hub, repo_
 
 With `push_to_hub=True` the model will be pushed to the 🤗 Hugging Face Hub with `repo_id` as the repository id where the model will be pushed.
 
-The retriever needs an index to search for the documents. The index can be created using `relik retriever build-index` command
+The retriever needs an index to search for the documents. The index can be created using `relik retriever create-index` command
 
 ```bash
-relik retriever build-index --help 
+relik retriever create-index --help 
 
  Usage: relik retriever build-index [OPTIONS] QUESTION_ENCODER_NAME_OR_PATH                                                                   
                                     DOCUMENT_PATH OUTPUT_FOLDER                                                                                                                                              
