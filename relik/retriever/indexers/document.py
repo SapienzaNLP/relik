@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Union
 from relik.common.log import get_logger
 from relik.common.utils import JsonSerializable
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(min(sys.maxsize, 2147483646))
 
 logger = get_logger(__name__)
 
