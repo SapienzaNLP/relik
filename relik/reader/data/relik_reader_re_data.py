@@ -730,7 +730,7 @@ class RelikREDataset(IterableDataset):
 
                     candidates_encoding_result = (
                         candidates_encoding_result[:i]
-                        + candidates_encoding_result[len(sample.span_candidates) : i]
+                        + candidates_encoding_result[len(sample.span_candidates) : len(sample.span_candidates) + i]
                     )
                     if len(self.special_symbols_types) > 0:
                         candidates_entities_symbols = candidates_entities_symbols[:i]
