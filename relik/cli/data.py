@@ -14,7 +14,7 @@ from relik.inference.data.splitters.spacy_sentence_splitter import SpacySentence
 from relik.inference.data.splitters.window_based_splitter import WindowSentenceSplitter
 from relik.inference.data.tokenizers.spacy_tokenizer import SpacyTokenizer
 from relik.inference.data.window.manager import WindowManager
-from relik.retriever.indexers.document import DocumentStore
+from relik.retriever.indexers.document import DocumentStore, Document
 
 logger = get_logger(__name__)
 
@@ -25,15 +25,16 @@ app = typer.Typer(no_args_is_help=True, pretty_exceptions_show_locals=False)
 def create_windows(
     input_file: str,
     output_file: str,
-    window_size: int = 32,
-    window_stride: int = 16,
-    title_mapping: str = None,
-    relation_mapping: str = None,
+    window_size: int | None = None,
+    window_stride: int | None = None,
+    title_mapping: str | None = None,
+    relation_mapping: str | None = None,
     language: str = "en",
     tokenizer_device: str = "cpu",
     is_split_into_words: bool = False,
     labels_are_tokens: bool = False,
     write_batch_size: int = 10_000,
+    keys_to_keep: str | None = None,
     overwrite: bool = False,
 ):
     """
@@ -72,6 +73,7 @@ def create_windows(
         title_mapping,
         relation_mapping,
         labels_are_tokens,
+        keys_to_keep,
     ):
         # build a doc_id to doc mapping
         doc_id_to_doc = {int(document["doc_id"]): document for document in data}
@@ -90,6 +92,10 @@ def create_windows(
         )
 
         for window in windowized_data:
+            # copy the keys we want to keep from the original document
+            if keys_to_keep:
+                for key in keys_to_keep:
+                    window._d[key] = doc_id_to_doc[window._d["doc_id"]][key]
             # try:
             # we need to add the labels
             doc_level_labels = doc_id_to_doc[window._d["doc_id"]][
@@ -140,8 +146,10 @@ def create_windows(
                             or start_char < window.offset
                             or end_char > window.offset + len(window.text)
                         ):
-                            print(
-                                f"Error in window {window._d['window_id']}, start: {start_char}, end: {end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}"
+                            logger.error(
+                                f"Error in window {window._d['window_id']}, start: {start_char}, ",
+                                f"end: {end_char}, window start: {window.offset}, window end: ",
+                                f"{window.offset + len(window.text)}",
                             )
                             continue
                         window_level_labels.append([start_char, end_char, label_text])
@@ -186,8 +194,10 @@ def create_windows(
                             if start_token is not None and end_token is not None:
                                 break
                     if start_token is None or end_token is None:
-                        print(
-                            f"Error in window {window._d['window_id']}, start: {start_char}, end: {end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}"
+                        logger.error(
+                            f"Error in window {window._d['window_id']}, start: {start_char}, ",
+                            f"end: {end_char}, window start: {window.offset}, window end: ",
+                            f"{window.offset + len(window.text)}",
                         )
                         continue
                     window_level_labels_but_for_tokens.append(
@@ -338,8 +348,10 @@ def create_windows(
                                         subject_index = idx
                                         break
                                 if subject_index is None:
-                                    print(
-                                        f"Error in window {window._d['window_id']}, start: {subject_start_char}, end: {subject_end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}"
+                                    logger.error(
+                                        f"Error in window {window._d['window_id']}, start: ",
+                                        f"{subject_start_char}, end: {subject_end_char}, window start: ",
+                                        f"{window.offset}, window end: {window.offset + len(window.text)}",
                                     )
                                     continue
                                 subject_start_token, subject_end_token, _ = window._d[
@@ -355,8 +367,10 @@ def create_windows(
                                         object_index = idx
                                         break
                                 if object_index is None:
-                                    print(
-                                        f"Error in window {window._d['window_id']}, start: {object_start_char}, end: {object_end_char}, window start: {window.offset}, window end: {window.offset + len(window.text)}"
+                                    logger.error(
+                                        f"Error in window {window._d['window_id']}, start: {object_start_char}, ",
+                                        f"end: {object_end_char}, window start: {window.offset}, window end: ",
+                                        f"{window.offset + len(window.text)}",
                                     )
                                     continue
                                 object_start_token, object_end_token, _ = window._d[
@@ -457,9 +471,13 @@ def create_windows(
     if not Path(input_file).exists():
         raise FileNotFoundError(f"Input file {input_file} not found.")
 
+    if keys_to_keep:
+        keys_to_keep = keys_to_keep.split(",")
+    else:
+        keys_to_keep = []
     # windowization stuff
     tokenizer = SpacyTokenizer(language=language, use_gpu=tokenizer_device == "cuda")
-    if window_size == "none":
+    if window_size is None:
         sentence_splitter = BlankSentenceSplitter()
     elif window_size == "sentence":
         sentence_splitter = SpacySentenceSplitter()
@@ -481,30 +499,30 @@ def create_windows(
 
     # check if file exists
     continue_from_id = None
-    if output_file_path.exists():
-        if not overwrite:
-            # we should not overwrite the file
-            # open last line of the file using tail command
-            try:
-                last_line = subprocess.check_output(
-                    f"tail -n 1 {output_file}", shell=True
-                )
-                continue_from_id = json.loads(last_line)["doc_id"]
-            except Exception as e:
-                raise ValueError(
-                    f"Could not read the last line of the output file {output_file}: {e}"
-                )
+    # if output_file_path.exists():
+    #     if not overwrite:
+    #         # we should not overwrite the file
+    #         # open last line of the file using tail command
+    #         try:
+    #             last_line = subprocess.check_output(
+    #                 f"tail -n 1 {output_file}", shell=True
+    #             )
+    #             continue_from_id = json.loads(last_line)["doc_id"]
+    #         except Exception as e:
+    #             raise ValueError(
+    #                 f"Could not read the last line of the output file {output_file}: {e}"
+    #             )
 
-            logger.info(
-                f"Output file {output_file} already exists. Continuing from doc id {continue_from_id}"
-            )
-        else:
-            logger.info(
-                f"{output_file} already exists but `--overwrite` flag is set, overwriting the file."
-            )
-    else:
-        output_file_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Saving windowized data to {output_file}")
+    #         logger.info(
+    #             f"Output file {output_file} already exists. Continuing from doc id {continue_from_id}"
+    #         )
+    #     else:
+    #         logger.info(
+    #             f"{output_file} already exists but `--overwrite` flag is set, overwriting the file."
+    #         )
+    # else:
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    logger.info(f"Saving windowized data to {output_file}")
 
     logger.info(f"Loading data from {input_file}")
     batched_data = []
@@ -544,9 +562,14 @@ def create_windows(
                     title_mapping,
                     relation_mapping,
                     labels_are_tokens,
+                    keys_to_keep,
                 )
                 for wd in windowized_data:
-                    f_out.write(wd.to_jsons() + "\n")
+                    wd_to_write = wd.to_dict()
+                    # clean spans field, not used here
+                    if "spans" in wd_to_write and not wd_to_write["spans"]:
+                        wd_to_write.pop("spans")
+                    f_out.write(json.dumps(wd_to_write) + "\n")
                 progress_bar.update(len(batched_data))
                 batched_data = []
 
@@ -560,9 +583,14 @@ def create_windows(
                 title_mapping,
                 relation_mapping,
                 labels_are_tokens,
+                keys_to_keep,
             )
             for wd in windowized_data:
-                f_out.write(wd.to_jsons() + "\n")
+                wd_to_write = wd.to_dict()
+                # clean spans field, not used here
+                if "spans" in wd_to_write and not wd_to_write["spans"]:
+                    wd_to_write.pop("spans")
+                f_out.write(json.dumps(wd_to_write) + "\n")
             progress_bar.update(len(batched_data))
             batched_data = []
 
@@ -572,7 +600,7 @@ def convert_to_dpr(
     input_path: str,
     output_path: str,
     documents_path: str,
-    title_map: str = None,
+    title_map: str | None = None,
     label_type: str = "span",
 ):
     if label_type not in ["span", "triplet"]:
@@ -678,12 +706,40 @@ def convert_to_dpr(
             if len(positive_pssgs) == 0:
                 continue
 
+            # negative_pssgs = []
+            # for idx, entity in enumerate(sentence["negative"]):
+            #     if not entity:
+            #         continue
+            #     # entity = entity.strip().lower().replace("_", " ")
+            #     entity = entity.strip()
+            #     # if title_map and entity in title_to_lower_map:
+            #     # entity = title_to_lower_map.get(entity, entity)
+            #     entity = title_map.get(entity, entity)
+            #     if entity in documents:
+            #         doc = documents.get_document_from_text(entity)
+            #         # doc.text = mapped_entity
+            #         doc.metadata["passage_id"] = (
+            #             f"{sentence['doc_id']}_{sentence['offset']}_{idx}_neg"
+            #         )
+            #         negative_pssgs.append(doc.to_dict())
+            #     else:
+            #         # missing.add(entity)
+            #         # print(f"Entity {entity} not found in definitions")
+            #         doc = Document(
+            #             entity,
+            #             len(documents),
+            #             {
+            #                 "passage_id": f"{sentence['doc_id']}_{sentence['offset']}_{idx}_neg"
+            #             },
+            #         )
+            #         negative_pssgs.append(doc.to_dict())
+
             dpr_sentence = {
                 "id": f"{sentence['doc_id']}_{sentence['offset']}",
                 "doc_topic": sentence["doc_topic"],
                 "question": question,
                 "positive_ctxs": positive_pssgs,
-                "negative_ctxs": "",
+                "negative_ctxs": "", # if negative_pssgs else "",
                 "hard_negative_ctxs": "",
             }
             f_out.write(json.dumps(dpr_sentence) + "\n")
