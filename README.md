@@ -307,6 +307,26 @@ Output:
       ),
     )
 
+### Note on use on Windows only
+On Windows only, in your main starting file you need to have code in a function. 
+Otherwise you can get a RuntimeError: "An attempt has been made to start a new process before the current process has finished its bootstrapping phase" or hang.
+Looks like all you need is having the function structure.  Don't need freeze_support() unless producing an executable on Windows as documented.
+Note: Llamma Index RelikPathExtractor / PropertyGraphIndex.from_documents ran about 8 times slower on Windows vs Linux whether gpu or cpu. See [llama-relik](https://github.com/stevereiner/llama-relik)
+
+```python
+from relik import Relik
+from relik.inference.data.objects import RelikOutput
+from multiprocessing import freeze_support
+
+def main():
+    relik = Relik.from_pretrained("sapienzanlp/relik-entity-linking-large")
+    relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
+
+if __name__ == "__main__":
+    #freeze_support()
+    main()    
+```
+
 ### CLI
 
 ReLiK provides a CLI to serve a [FastAPI](https://fastapi.tiangolo.com/) server for the model or to perform inference on a dataset.

@@ -106,7 +106,7 @@ VERSION = {}  # type: ignore
 with open("relik/version.py", "r") as version_file:
     exec(version_file.read(), VERSION)
 
-with open("README.md", "r") as fh:
+with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
