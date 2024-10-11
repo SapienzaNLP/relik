@@ -308,10 +308,9 @@ Output:
     )
 
 ### Note on use on Windows only
-On Windows only, in your main starting file you need to have code in a function. 
-Otherwise you can get a RuntimeError: "An attempt has been made to start a new process before the current process has finished its bootstrapping phase" or hang.
-Looks like all you need is having the function structure.  Don't need freeze_support() unless producing an executable on Windows as documented.
-Note: Llamma Index RelikPathExtractor / PropertyGraphIndex.from_documents ran about 8 times slower on Windows vs Linux whether gpu or cpu. See [relik-llama](https://github.com/stevereiner/llama-relik)
+On Windows only, in your main starting file you need freeze_support() even if its just a python file (not the documented "only if frozen to produce an executable").
+Otherwise you can get a RuntimeError: "An attempt has been made to start a new process before the current process has finished its bootstrapping phase."
+Also need to have a main function:
 
 ```python
 from relik import Relik
@@ -323,7 +322,7 @@ def main():
     relik_out: RelikOutput = relik("Michael Jordan was one of the best players in the NBA.")
 
 if __name__ == "__main__":
-    #freeze_support()
+    freeze_support()
     main()    
 ```
 
