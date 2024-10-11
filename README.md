@@ -311,7 +311,7 @@ Output:
 On Windows only, in your main starting file you need to have code in a function. 
 Otherwise you can get a RuntimeError: "An attempt has been made to start a new process before the current process has finished its bootstrapping phase" or hang.
 Looks like all you need is having the function structure.  Don't need freeze_support() unless producing an executable on Windows as documented.
-Note: Llamma Index RelikPathExtractor / PropertyGraphIndex.from_documents ran about 8 times slower on Windows vs Linux whether gpu or cpu. See [llama-relik](https://github.com/stevereiner/llama-relik)
+Note: Llamma Index RelikPathExtractor / PropertyGraphIndex.from_documents ran about 8 times slower on Windows vs Linux whether gpu or cpu. See [relik-llama](https://github.com/stevereiner/llama-relik)
 
 ```python
 from relik import Relik
