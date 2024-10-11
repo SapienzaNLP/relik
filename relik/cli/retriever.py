@@ -3,7 +3,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import hydra
 import torch
@@ -64,8 +64,10 @@ def create_index(
     document_path: str,
     output_folder: str,
     document_file_type: str = "jsonl",
-    passage_encoder_name_or_path: Optional[str] = None,
+    passage_encoder_name_or_path: str | None = None,
     indexer_class: str = "relik.retriever.indexers.inmemory.InMemoryDocumentIndex",
+    metadata_fields: str | None = None,
+    separator: str | None = None,
     batch_size: int = 512,
     num_workers: int = 4,
     passage_max_length: int = 64,
@@ -73,7 +75,7 @@ def create_index(
     index_device: str = "cpu",
     precision: str = "fp32",
     push_to_hub: bool = False,
-    repo_id: Optional[str] = None,
+    repo_id: str | None = None,
 ):
     """
     Builds an index for document retrieval.
@@ -115,6 +117,8 @@ def create_index(
         None
     """
 
+    metadata_fields = metadata_fields.split(",") if metadata_fields else None
+
     if push_to_hub:
         if not repo_id:
             raise ValueError("`repo_id` must be provided when `push_to_hub=True`")
@@ -138,7 +142,7 @@ def create_index(
     logger.info("Loading document index")
     logger.info(f"Loaded {len(documents)} documents")
     indexer = get_callable_from_string(indexer_class)(
-        documents, device=index_device, precision=precision
+        documents, device=index_device, precision=precision, metadata_fields=metadata_fields, separator=separator
     )
 
     retriever = GoldenRetriever(
@@ -172,7 +176,7 @@ def add_candidates(
     document_name_or_path: str,
     input_path: str,
     output_path: str,
-    passage_encoder_name_or_path: Optional[str] = None,
+    passage_encoder_name_or_path: str | None = None,
     relations: bool = False,
     top_k: int = 100,
     batch_size: int = 128,
