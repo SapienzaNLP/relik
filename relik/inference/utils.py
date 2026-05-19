@@ -13,6 +13,27 @@ from relik.retriever.pytorch_modules.model import GoldenRetriever
 
 logger = get_logger(__name__)
 
+_SAFE_HYDRA_PREFIXES = ("relik.",)
+
+
+def _validate_hydra_target(config: DictConfig) -> None:
+    """Reject configs whose _target_ points outside trusted relik modules.
+
+    Without this check, hydra.utils.instantiate() on an attacker-supplied
+    config.yaml (e.g. from a malicious HuggingFace model) would execute any
+    Python callable, giving arbitrary code execution on the loading machine
+    (CWE-913 / CWE-94).
+    """
+    target = OmegaConf.select(config, "_target_", default=None)
+    if target is not None and not any(
+        target.startswith(p) for p in _SAFE_HYDRA_PREFIXES
+    ):
+        raise ValueError(
+            f"Unsafe Hydra _target_ '{target}': only targets within "
+            f"{_SAFE_HYDRA_PREFIXES} are permitted. "
+            "Loading models from untrusted sources may execute arbitrary code."
+        )
+
 
 def _instantiate_retriever(
     retriever: GoldenRetriever | DictConfig | Dict,
@@ -39,8 +60,10 @@ def _instantiate_retriever(
     """
     if not isinstance(retriever, GoldenRetriever):
         # convert to DictConfig
+        retriever_cfg = OmegaConf.create(retriever)
+        _validate_hydra_target(retriever_cfg)
         retriever = hydra.utils.instantiate(
-            OmegaConf.create(retriever),
+            retriever_cfg,
             device=device,
             precision=precision,
             **kwargs,
@@ -219,6 +242,7 @@ def _instantiate_index(
 
         # merge the kwargs
         index = OmegaConf.merge(index, OmegaConf.create(kwargs))
+        _validate_hydra_target(index)
         index: BaseDocumentIndex = hydra.utils.instantiate(index)
     else:
         index = index
@@ -367,6 +391,8 @@ def load_reader(
         # if not isinstance(reader, DictConfig):
         reader = OmegaConf.create(reader)
 
+    if isinstance(reader, DictConfig):
+        _validate_hydra_target(reader)
     reader = (
         hydra.utils.instantiate(
             reader,

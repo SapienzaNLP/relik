@@ -546,6 +546,16 @@ class BaseDocumentIndex:
                 "No index or embeddings found in the directory. Remember to index the documents before using the retriever."
             )
 
+        _safe_prefixes = ("relik.",)
+        target = OmegaConf.select(config, "_target_", default=None)
+        if target is not None and not any(
+            target.startswith(p) for p in _safe_prefixes
+        ):
+            raise ValueError(
+                f"Unsafe Hydra _target_ '{target}': only targets within "
+                f"{_safe_prefixes} are permitted. "
+                "Loading models from untrusted sources may execute arbitrary code."
+            )
         document_index = hydra.utils.instantiate(
             config,
             documents=documents,

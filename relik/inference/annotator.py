@@ -772,6 +772,8 @@ class Relik:
         # logger.info(pformat(OmegaConf.to_container(config)))
 
         # load relik from config
+        from relik.inference.utils import _validate_hydra_target
+        _validate_hydra_target(config)
         relik = hydra.utils.instantiate(
             config, _recursive_=False, retriever=retriever, index=index, reader=reader
         )
